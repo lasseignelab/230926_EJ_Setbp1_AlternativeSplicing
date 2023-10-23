@@ -1,0 +1,24 @@
+---
+title: "Explore JW data"
+author: "Emma Jones"
+date: "2023-10-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r download data}
+library(Seurat)
+
+load("/data/project/lasseigne_lab/JordanWhitlock/230227_Setbp1Manuscript/230227_JW_Setbp1Manuscript_EVERYTHING/data/setbp1_cerebralintcelltypes.Rdata")
+
+DimPlot(cerebral_int_celltypes, group.by = "type")
+
+FeaturePlot(cerebral_int_celltypes, features = "Setbp1")
+
+VlnPlot(cerebral_int_celltypes, features = "Setbp1")
+```

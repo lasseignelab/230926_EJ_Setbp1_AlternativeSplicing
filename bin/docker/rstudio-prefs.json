@@ -1,5 +1,7 @@
 {
-    "editor_theme": "Cobalt",
+    "editor_theme": "Solarized Dark",
     "jobs_tab_visibility": "shown",
-    "document_author": "<YOUR NAME>"
+    "document_author": "Emma Jones",
+    "initial_working_directory": "~",
+    "posix_terminal_shell": "bash"
 }
