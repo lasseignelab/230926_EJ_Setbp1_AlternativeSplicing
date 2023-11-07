@@ -206,6 +206,12 @@ object is matching and ready for the rest of analysis, so we can save this objec
 path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/R Object/"
 file <- "MARVEL_EJ.RData"
 save(marvel, file = paste(path, file, sep = ""))
+
+# Load object
+path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/R Object/"
+file <- "MARVEL_EJ.RData"
+load(paste(path, file, sep=""))
+
 ```
 
 ## Explore expression
@@ -248,15 +254,249 @@ marvel <- CompareValues.SJ.10x(MarvelObject=marvel,
                                seed=1,
                                n.iterations=100,
                                downsample=TRUE,
-                               show.progress=FALSE
+                               show.progress=TRUE
                                )
 
 ```
 
+```{r differential gene analysis}
+marvel <- CompareValues.Genes.10x(MarvelObject=marvel,
+                                  show.progress=TRUE
+                                  )
+
+head(marvel$DE$SJ$Table)
+```
+
+```{r splicing volcano plot}
+
+marvel <- PlotDEValues.SJ.10x(MarvelObject=marvel,
+                              pval=0.05,
+                              delta=5,
+                              min.gene.norm=1.0,
+                              anno=FALSE
+                              )
+
+marvel$DE$SJ$VolcanoPlot$SJ$Plot
+
+head(marvel$DE$SJ$VolcanoPlot$SJ$Data[,c("coord.intron", "gene_short_name", "sig")])
+```
+
+```{r assign splicing dynamics}
+
+marvel <- IsoSwitch.10x(MarvelObject=marvel,
+                        pval.sj=0.05,
+                        delta.sj=5,
+                        min.gene.norm=1.0,
+                        pval.adj.gene=0.05,
+                        log2fc.gene=0.5
+                        )
+
+marvel$SJ.Gene.Cor$Proportion$Plot
+
+marvel$SJ.Gene.Cor$Proportion$Table
+
+head(marvel$SJ.Gene.Cor$Data[,c("coord.intron", "gene_short_name", "cor.complete")])
+```
 
 
+```{r coordinated gene splciing dynamic tSNE}
+# Define cell groups
+    # Retrieve sample metadata
+    sample.metadata <- marvel$sample.metadata
+    
+    # iPSC
+    index <- which(sample.metadata$cell.type=="iPSC")
+    cell.ids.1 <- sample.metadata[index, "cell.id"]
+    length(cell.ids.1)
+    # Cardio day 10
+    index <- which(sample.metadata$cell.type=="Cardio day 10")
+    cell.ids.2 <- sample.metadata[index, "cell.id"]
+    length(cell.ids.2)
+
+    # Save into list
+    cell.group.list <- list("iPSC"=cell.ids.1,
+                            "Cardio d10"=cell.ids.2
+                            )
+    
+# Plot cell groups
+marvel <- PlotValues.PCA.CellGroup.10x(MarvelObject=marvel,
+                                       cell.group.list=cell.group.list,
+                                       legendtitle="Cell group",
+                                       type="tsne"
+                                       )
+
+plot_group <- marvel$adhocPlot$PCA$CellGroup
+
+# Plot gene expression
+marvel <- PlotValues.PCA.Gene.10x(MarvelObject=marvel,
+                                  gene_short_name="VIM",
+                                  color.gradient=c("grey","cyan","green","yellow","red"),
+                                  type="tsne"
+                                  )
 
 
+plot_gene <- marvel$adhocPlot$PCA$Gene
+
+# Plot PSI
+marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
+                                 coord.intron="chr10:17235390:17235845",
+                                 min.gene.count=3,
+                                 log2.transform=FALSE,
+                                 color.gradient=c("grey","cyan","green","yellow","red"),
+                                 type="tsne"
+                                 )
+ 
+plot_sj <- marvel$adhocPlot$PCA$PSI
+
+# Arrange and view plots
+grid.arrange(plot_group, plot_gene, plot_sj, nrow=1)
+
+```
+
+```{r opposing splicing tSNE}
+# Plot gene expression
+marvel <- PlotValues.PCA.Gene.10x(MarvelObject=marvel,
+                                  gene_short_name="UQCRH",
+                                  color.gradient=c("grey","cyan","green","yellow","red"),
+                                  type="tsne"
+                                  )
+
+
+plot_gene <- marvel$adhocPlot$PCA$Gene
+
+# Plot PSI
+marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
+                                 coord.intron="chr1:46310317:46316551",
+                                 min.gene.count=3,
+                                 log2.transform=FALSE,
+                                 color.gradient=c("grey","cyan","green","yellow","red"),
+                                 type="tsne"
+                                 )
+ 
+plot_sj <- marvel$adhocPlot$PCA$PSI
+
+# Arrange and view plots
+grid.arrange(plot_group, plot_gene, plot_sj, nrow=1)
+
+```
+
+```{r iso switch tsne}
+
+# Plot gene expression
+marvel <- PlotValues.PCA.Gene.10x(MarvelObject=marvel,
+                                  gene_short_name="RBM39",
+                                  color.gradient=c("grey","cyan","green","yellow","red"),
+                                  type="tsne"
+                                  )
+
+
+plot_gene <- marvel$adhocPlot$PCA$Gene
+
+# Plot PSI: SJ-1
+marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
+                                 coord.intron="chr20:35740888:35741940",
+                                 min.gene.count=3,
+                                 log2.transform=FALSE,
+                                 color.gradient=c("grey","cyan","green","yellow","red"),
+                                 type="tsne"
+                                 )
+ 
+plot_sj_1 <- marvel$adhocPlot$PCA$PSI
+
+# Plot PSI: SJ-2
+marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
+                                 coord.intron="chr20:35739018:35740823",
+                                 min.gene.count=3,
+                                 log2.transform=FALSE,
+                                 color.gradient=c("grey","cyan","green","yellow","red"),
+                                 type="tsne"
+                                 )
+ 
+plot_sj_2 <- marvel$adhocPlot$PCA$PSI
+
+# Arrange and view plots
+grid.arrange(plot_gene, plot_sj_1, plot_sj_2, nrow=1)
+```
+
+```{r complex splicing tSNE}
+
+# Gene 1
+  # Plot gene expression
+  marvel <- PlotValues.PCA.Gene.10x(MarvelObject=marvel,
+                                    gene_short_name="TPM1",
+                                    color.gradient=c("grey","cyan","green","yellow","red"),
+                                    type="tsne"
+                                    )
+
+  plot.1_gene <- marvel$adhocPlot$PCA$Gene
+  
+  # Plot PSI: SJ-1
+  marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
+                                   coord.intron="chr15:63064143:63065895",
+                                   min.gene.count=3,
+                                   log2.transform=FALSE,
+                                   color.gradient=c("grey","cyan","green","yellow","red"),
+                                   type="tsne"
+                                   )
+   
+  plot.1_sj_1 <- marvel$adhocPlot$PCA$PSI
+  
+  # Plot PSI: SJ-2
+  marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
+                                   coord.intron="chr15:63044153:63056984",
+                                   min.gene.count=3,
+                                   log2.transform=FALSE,
+                                   color.gradient=c("grey","cyan","green","yellow","red"),
+                                   type="tsne"
+                                   )
+   
+  plot.1_sj_2 <- marvel$adhocPlot$PCA$PSI
+
+# Gene 2
+  # Plot gene expression
+  marvel <- PlotValues.PCA.Gene.10x(MarvelObject=marvel,
+                                    gene_short_name="TPM2",
+                                    color.gradient=c("grey","cyan","green","yellow","red"),
+                                    type="tsne"
+                                    )
+  
+  
+  plot.2_gene <- marvel$adhocPlot$PCA$Gene
+  
+  # Plot PSI: SJ-1
+  marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
+                                   coord.intron="chr9:35684808:35685268",
+                                   min.gene.count=3,
+                                   log2.transform=FALSE,
+                                   color.gradient=c("grey","cyan","green","yellow","red"),
+                                   type="tsne"
+                                   )
+   
+  plot.2_sj_1 <- marvel$adhocPlot$PCA$PSI
+  
+  # Plot PSI: SJ-2
+  marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
+                                   coord.intron="chr9:35684551:35685063",
+                                   min.gene.count=3,
+                                   log2.transform=FALSE,
+                                   color.gradient=c("grey","cyan","green","yellow","red"),
+                                   type="tsne"
+                                   )
+   
+  plot.2_sj_2 <- marvel$adhocPlot$PCA$PSI
+  
+# Arrange and view plots
+grid.arrange(plot.1_gene, plot.1_sj_1, plot.1_sj_2, 
+             plot.2_gene, plot.2_sj_1, plot.2_sj_2,
+             nrow=2
+             )
+```
+
+```{r}
+```
+
+```{r}
+```
 
 
 
