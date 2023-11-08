@@ -569,13 +569,200 @@ marvel <- BioPathways.10x(
 head(marvel$DE$BioPathways$Table)
 ```
 
-```{r}
+Getting "Error: database or disk is full", but I definitely have enough memory
+
+### Candidate gene analysis
+
+```{r define cell groups}
+# Retrieve sample metadata
+sample.metadata <- marvel$sample.metadata
+
+# iPSC
+index <- which(sample.metadata$cell.type=="iPSC")
+cell.ids.1 <- sample.metadata[index, "cell.id"]
+length(cell.ids.1)
+
+# Cardio day 2
+index <- which(sample.metadata$cell.type=="Cardio day 2")
+cell.ids.2 <- sample.metadata[index, "cell.id"]
+length(cell.ids.2)
+
+# Cardio day 4
+index <- which(sample.metadata$cell.type=="Cardio day 4")
+cell.ids.3 <- sample.metadata[index, "cell.id"]
+length(cell.ids.3)
+
+# Cardio day 10
+index <- which(sample.metadata$cell.type=="Cardio day 10")
+cell.ids.4 <- sample.metadata[index, "cell.id"]
+length(cell.ids.4)
+
+# Save into list
+cell.group.list <- list("iPSC"=cell.ids.1,
+                        "day2"=cell.ids.2,
+                        "day4"=cell.ids.3,
+                        "day10"=cell.ids.4
+                        )
+
+
 ```
 
+```{r gene expression profiling}
 
+marvel <- adhocGene.TabulateExpression.Gene.10x(MarvelObject=marvel,
+                                                cell.group.list=cell.group.list,
+                                                gene_short_name="TPM2",
+                                                min.pct.cells=10,
+                                                downsample=TRUE
+                                                )
 
+marvel$adhocGene$Expression$Gene$Plot
 
+marvel$adhocGene$Expression$Gene$Table
 
+```
+```{r SJ usage profiling}
+
+marvel <- adhocGene.TabulateExpression.PSI.10x(MarvelObject=marvel,
+                                               min.pct.cells=10
+                                               )
+
+marvel$adhocGene$Expression$PSI$Plot
+
+head(marvel$adhocGene$Expression$PSI$Table)
+
+```
+```{r gene splicing relationship}
+# Perform DGE analysis for all pairwise group comparison
+marvel <- adhocGene.DE.Gene.10x(MarvelObject=marvel)
+
+# Perform PSI expression analysis for all pairwise group comparison
+marvel <- adhocGene.DE.PSI.10x(MarvelObject=marvel)
+
+# Retrieve SJ DE results table
+results <- marvel$adhocGene$DE$PSI$Data
+
+# SJ-1
+  # Define SJ
+  coord.intron <- results[which(results$figure.column=="SJ-1"), "coord.intron"]
+  coord.intron <- unique(coord.intron)
+  coord.intron
+
+  # Plot
+  marvel <- adhocGene.PlotDEValues.10x(MarvelObject=marvel,
+                                       coord.intron=coord.intron,
+                                       log2fc.gene=0.5,
+                                       delta.sj=5,
+                                       label.size=2,
+                                       point.size=2,
+                                       xmin=-2.0,
+                                       xmax=2.0,
+                                       ymin=-25,
+                                       ymax=25
+                                       )
+
+  plot.1 <- marvel$adhocGene$DE$VolcanoPlot$Plot
+
+# SJ-2
+  # Define SJ
+  coord.intron <- results[which(results$figure.column=="SJ-2"), "coord.intron"]
+  coord.intron <- unique(coord.intron)
+  coord.intron
+
+  # Plot
+  marvel <- adhocGene.PlotDEValues.10x(MarvelObject=marvel,
+                                       coord.intron=coord.intron,
+                                       log2fc.gene=0.5,
+                                       delta.sj=5,
+                                       label.size=2,
+                                       point.size=2,
+                                       xmin=-2.0,
+                                       xmax=2.0,
+                                       ymin=-25,
+                                       ymax=25
+                                       )
+                                         
+  plot.2 <- marvel$adhocGene$DE$VolcanoPlot$Plot    
+
+# SJ-3
+    # Define SJ
+    coord.intron <- results[which(results$figure.column=="SJ-3"), "coord.intron"]
+    coord.intron <- unique(coord.intron)
+    coord.intron
+
+    # Plot
+    marvel <- adhocGene.PlotDEValues.10x(MarvelObject=marvel,
+                                         coord.intron=coord.intron,
+                                         log2fc.gene=0.5,
+                                         delta.sj=5,
+                                         label.size=2,
+                                         point.size=2,
+                                         xmin=-2.0,
+                                         xmax=2.0,
+                                         ymin=-25,
+                                         ymax=25
+                                         )
+                                         
+    plot.3 <- marvel$adhocGene$DE$VolcanoPlot$Plot    
+
+# Arrange and view plots
+grid.arrange(plot.1, plot.2, plot.3,
+             nrow=3
+             )
+```
+locate SJ positions
+
+```{r locate SJ poisitions}
+
+# SJ-1
+    # Define SJs to plot
+    coord.intron <- results[which(results$figure.column=="SJ-1"), "coord.intron"]
+    coord.intron <- unique(coord.intron)
+    coord.intron
+
+    # Plot
+    marvel <- adhocGene.PlotSJPosition.10x(MarvelObject=marvel,
+                                          coord.intron=coord.intron,
+                                          rescale_introns=FALSE,
+                                          show.protein.coding.only=TRUE,
+                                          anno.label.size=1.5
+                                          )
+    
+    marvel$adhocGene$SJPosition$Plot
+
+# SJ-2
+    # Define SJs to plot
+    coord.intron <- results[which(results$figure.column=="SJ-2"), "coord.intron"]
+    coord.intron <- unique(coord.intron)
+    coord.intron
+
+    # Plot
+    marvel <- adhocGene.PlotSJPosition.10x(MarvelObject=marvel,
+                                          coord.intron=coord.intron,
+                                          rescale_introns=FALSE,
+                                          show.protein.coding.only=TRUE,
+                                          anno.label.size=1.5
+                                          )
+    
+    marvel$adhocGene$SJPosition$Plot
+
+# SJ-3
+    # Define SJs to plot
+    coord.intron <- results[which(results$figure.column=="SJ-3"), "coord.intron"]
+    coord.intron <- unique(coord.intron)
+    coord.intron
+
+    # Plot
+    marvel <- adhocGene.PlotSJPosition.10x(MarvelObject=marvel,
+                                          coord.intron=coord.intron,
+                                          rescale_introns=FALSE,
+                                          show.protein.coding.only=TRUE,
+                                          anno.label.size=1.5
+                                          )
+    
+    marvel$adhocGene$SJPosition$Plot
+
+```
 
 
 ```{r tidy script}
