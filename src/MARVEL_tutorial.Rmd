@@ -73,16 +73,20 @@ df.gene.norm <- readMM(paste(path, file, sep = ""))
 df.gene.norm[df.gene.norm[, 1] != 0, ][1:5, 1:5]
 
 # cell metadata
-path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/Gene_SingCellaR/"
 file <- "phenoData.txt"
-df.gene.norm.pheno <- read.table(paste(path, file, sep = ""), sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+df.gene.norm.pheno <- read.table(paste(path, file, sep = ""),
+  sep = "\t",
+  header = TRUE, stringsAsFactors = FALSE
+)
 
 head(df.gene.norm.pheno)
 
 # gene metadata
-path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/Gene_SingCellaR/"
 file <- "featureData.txt"
-df.gene.norm.feature <- read.table(paste(path, file, sep = ""), sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+df.gene.norm.feature <- read.table(paste(path, file, sep = ""),
+  sep = "\t",
+  header = TRUE, stringsAsFactors = FALSE
+)
 
 head(df.gene.norm.feature)
 ```
@@ -99,16 +103,20 @@ df.gene.count <- readMM(paste(path, file, sep = ""))
 df.gene.count[df.gene.count[, 1] != 0, ][1:5, 1:5]
 
 # cell metadata
-path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/Gene_STARsolo/"
 file <- "phenoData.txt"
-df.gene.count.pheno <- read.table(paste(path, file, sep = ""), sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+df.gene.count.pheno <- read.table(paste(path, file, sep = ""),
+  sep = "\t",
+  header = TRUE, stringsAsFactors = FALSE
+)
 
 head(df.gene.count.pheno)
 
 # feature metadata
-path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/Gene_STARsolo/"
 file <- "featureData.txt"
-df.gene.count.feature <- read.table(paste(path, file, sep = ""), sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+df.gene.count.feature <- read.table(paste(path, file, sep = ""),
+  sep = "\t",
+  header = TRUE, stringsAsFactors = FALSE
+)
 
 head(df.gene.count.feature)
 ```
@@ -125,15 +133,20 @@ df.sj.count <- readMM(paste(path, file, sep = ""))
 df.sj.count[df.sj.count[, 1] != 0, ][1:5, 1:5]
 
 # cell metadata
-path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/SJ_STARsolo/"
 file <- "phenoData.txt"
-df.sj.count.pheno <- read.table(paste(path, file, sep = ""), sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+df.sj.count.pheno <- read.table(paste(path, file, sep = ""),
+  sep = "\t",
+  header = TRUE, stringsAsFactors = FALSE
+)
 
 head(df.sj.count.pheno)
 
-path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/SJ_STARsolo/"
+
 file <- "featureData.txt"
-df.sj.count.feature <- read.table(paste(path, file, sep = ""), sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+df.sj.count.feature <- read.table(paste(path, file, sep = ""),
+  sep = "\t",
+  header = TRUE, stringsAsFactors = FALSE
+)
 
 head(df.sj.count.feature)
 ```
@@ -149,7 +162,10 @@ head(df.coord)
 
 path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/GTF/"
 file <- "refdata-cellranger-GRCh38-3.0.0.gtf"
-gtf <- as.data.frame(fread(paste(path, file, sep = ""), sep = "\t", header = FALSE, stringsAsFactors = FALSE))
+gtf <- as.data.frame(fread(paste(path, file, sep = ""),
+  sep = "\t",
+  header = FALSE, stringsAsFactors = FALSE
+))
 ```
 
 Finally, with all this data we can make the MARVEL object
@@ -199,6 +215,7 @@ marvel <- FilterGenes.10x(
 ```{r check marvel object}
 marvel <- CheckAlignment.10x(MarvelObject = marvel)
 ```
+
 object is matching and ready for the rest of analysis, so we can save this object
 
 ```{r save marvel object}
@@ -206,293 +223,350 @@ object is matching and ready for the rest of analysis, so we can save this objec
 path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/R Object/"
 file <- "MARVEL_EJ.RData"
 save(marvel, file = paste(path, file, sep = ""))
+```
 
+If needed, this is a stopping point where you can load your data.
+
+```{r load marvel object if needed}
 # Load object
 path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/R Object/"
 file <- "MARVEL_EJ.RData"
-load(paste(path, file, sep=""))
-
+load(paste(path, file, sep = ""))
 ```
 
 ## Explore expression
 
 ```{r gene expression rate}
-
 # Define cell groups
-    # Retrieve sample metadata
-    sample.metadata <- marvel$sample.metadata
-    
-    # Group 1 (reference)
-    index <- which(sample.metadata$cell.type=="iPSC")
-    cell.ids.1 <- sample.metadata[index, "cell.id"]
-    length(cell.ids.1)
-    # Group 2
-    index <- which(sample.metadata$cell.type=="Cardio day 10")
-    cell.ids.2 <- sample.metadata[index, "cell.id"]
-    length(cell.ids.2)
-    
+# Retrieve sample metadata
+sample.metadata <- marvel$sample.metadata
+
+# Group 1 (reference)
+index <- which(sample.metadata$cell.type == "iPSC")
+cell.ids.1 <- sample.metadata[index, "cell.id"]
+length(cell.ids.1)
+# Group 2
+index <- which(sample.metadata$cell.type == "Cardio day 10")
+cell.ids.2 <- sample.metadata[index, "cell.id"]
+length(cell.ids.2)
+
 # Explore % of cells expressing genes
-marvel <- PlotPctExprCells.Genes.10x(MarvelObject=marvel,
-                                     cell.group.g1=cell.ids.1,
-                                     cell.group.g2=cell.ids.2,
-                                     min.pct.cells=5
-                                     )
+marvel <- PlotPctExprCells.Genes.10x(
+  MarvelObject = marvel,
+  cell.group.g1 = cell.ids.1,
+  cell.group.g2 = cell.ids.2,
+  min.pct.cells = 5
+)
 
 marvel$pct.cells.expr$Gene$Plot
 
 head(marvel$pct.cells.expr$Gene$Data)
 ```
 
+Now, you can do this differential splicing analysis - this step takes about 20 min
+
 ```{r differential splicing analysis}
-
-marvel <- CompareValues.SJ.10x(MarvelObject=marvel,
-                               cell.group.g1=cell.ids.1,
-                               cell.group.g2=cell.ids.2,
-                               min.pct.cells.genes=10,
-                               min.pct.cells.sj=10,
-                               min.gene.norm=1.0,
-                               seed=1,
-                               n.iterations=100,
-                               downsample=TRUE,
-                               show.progress=TRUE
-                               )
-
+marvel <- CompareValues.SJ.10x(
+  MarvelObject = marvel,
+  cell.group.g1 = cell.ids.1,
+  cell.group.g2 = cell.ids.2,
+  min.pct.cells.genes = 10,
+  min.pct.cells.sj = 10,
+  min.gene.norm = 1.0,
+  seed = 1,
+  n.iterations = 100,
+  downsample = TRUE,
+  show.progress = TRUE
+)
 ```
 
+This last step takes a while, so you might want to save after this step as well.
+
+```{r save marvel object}
+# Save object
+path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/R Object/"
+file <- "MARVEL_EJ_splicing.RData"
+save(marvel, file = paste(path, file, sep = ""))
+```
+
+If needed, this is another stopping point where you can load your data.
+
+```{r load marvel object if needed}
+# Load object
+path <- "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/MARVEL_tutorial/Data/R Object/"
+file <- "MARVEL_EJ_splicing.RData"
+load(paste(path, file, sep = ""))
+```
+
+Differential gene analysis doesn't take quite as long, so no need to save after this step.
+
 ```{r differential gene analysis}
-marvel <- CompareValues.Genes.10x(MarvelObject=marvel,
-                                  show.progress=TRUE
-                                  )
+marvel <- CompareValues.Genes.10x(
+  MarvelObject = marvel,
+  show.progress = TRUE
+)
 
 head(marvel$DE$SJ$Table)
 ```
 
 ```{r splicing volcano plot}
-
-marvel <- PlotDEValues.SJ.10x(MarvelObject=marvel,
-                              pval=0.05,
-                              delta=5,
-                              min.gene.norm=1.0,
-                              anno=FALSE
-                              )
+marvel <- PlotDEValues.SJ.10x(
+  MarvelObject = marvel,
+  pval = 0.05,
+  delta = 5,
+  min.gene.norm = 1.0,
+  anno = FALSE
+)
 
 marvel$DE$SJ$VolcanoPlot$SJ$Plot
 
-head(marvel$DE$SJ$VolcanoPlot$SJ$Data[,c("coord.intron", "gene_short_name", "sig")])
+head(marvel$DE$SJ$VolcanoPlot$SJ$Data[, c(
+  "coord.intron",
+  "gene_short_name",
+  "sig"
+)])
 ```
 
 ```{r assign splicing dynamics}
-
-marvel <- IsoSwitch.10x(MarvelObject=marvel,
-                        pval.sj=0.05,
-                        delta.sj=5,
-                        min.gene.norm=1.0,
-                        pval.adj.gene=0.05,
-                        log2fc.gene=0.5
-                        )
+marvel <- IsoSwitch.10x(
+  MarvelObject = marvel,
+  pval.sj = 0.05,
+  delta.sj = 5,
+  min.gene.norm = 1.0,
+  pval.adj.gene = 0.05,
+  log2fc.gene = 0.5
+)
 
 marvel$SJ.Gene.Cor$Proportion$Plot
 
 marvel$SJ.Gene.Cor$Proportion$Table
 
-head(marvel$SJ.Gene.Cor$Data[,c("coord.intron", "gene_short_name", "cor.complete")])
+head(marvel$SJ.Gene.Cor$Data[, c(
+  "coord.intron",
+  "gene_short_name",
+  "cor.complete"
+)])
 ```
 
+## Plot tSNEs
 
 ```{r coordinated gene splciing dynamic tSNE}
 # Define cell groups
-    # Retrieve sample metadata
-    sample.metadata <- marvel$sample.metadata
-    
-    # iPSC
-    index <- which(sample.metadata$cell.type=="iPSC")
-    cell.ids.1 <- sample.metadata[index, "cell.id"]
-    length(cell.ids.1)
-    # Cardio day 10
-    index <- which(sample.metadata$cell.type=="Cardio day 10")
-    cell.ids.2 <- sample.metadata[index, "cell.id"]
-    length(cell.ids.2)
+# Retrieve sample metadata
+sample.metadata <- marvel$sample.metadata
 
-    # Save into list
-    cell.group.list <- list("iPSC"=cell.ids.1,
-                            "Cardio d10"=cell.ids.2
-                            )
-    
+# iPSC
+index <- which(sample.metadata$cell.type == "iPSC")
+cell.ids.1 <- sample.metadata[index, "cell.id"]
+length(cell.ids.1)
+# Cardio day 10
+index <- which(sample.metadata$cell.type == "Cardio day 10")
+cell.ids.2 <- sample.metadata[index, "cell.id"]
+length(cell.ids.2)
+
+# Save into list
+cell.group.list <- list(
+  "iPSC" = cell.ids.1,
+  "Cardio d10" = cell.ids.2
+)
+
 # Plot cell groups
-marvel <- PlotValues.PCA.CellGroup.10x(MarvelObject=marvel,
-                                       cell.group.list=cell.group.list,
-                                       legendtitle="Cell group",
-                                       type="tsne"
-                                       )
+marvel <- PlotValues.PCA.CellGroup.10x(
+  MarvelObject = marvel,
+  cell.group.list = cell.group.list,
+  legendtitle = "Cell group",
+  type = "tsne"
+)
 
 plot_group <- marvel$adhocPlot$PCA$CellGroup
 
 # Plot gene expression
-marvel <- PlotValues.PCA.Gene.10x(MarvelObject=marvel,
-                                  gene_short_name="VIM",
-                                  color.gradient=c("grey","cyan","green","yellow","red"),
-                                  type="tsne"
-                                  )
+marvel <- PlotValues.PCA.Gene.10x(
+  MarvelObject = marvel,
+  gene_short_name = "VIM",
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
 
 
 plot_gene <- marvel$adhocPlot$PCA$Gene
 
 # Plot PSI
-marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
-                                 coord.intron="chr10:17235390:17235845",
-                                 min.gene.count=3,
-                                 log2.transform=FALSE,
-                                 color.gradient=c("grey","cyan","green","yellow","red"),
-                                 type="tsne"
-                                 )
- 
+marvel <- PlotValues.PCA.PSI.10x(
+  MarvelObject = marvel,
+  coord.intron = "chr10:17235390:17235845",
+  min.gene.count = 3,
+  log2.transform = FALSE,
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
+
 plot_sj <- marvel$adhocPlot$PCA$PSI
 
 # Arrange and view plots
-grid.arrange(plot_group, plot_gene, plot_sj, nrow=1)
-
+grid.arrange(plot_group, plot_gene, plot_sj, nrow = 1)
 ```
 
 ```{r opposing splicing tSNE}
 # Plot gene expression
-marvel <- PlotValues.PCA.Gene.10x(MarvelObject=marvel,
-                                  gene_short_name="UQCRH",
-                                  color.gradient=c("grey","cyan","green","yellow","red"),
-                                  type="tsne"
-                                  )
+marvel <- PlotValues.PCA.Gene.10x(
+  MarvelObject = marvel,
+  gene_short_name = "UQCRH",
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
 
 
 plot_gene <- marvel$adhocPlot$PCA$Gene
 
 # Plot PSI
-marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
-                                 coord.intron="chr1:46310317:46316551",
-                                 min.gene.count=3,
-                                 log2.transform=FALSE,
-                                 color.gradient=c("grey","cyan","green","yellow","red"),
-                                 type="tsne"
-                                 )
- 
+marvel <- PlotValues.PCA.PSI.10x(
+  MarvelObject = marvel,
+  coord.intron = "chr1:46310317:46316551",
+  min.gene.count = 3,
+  log2.transform = FALSE,
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
+
 plot_sj <- marvel$adhocPlot$PCA$PSI
 
 # Arrange and view plots
-grid.arrange(plot_group, plot_gene, plot_sj, nrow=1)
-
+grid.arrange(plot_group, plot_gene, plot_sj, nrow = 1)
 ```
 
 ```{r iso switch tsne}
-
 # Plot gene expression
-marvel <- PlotValues.PCA.Gene.10x(MarvelObject=marvel,
-                                  gene_short_name="RBM39",
-                                  color.gradient=c("grey","cyan","green","yellow","red"),
-                                  type="tsne"
-                                  )
+marvel <- PlotValues.PCA.Gene.10x(
+  MarvelObject = marvel,
+  gene_short_name = "RBM39",
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
 
 
 plot_gene <- marvel$adhocPlot$PCA$Gene
 
 # Plot PSI: SJ-1
-marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
-                                 coord.intron="chr20:35740888:35741940",
-                                 min.gene.count=3,
-                                 log2.transform=FALSE,
-                                 color.gradient=c("grey","cyan","green","yellow","red"),
-                                 type="tsne"
-                                 )
- 
+marvel <- PlotValues.PCA.PSI.10x(
+  MarvelObject = marvel,
+  coord.intron = "chr20:35740888:35741940",
+  min.gene.count = 3,
+  log2.transform = FALSE,
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
+
 plot_sj_1 <- marvel$adhocPlot$PCA$PSI
 
 # Plot PSI: SJ-2
-marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
-                                 coord.intron="chr20:35739018:35740823",
-                                 min.gene.count=3,
-                                 log2.transform=FALSE,
-                                 color.gradient=c("grey","cyan","green","yellow","red"),
-                                 type="tsne"
-                                 )
- 
+marvel <- PlotValues.PCA.PSI.10x(
+  MarvelObject = marvel,
+  coord.intron = "chr20:35739018:35740823",
+  min.gene.count = 3,
+  log2.transform = FALSE,
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
+
 plot_sj_2 <- marvel$adhocPlot$PCA$PSI
 
 # Arrange and view plots
-grid.arrange(plot_gene, plot_sj_1, plot_sj_2, nrow=1)
+grid.arrange(plot_gene, plot_sj_1, plot_sj_2, nrow = 1)
 ```
 
 ```{r complex splicing tSNE}
-
 # Gene 1
-  # Plot gene expression
-  marvel <- PlotValues.PCA.Gene.10x(MarvelObject=marvel,
-                                    gene_short_name="TPM1",
-                                    color.gradient=c("grey","cyan","green","yellow","red"),
-                                    type="tsne"
-                                    )
+# Plot gene expression
+marvel <- PlotValues.PCA.Gene.10x(
+  MarvelObject = marvel,
+  gene_short_name = "TPM1",
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
 
-  plot.1_gene <- marvel$adhocPlot$PCA$Gene
-  
-  # Plot PSI: SJ-1
-  marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
-                                   coord.intron="chr15:63064143:63065895",
-                                   min.gene.count=3,
-                                   log2.transform=FALSE,
-                                   color.gradient=c("grey","cyan","green","yellow","red"),
-                                   type="tsne"
-                                   )
-   
-  plot.1_sj_1 <- marvel$adhocPlot$PCA$PSI
-  
-  # Plot PSI: SJ-2
-  marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
-                                   coord.intron="chr15:63044153:63056984",
-                                   min.gene.count=3,
-                                   log2.transform=FALSE,
-                                   color.gradient=c("grey","cyan","green","yellow","red"),
-                                   type="tsne"
-                                   )
-   
-  plot.1_sj_2 <- marvel$adhocPlot$PCA$PSI
+plot.1_gene <- marvel$adhocPlot$PCA$Gene
+
+# Plot PSI: SJ-1
+marvel <- PlotValues.PCA.PSI.10x(
+  MarvelObject = marvel,
+  coord.intron = "chr15:63064143:63065895",
+  min.gene.count = 3,
+  log2.transform = FALSE,
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
+
+plot.1_sj_1 <- marvel$adhocPlot$PCA$PSI
+
+# Plot PSI: SJ-2
+marvel <- PlotValues.PCA.PSI.10x(
+  MarvelObject = marvel,
+  coord.intron = "chr15:63044153:63056984",
+  min.gene.count = 3,
+  log2.transform = FALSE,
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
+
+plot.1_sj_2 <- marvel$adhocPlot$PCA$PSI
 
 # Gene 2
-  # Plot gene expression
-  marvel <- PlotValues.PCA.Gene.10x(MarvelObject=marvel,
-                                    gene_short_name="TPM2",
-                                    color.gradient=c("grey","cyan","green","yellow","red"),
-                                    type="tsne"
-                                    )
-  
-  
-  plot.2_gene <- marvel$adhocPlot$PCA$Gene
-  
-  # Plot PSI: SJ-1
-  marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
-                                   coord.intron="chr9:35684808:35685268",
-                                   min.gene.count=3,
-                                   log2.transform=FALSE,
-                                   color.gradient=c("grey","cyan","green","yellow","red"),
-                                   type="tsne"
-                                   )
-   
-  plot.2_sj_1 <- marvel$adhocPlot$PCA$PSI
-  
-  # Plot PSI: SJ-2
-  marvel <- PlotValues.PCA.PSI.10x(MarvelObject=marvel,
-                                   coord.intron="chr9:35684551:35685063",
-                                   min.gene.count=3,
-                                   log2.transform=FALSE,
-                                   color.gradient=c("grey","cyan","green","yellow","red"),
-                                   type="tsne"
-                                   )
-   
-  plot.2_sj_2 <- marvel$adhocPlot$PCA$PSI
-  
+# Plot gene expression
+marvel <- PlotValues.PCA.Gene.10x(
+  MarvelObject = marvel,
+  gene_short_name = "TPM2",
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
+
+
+plot.2_gene <- marvel$adhocPlot$PCA$Gene
+
+# Plot PSI: SJ-1
+marvel <- PlotValues.PCA.PSI.10x(
+  MarvelObject = marvel,
+  coord.intron = "chr9:35684808:35685268",
+  min.gene.count = 3,
+  log2.transform = FALSE,
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
+
+plot.2_sj_1 <- marvel$adhocPlot$PCA$PSI
+
+# Plot PSI: SJ-2
+marvel <- PlotValues.PCA.PSI.10x(
+  MarvelObject = marvel,
+  coord.intron = "chr9:35684551:35685063",
+  min.gene.count = 3,
+  log2.transform = FALSE,
+  color.gradient = c("grey", "cyan", "green", "yellow", "red"),
+  type = "tsne"
+)
+
+plot.2_sj_2 <- marvel$adhocPlot$PCA$PSI
+
 # Arrange and view plots
-grid.arrange(plot.1_gene, plot.1_sj_1, plot.1_sj_2, 
-             plot.2_gene, plot.2_sj_1, plot.2_sj_2,
-             nrow=2
-             )
+grid.arrange(plot.1_gene, plot.1_sj_1, plot.1_sj_2,
+  plot.2_gene, plot.2_sj_1, plot.2_sj_2,
+  nrow = 2
+)
 ```
 
-```{r}
+After all these visualizations, you can do downstream things like GO analysis
+
+```{r go analysis}
+marvel <- BioPathways.10x(
+  MarvelObject = marvel,
+  pval = 0.05,
+  delta = 5,
+  min.gene.norm = 1.0,
+  method.adjust = "fdr",
+  species = "human"
+)
+
+head(marvel$DE$BioPathways$Table)
 ```
 
 ```{r}
