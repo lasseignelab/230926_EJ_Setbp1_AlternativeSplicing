@@ -1,0 +1,174 @@
+---
+title: "Import Setbp1 Data into Seurat"
+author: "Emma Jones"
+date: "2023-11-15"
+output: html_document
+---
+
+The purpose of this script is to load in the nf-core scrnaseq pipeline results.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+
+```{r load packages}
+# Load Lasseigne Lab standard packages
+library(here)
+library(styler)
+library(lintr)
+
+# Load Seurat and other single-cell packages
+library(tidyverse)
+library(Seurat)
+library(patchwork)
+
+# set seed
+set.seed(123)
+```
+
+## Load in Data
+
+```{r load data}
+# brain sample 1
+brain_1_data <- Read10X(here("data", "nextflow", "star", "brain_1",
+                             "brain_1.Solo.out", "Gene", "filtered"))
+
+# brain sample 2
+brain_2_data <- Read10X(here("data", "nextflow", "star", "brain_2",
+                             "brain_2.Solo.out", "Gene", "filtered"))
+
+# brain sample 3
+brain_3_data <- Read10X(here("data", "nextflow", "star", "brain_3",
+                             "brain_3.Solo.out", "Gene", "filtered"))
+
+# brain sample 4
+brain_4_data <- Read10X(here("data", "nextflow", "star", "brain_4",
+                             "brain_4.Solo.out", "Gene", "filtered"))
+
+# brain sample 5
+brain_5_data <- Read10X(here("data", "nextflow", "star", "brain_5",
+                             "brain_5.Solo.out", "Gene", "filtered"))
+
+# brain sample 6
+brain_6_data <- Read10X(here("data", "nextflow", "star", "brain_6",
+                             "brain_6.Solo.out", "Gene", "filtered"))
+
+```
+
+Now that teh data has been imported, we can create the seurat object
+
+```{r create Seurat object}
+# brain sample 1 - S858R Cortex 1
+brain_1 <- CreateSeuratObject(counts = brain_1_data, project = "setbp1", min.cells = 3, min.features = 200)
+
+brain_1[["sample_id"]] <- "S858R_1"
+
+# brain sample 2 - WT Cortex 1
+brain_2 <- CreateSeuratObject(counts = brain_2_data, project = "setbp1", min.cells = 3, min.features = 200)
+
+brain_2[["sample_id"]] <- "WT_1"
+
+# brain sample 3 - WT Cortex 2
+brain_3 <- CreateSeuratObject(counts = brain_3_data, project = "setbp1", min.cells = 3, min.features = 200)
+
+brain_3[["sample_id"]] <- "WT_2"
+
+# brain sample 4 - WT Cortex 3
+brain_4 <- CreateSeuratObject(counts = brain_4_data, project = "setbp1", min.cells = 3, min.features = 200)
+
+brain_4[["sample_id"]] <- "WT_3"
+
+# brain sample 5 - S858R Cortex 2
+brain_5 <- CreateSeuratObject(counts = brain_5_data, project = "setbp1", min.cells = 3, min.features = 200)
+
+brain_5[["sample_id"]] <- "S858R_2"
+
+# brain sample 6 - S858R Cortex 3
+brain_6 <- CreateSeuratObject(counts = brain_6_data, project = "setbp1", min.cells = 3, min.features = 200)
+
+brain_6[["sample_id"]] <- "S858R_3"
+```
+
+Now we can merge these seurat objects
+
+```{r merge seurat objects}
+# merge wildtype samples
+wt_samples <- merge(brain_2, y = c(brain_3, brain_4),
+                    add.cell.ids = c("WT_1", "WT_2", "WT_3"),
+                    project = "setbp1")
+
+wt_samples[["condition"]] <- "wildtype"
+
+# merge S858R mutant samples
+mutant_samples <- merge(brain_1, y = c(brain_5, brain_6),
+                    add.cell.ids = c("S858R_1", "S858R_2", "S858R_3"),
+                    project = "setbp1")
+
+mutant_samples[["condition"]] <- "mutant"
+
+# merge all wildtype and mutant samples into one object
+all_brain_samples <- merge(wt_samples,
+                           y = mutant_samples,
+                           project = "setbp1")
+
+# view object
+all_brain_samples
+
+```
+
+This is 31041 features across 45630 cells
+
+```{r get percent_mt}
+
+all_brain_samples[["percent_mt"]] <- PercentageFeatureSet(all_brain_samples,
+                                                          pattern = "^mt-")
+
+```
+
+
+
+```{r look at QC metrics}
+
+VlnPlot(all_brain_samples,
+        features = c("nFeature_RNA", "nCount_RNA", "percent_mt"),
+        ncol = 3)
+
+plot1 <- FeatureScatter(all_brain_samples, feature1 = "nCount_RNA", feature2 = "percent_mt")
+
+plot2 <- FeatureScatter(all_brain_samples, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+
+plot1 + plot2
+```
+
+```{r subset data for downstream analysis}
+
+all_brain_samples <- subset(all_brain_samples,
+                            subset = nFeature_RNA > 200 & nFeature_RNA < 6500 &
+                              percent_mt < 5)
+
+all_brain_samples
+```
+
+This now becomes 31041 features across 45583 cells.
+
+```{r normalize data}
+
+all_brain_samples <- NormalizeData(all_brain_samples)
+
+```
+
+
+
+```{r save object}
+
+saveRDS(all_brain_samples,
+        file = here("data", "seurat", "all_brain_samples.rds"))
+
+```
+
+
+
+
+
