@@ -26,6 +26,9 @@ library(patchwork)
 
 # set seed
 set.seed(123)
+
+# source functions
+source(here("src", "functions.R"))
 ```
 
 ## Load in Data
@@ -57,7 +60,7 @@ brain_6_data <- Read10X(here("data", "nextflow", "star", "brain_6",
 
 ```
 
-Now that teh data has been imported, we can create the seurat object
+Now that the data has been imported, we can create the seurat object
 
 ```{r create Seurat object}
 # brain sample 1 - S858R Cortex 1
@@ -115,22 +118,24 @@ all_brain_samples <- merge(wt_samples,
 
 # view object
 all_brain_samples
-
 ```
 
 This is 31041 features across 45630 cells
 
-```{r get percent_mt}
+## Quality Control
 
+Now, we need to calculate and plot QC metrics. We can use Tabea Soelter's function to expedite this process.
+
+I'll start by getting the percent mitochondrial, but also run a modified version of QC from TS's functions.
+
+```{r get percent_mt}
 all_brain_samples[["percent_mt"]] <- PercentageFeatureSet(all_brain_samples,
                                                           pattern = "^mt-")
-
 ```
 
-
+I did a basic look at QC metrics as shown in the vignette, but we can also do our own QC.
 
 ```{r look at QC metrics}
-
 VlnPlot(all_brain_samples,
         features = c("nFeature_RNA", "nCount_RNA", "percent_mt"),
         ncol = 3)
@@ -142,32 +147,71 @@ plot2 <- FeatureScatter(all_brain_samples, feature1 = "nCount_RNA", feature2 = "
 plot1 + plot2
 ```
 
-```{r subset data for downstream analysis}
+Calculate more QC, specifically mitoRatio and log10GenesPerUMI
 
-all_brain_samples <- subset(all_brain_samples,
-                            subset = nFeature_RNA > 200 & nFeature_RNA < 6500 &
-                              percent_mt < 5)
+```{r calculate and plot more qc metrics}
+# calculate qc
+all_brain_samples <- calculate_qc(all_brain_samples)
 
-all_brain_samples
+# extra qc from metadata
+metadata <- format_metadata(all_brain_samples)
+
+# add this metadata back to seurat object
+all_brain_samples@meta.data <- metadata
+
+# plot results
+pdf(here("results", "seurat_outputs", "qc_plots.pdf"))
+
+plot_qc(metadata)
+
+dev.off()
 ```
 
-This now becomes 31041 features across 45583 cells.
+## Filtering
+
+Now, we can filter our cells with after evaluating the QC metrics.
+
+```{r subset data for downstream analysis}
+# cell-level filtering
+filtered_brain_samples <- subset(all_brain_samples,
+                            subset = nGene > 500 & nGene < 7000 &
+                              mitoRatio < 0.05 & log10GenesPerUMI > 0.85)
+
+# examine new filtered object
+filtered_brain_samples
+```
+
+This now becomes 45606 cells.
+
+Save object!
+
+```{r save object}
+# save
+saveRDS(filtered_brain_samples,
+        file = here("data", "seurat", "filtered_brain_samples.rds"))
+```
+
+## Evaluate cell cycle effects
+
+```{r evaluate cell cycle effects}
+
+pdf(here("results", "seurat_outputs", "cellcycle_pca.pdf"))
+
+filtered_brain_samples <- evaluate_cell_cycle(filtered_brain_samples)
+
+dev.off()
+
+```
+
+## Normalization and Integration
+
+
 
 ```{r normalize data}
 
 all_brain_samples <- NormalizeData(all_brain_samples)
 
 ```
-
-
-
-```{r save object}
-
-saveRDS(all_brain_samples,
-        file = here("data", "seurat", "all_brain_samples.rds"))
-
-```
-
 
 
 
