@@ -14,15 +14,19 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Loading Packages
 
 ```{r load packages}
-# Load Lasseigne Lab standard packages
-library(here)
-library(styler)
-library(lintr)
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
 
-# Load Seurat and other single-cell packages
-library(tidyverse)
-library(Seurat)
-library(patchwork)
+  # Load Seurat and other single-cell packages
+  library(tidyverse)
+  library(Seurat)
+  library(patchwork)
+  library(harmony)
+  library(presto)
+  })
 
 # set seed
 set.seed(123)
@@ -191,9 +195,9 @@ saveRDS(filtered_brain_samples,
         file = here("data", "seurat", "filtered_brain_samples.rds"))
 ```
 
-## Evaluate cell cycle effects
+## Evaluate cell cycle effects and run PCA
 
-```{r evaluate cell cycle effects}
+```{r evaluate cell cycle effects and run PCA}
 
 pdf(here("results", "seurat_outputs", "cellcycle_pca.pdf"))
 
@@ -203,16 +207,190 @@ dev.off()
 
 ```
 
-## Normalization and Integration
+Save object again!
 
+```{r save object again}
+# save
+saveRDS(filtered_brain_samples,
+        file = here("data", "seurat", "filtered_brain_samples.rds"))
+```
 
+## Harmony Integration
 
-```{r normalize data}
+```{r harmony integration and run umap}
 
-all_brain_samples <- NormalizeData(all_brain_samples)
+integrated_brain_samples <- RunHarmony(filtered_brain_samples,
+                              group.by.vars = "sample_id")
+
+integrated_brain_samples <- RunUMAP(integrated_brain_samples, dims = 1:25,
+                                  reduction = "harmony",
+                                  reduction.name = "umap_harmony")
+
+```
+Harmony converged after 9 iterations
+
+Save integrated object!
+
+```{r save integrated object}
+# save
+saveRDS(integrated_brain_samples,
+        file = here("data", "seurat", "integrated_brain_samples.rds"))
+```
+
+## Clustering
+
+```{r find clusters}
+
+resolutions <- c(0.5, 0.75, 0.9, 1, 1.1, 1.2, 1.25, 1.5, 1.75)
+
+clustered_brain_samples <- find_clusters(integrated_brain_samples, dims = 1:25,
+                                          reduction = "harmony",
+                                          resolutions = resolutions)
 
 ```
 
+Save clustered object!
+
+```{r save clustered object}
+# save
+saveRDS(clustered_brain_samples,
+        file = here("data", "seurat", "clustered_brain_samples.rds"))
+```
 
 
+```{r find markers}
+# set identity to best clustering after exploring data, I think 0.75 is enough
+clustered_brain_samples <- SetIdent(clustered_brain_samples, value = "RNA_snn_res.0.75")
 
+DimPlot(clustered_brain_samples)
+
+marker_genes <- FindAllMarkers(clustered_brain_samples,
+                               logfc.threshold = 0.2,
+                               assay = "RNA",
+                               min.pct = 0.01,
+                               only.pos = TRUE)
+
+top10 <- marker_genes %>%
+  group_by(cluster) %>%
+  top_n(-10, p_val_adj)
+```
+
+
+```{r featureplots}
+
+FeaturePlot(clustered_brain_samples, features = c("Slc17a7"),
+            label = TRUE) # excitatory neurons
+
+FeaturePlot(clustered_brain_samples, features = c("Foxp2"),
+            label = TRUE) # cluster in the middle
+
+FeaturePlot(clustered_brain_samples, features = c("Elavl4"),
+            label = TRUE)
+
+FeaturePlot(clustered_brain_samples, features = c("Slc1a3", "Gja1"),
+            label = TRUE)
+
+FeaturePlot(clustered_brain_samples, features = c("Sst"),
+            label = TRUE)
+FeaturePlot(clustered_brain_samples, features = c("Pvalb"),
+            label = TRUE)
+FeaturePlot(clustered_brain_samples, features = c("Vip"),
+            label = TRUE)
+FeaturePlot(clustered_brain_samples, features = c("Lamp5"),
+            label = TRUE)
+
+FeaturePlot(clustered_brain_samples, features = c("Cx3cr1"),
+            label = TRUE)
+FeaturePlot(clustered_brain_samples, features = c("Csf1r"),
+            label = TRUE)
+
+FeaturePlot(clustered_brain_samples, features = c("Slc1a3"),
+            label = TRUE)
+
+FeaturePlot(clustered_brain_samples, features = c("Mbp"),
+            label = TRUE) # oligodendrocytes
+FeaturePlot(clustered_brain_samples, features = c("Pdgfra"),
+            label = TRUE) # cluster 18 is OPCs?
+
+FeaturePlot(clustered_brain_samples, features = c("Nr4a2"),
+            label = TRUE) # I think 20 is fibroblasts
+
+FeaturePlot(clustered_brain_samples, features = c("Gad1"),
+            label = TRUE)
+
+FeaturePlot(clustered_brain_samples, features = c("Satb2"))
+
+FeaturePlot(clustered_brain_samples, features = c("Snap25"))
+```
+
+Look at cortical layer markers
+
+```{r cortical layer markers}
+
+# layer 2/3
+FeaturePlot(clustered_brain_samples, features = c("Lamp5"))
+# layer 2/4
+FeaturePlot(clustered_brain_samples, features = c("Cux2"))
+# layer 2/5
+FeaturePlot(clustered_brain_samples, features = c("Rasgrf2"))
+# layer 4/5
+FeaturePlot(clustered_brain_samples, features = c("Rorb"))
+# layer 5
+FeaturePlot(clustered_brain_samples, features = c("Kcnk2", "Sulf2", "Pcp4", "Fezf2"))
+# layer 5/6
+FeaturePlot(clustered_brain_samples, features = c("Etv1", "Rprm", "Rxfp1", "Foxp2"))
+# layer 6
+FeaturePlot(clustered_brain_samples, features = c("Syt6", "Oprk1", "Nr4a2", "Synpr"))
+
+```
+
+Assign cell types
+
+```{r assign cell types}
+
+annotated_brain_samples <- RenameIdents(clustered_brain_samples,
+                                        `1` = "Excitatory Neurons",
+                                        `2` = "Excitatory Neurons",
+                                        `3` = "Excitatory Neurons",
+                                        `4` = "Excitatory Neurons",
+                                        `5` = "Astrocytes",
+                                        `6` = "Inhibitory Neurons",
+                                        `7` = "Excitatory Neurons",
+                                        `8` = "Excitatory Neurons",
+                                        `9` = "Oligodendrocytes",
+                                        `10` = "Excitatory Neurons",
+                                        `11` = "Inhibitory Neurons",
+                                        `12` = "Excitatory Neurons",
+                                        `13` = "Inhibitory Neurons",
+                                        `14` = "Excitatory Neurons",
+                                        `15` = "Excitatory Neurons",
+                                        `16` = "Excitatory Neurons",
+                                        `17` = "Inhibitory Neurons",
+                                        `18` = "OPCs",
+                                        `19` = "Oligodendrocytes",
+                                        `20` = "Fibroblasts",
+                                        `21` = "Inhibitory Neurons",
+                                        `22` = "Microglia",
+                                        `23` = "Oligodendrocytes",
+                                        `24` = "Astrocytes",
+                                        `25` = "Excitatory Neurons",
+                                        `26` = "Excitatory Neurons"
+                                        )
+```
+
+Now that we have cell types identified, we can see what the final UMAP looks like.
+
+```{r plot final umap}
+png(here("results", "seurat_outputs", "annotated_umap.png"))
+DimPlot(clustered_brain_samples)
+dev.off()
+```
+
+
+Save annotated object!
+
+```{r save annotated object}
+# save
+saveRDS(annotated_brain_samples,
+        file = here("data", "seurat", "annotated_brain_samples.rds"))
+```

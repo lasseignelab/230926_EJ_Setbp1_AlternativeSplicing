@@ -115,7 +115,7 @@ evaluate_cell_cycle <- function(filtered_seurat){
   # convert human cell cycle markers to mouse -----
   s.genes <- convert_human_gene_list(cc.genes.updated.2019$s.genes)
   g2m.genes <- convert_human_gene_list(cc.genes.updated.2019$g2m.genes)
-  # EJ BUG FIX: JOIN LAYERS
+  # EJ V5 BUG FIX: JOIN LAYERS
   filtered_seurat <- JoinLayers(filtered_seurat)
   # score cells based in gex of genes -----
   filtered_seurat <- CellCycleScoring(filtered_seurat,
@@ -156,25 +156,4 @@ find_clusters <- function(object, dims, reduction, resolutions) {
                            method = "igraph")
   } 
   return(object)
-}
-
-## find_markers - c/o Tabea Soelter
-# A function allowing for individual FindMarkers analyses for a defined list of clusters
-find_markers <- function(object, resolution, identities, value){
-  # set resolution ----------
-  object <- SetIdent(object, value = resolution)
-  # create empty df ----------
-  top_markers <- data.frame()
-  # iterating through all unidentified clusters ----------
-  for (i in identities) {
-    # find marker genes ----------
-    markers <- FindMarkers(object, ident.1 = i, max.cells.per.ident = 100, logfc.threhold = 0.25, only.pos = TRUE)
-    # print out which cluster was completed ----------
-    print(paste0("Markers for cluster ", i))
-    # filter markers by specified value and adjusted p-value ----------
-    markers_filt <- markers %>% top_n(-value, p_val_adj) %>% add_column(cluster = i)
-    # bind empty df and filtered markers together ----------
-    top_markers <- rbind(top_markers, markers_filt)
-  }
-  return(top_markers)
 }
