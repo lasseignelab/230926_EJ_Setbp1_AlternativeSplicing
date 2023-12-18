@@ -1,0 +1,7 @@
+# run: conda env create --file environment.yml
+name: star
+channels:
+- bioconda
+dependencies:
+- star=2.7.10b
+- samtools

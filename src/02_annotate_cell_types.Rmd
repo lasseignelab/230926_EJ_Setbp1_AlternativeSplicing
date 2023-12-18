@@ -1,0 +1,181 @@
+---
+title: "Annotate Cell Types in Seurat"
+author: "Emma Jones"
+date: "2023-11-15"
+output: html_document
+---
+
+The purpose of this script is to annotate cell types in seurat.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+
+```{r load packages}
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
+
+  # Load Seurat and other single-cell packages
+  library(tidyverse)
+  library(Seurat)
+  library(patchwork)
+  library(harmony)
+  library(presto)
+  })
+
+# set seed
+set.seed(123)
+
+# source functions
+source(here("src", "functions.R"))
+```
+
+```{r load in data}
+
+clustered_brain_samples <- readRDS(here("data", "seurat",
+                                        "clustered_brain_samples.rds"))
+
+```
+
+```{r find markers}
+# set identity to best clustering after exploring data
+clustered_brain_samples <- SetIdent(clustered_brain_samples,
+                                    value = "RNA_snn_res.0.75")
+
+DimPlot(clustered_brain_samples, label = TRUE)
+
+marker_genes <- FindAllMarkers(clustered_brain_samples,
+                               logfc.threshold = 0.2,
+                               assay = "RNA",
+                               min.pct = 0.01,
+                               only.pos = TRUE)
+
+top10 <- marker_genes %>%
+  group_by(cluster) %>%
+  top_n(-10, p_val_adj)
+```
+
+
+```{r featureplots}
+
+FeaturePlot(clustered_brain_samples, features = c("Slc17a7"),
+            label = TRUE) # excitatory neurons
+
+FeaturePlot(clustered_brain_samples, features = c("Gad1"),
+            label = TRUE) # more inhibitory neurons - 11, 12, 9, 18
+
+FeaturePlot(clustered_brain_samples, features = c("Sst"),
+            label = TRUE) # sst inhibitory neurons - 12
+FeaturePlot(clustered_brain_samples, features = c("Pvalb"),
+            label = TRUE) # pvalb inhibitory neurons - 9
+FeaturePlot(clustered_brain_samples, features = c("Vip"),
+            label = TRUE) # vip - 11
+FeaturePlot(clustered_brain_samples, features = c("Lamp5"),
+            label = TRUE)
+```
+
+```{r more exploratory cluster annotation non-neuronal cells}
+FeaturePlot(clustered_brain_samples, features = c("Cx3cr1"),
+            label = TRUE) # microglia - 14
+
+FeaturePlot(clustered_brain_samples, features = c("Slc1a3", "Gja1"),
+            label = TRUE) # astrocytes - 3
+
+FeaturePlot(clustered_brain_samples, features = c("Vtn"),
+            label = TRUE) # 26
+
+FeaturePlot(clustered_brain_samples, features = c("Mbp"),
+            label = TRUE) # oligodendrocytes are 7, 20 ,22, 23, 31
+FeaturePlot(clustered_brain_samples, features = c("Pdgfra"),
+            label = TRUE) # cluster 13 is OPCs
+
+FeaturePlot(clustered_brain_samples, features = c("Nr4a2"),
+            label = TRUE) # I think 24 is fibroblasts
+
+FeaturePlot(clustered_brain_samples, features = c("Snap25"),
+            label = TRUE) # clusters 7, 20, 3, 14, 29, 31 seem to have no expression
+```
+
+Look at cortical layer markers
+
+```{r cortical layer markers}
+
+# layer 2/3
+FeaturePlot(clustered_brain_samples, features = c("Lamp5"), label = TRUE)
+# layer 2/4
+FeaturePlot(clustered_brain_samples, features = c("Cux2"), label = TRUE)
+# layer 2/5
+FeaturePlot(clustered_brain_samples, features = c("Rasgrf2"), label = TRUE)
+# layer 4/5
+FeaturePlot(clustered_brain_samples, features = c("Rorb"), label = TRUE)
+# layer 5
+FeaturePlot(clustered_brain_samples, features = c("Kcnk2", "Sulf2", "Pcp4", "Fezf2"), label = TRUE)
+# layer 5/6
+FeaturePlot(clustered_brain_samples, features = c("Etv1", "Rprm", "Rxfp1", "Foxp2"), label = TRUE)
+# layer 6
+FeaturePlot(clustered_brain_samples, features = c("Syt6", "Oprk1", "Nr4a2", "Synpr"), label = TRUE)
+
+```
+
+
+```{r subcluster if needed}
+
+
+```
+
+Assign cell types
+
+```{r assign cell types}
+
+annotated_brain_samples <- RenameIdents(clustered_brain_samples,
+                                        `1` = "Excitatory Neurons",
+                                        `2` = "Excitatory Neurons",
+                                        `3` = "Excitatory Neurons",
+                                        `4` = "Excitatory Neurons",
+                                        `5` = "Astrocytes",
+                                        `6` = "Inhibitory Neurons",
+                                        `7` = "Excitatory Neurons",
+                                        `8` = "Excitatory Neurons",
+                                        `9` = "Oligodendrocytes",
+                                        `10` = "Excitatory Neurons",
+                                        `11` = "Inhibitory Neurons",
+                                        `12` = "Excitatory Neurons",
+                                        `13` = "Inhibitory Neurons",
+                                        `14` = "Excitatory Neurons",
+                                        `15` = "Excitatory Neurons",
+                                        `16` = "Excitatory Neurons",
+                                        `17` = "Inhibitory Neurons",
+                                        `18` = "OPCs",
+                                        `19` = "Oligodendrocytes",
+                                        `20` = "Fibroblasts",
+                                        `21` = "Inhibitory Neurons",
+                                        `22` = "Microglia",
+                                        `23` = "Oligodendrocytes",
+                                        `24` = "Astrocytes",
+                                        `25` = "Excitatory Neurons",
+                                        `26` = "Excitatory Neurons",
+                                        `27` = ""
+                                        )
+```
+
+Now that we have cell types identified, we can see what the final UMAP looks like.
+
+```{r plot final umap}
+png(here("results", "seurat_outputs", "annotated_umap.png"))
+DimPlot(clustered_brain_samples)
+dev.off()
+```
+
+
+Save annotated object!
+
+```{r save annotated object}
+# save
+saveRDS(annotated_brain_samples,
+        file = here("data", "seurat", "annotated_brain_samples.rds"))
+```
