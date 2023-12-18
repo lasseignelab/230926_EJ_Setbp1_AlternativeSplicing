@@ -1,34 +1,30 @@
-README
+Examining cell-type specific patterns of alternative splicing of a
+Schinzel-Giedion Syndrome mouse model using snRNA-Seq data
 ================
-2023-02-27
-
-**EDIT THIS DOCUMENT, NOT README.md**
-
-# README Template
-
-**\[Replace this header with your project name\]**
-
-## Purpose
-
-**\[Replace this section with the purpose of your research project.\]**
-This is an R Markdown document created for the Lasseigne Lab R Project
-Template. The project and README template are designed to create
-standardized R projects for research ongoing in the [Lasseigne Lab at
-the University of Alabama at Birmingham](https://www.lasseigne.org/)
-
-## Installation/Dependencies OR Scripts
-
-**\[if project will be a package\]** - this section should be titled
-“Installation” Include a code chunk on how to install your package
-
-**\[if project will not be a package\]** - this section should be titled
-“Dependencies” or “Scripts” Include a code chunk (if relevant) on what
-your project depends on. Include a “script tree” on how to reproduce
-your results with descriptions for all scripts
+2023-12-18
 
 ## Authors
 
-List co-authors if known here.
+Emma F. Jones, Timothy C. Howton, Tabea M. Soelter, Brittany N.
+Lasseigne
+
+## Purpose
+
+The purpose of this project is to analyze cell-type specific patterns of
+alternative splicing in a rare neurodevelopmental disease model.
+
+## Scripts
+
+Include a code chunk (if relevant) on what your project depends on.
+Include a “script tree” on how to reproduce your results with
+descriptions for all scripts
+
+    ## src
+    ## ├── 01_import_filter_data.Rmd
+    ## ├── 02_annotate_cell_types.Rmd
+    ## ├── README
+    ## ├── functions.R
+    ## └── starsolo_conda
 
 ## Lasseigne Lab
 
