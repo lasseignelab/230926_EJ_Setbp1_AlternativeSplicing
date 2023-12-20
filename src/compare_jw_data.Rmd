@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+The purpose of this script is to compare my cell types to JW's cell types for all cells that we have in common.
+
 ## Loading Packages
 
 ```{r load packages}
@@ -24,31 +26,37 @@ suppressPackageStartupMessages({
   library(patchwork)
   library(harmony)
   library(presto)
-  })
+})
 
 # set seed
 set.seed(123)
 ```
 
 
-
 ```{r load ej data}
-
-clustered_brain_samples <- readRDS("/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/seurat/clustered_brain_samples.rds")
-
+annotated_brain_samples <- readRDS(here(
+  "data", "seurat",
+  "annotated_brain_samples.rds"
+))
 ```
-
 
 
 ```{r load jw data}
 load("/data/project/lasseigne_lab/JordanWhitlock/230227_Setbp1Manuscript/230227_JW_Setbp1Manuscript_EVERYTHING/data/setbp1_cerebralintcelltypes.Rdata")
-
 ```
 
+How do the UMAPs look side by side?
+
+```{r visualize UMAPs}
+DimPlot(annotated_brain_samples)
+DimPlot(cerebral_int_celltypes)
+```
+
+They look similar, but let's dig in to which cells are overlapping.
 
 ```{r look at overlapping barcodes}
 # make names match
-EJ_cells <- paste0(filtered_brain_samples@meta.data[["cells"]], "-1")
+EJ_cells <- paste0(annotated_brain_samples@meta.data[["cells"]], "-1")
 # df has slightly different structure in seurat version workflows
 JW_cells <- cerebral_int_celltypes@assays[["RNA"]]@counts@Dimnames[[2]]
 
@@ -61,14 +69,263 @@ length(overlapping_cells) / length(JW_cells) # and 99.9% of JW's cells
 EJ_only <- setdiff(EJ_cells, JW_cells) # 437
 
 JW_only <- setdiff(JW_cells, EJ_cells) # only 10 cells!
-
 ```
 
-```{r}
+Here, I can pull the metadata for only the matching cells.
+
+```{r pull metadata for the matching cells}
+EJ_barcodes <- str_sub(overlapping_cells, end = -3)
+
+EJ_celltypes_overlapping <-
+  annotated_brain_samples@meta.data[EJ_barcodes, "cell_type"]
+
+JW_celltypes_overlapping <-
+  cerebral_int_celltypes@meta.data[overlapping_cells, "cell_type"]
+
+both_cell_types <- data.frame(
+  "barcode" = overlapping_cells,
+  "EJ_celltype" = EJ_celltypes_overlapping,
+  "JW_celltype" = JW_celltypes_overlapping
+)
+
+# gsub and toupper to fix
+both_cell_types$JW_celltype <- gsub("_", " ", both_cell_types$JW_celltype)
+both_cell_types$JW_celltype <- str_to_title(both_cell_types$JW_celltype)
+both_cell_types$JW_celltype <- gsub("Opcs", "OPCs", both_cell_types$JW_celltype)
+
+both_cell_types$match <-
+  both_cell_types$EJ_celltype == both_cell_types$JW_celltype
+
+sum(both_cell_types$match) / nrow(both_cell_types) # 93% match
 ```
 
-```{r}
+Ok, so 93% are overlapping? but what about the cell types that overlap the least? what are they?
+
+```{r get non-matching cells}
+ggplot(both_cell_types, aes(x = EJ_celltype, fill = match)) +
+  geom_bar()
+
+ggplot(both_cell_types, aes(x = JW_celltype, fill = match)) +
+  geom_bar()
+
+nonmatching_cells <- both_cell_types[both_cell_types$match == FALSE, ]
+
+ggplot(nonmatching_cells, aes(x = EJ_celltype, fill = EJ_celltype)) +
+  geom_bar()
+
+ggplot(nonmatching_cells, aes(x = JW_celltype, fill = JW_celltype)) +
+  geom_bar()
 ```
 
-```{r}
+Next, I want to look more closely at the non-matching clusters by applying the matching to a umap and show clusters. this Seurat object will be called matched_brain_samples.
+
+```{r add to metadta}
+both_cell_types$barcode <- str_sub(both_cell_types$barcode, end = -3)
+
+matching_metadata_EJ <-
+  left_join(rownames_to_column(annotated_brain_samples@meta.data),
+    both_cell_types[, c(1, 4)],
+    by = c("rowname" = "barcode")
+  )
+
+matched_brain_samples <-
+  AddMetaData(
+    object = annotated_brain_samples,
+    matching_metadata_EJ$match,
+    col.name = "match"
+  )
+
+matched_brain_samples <- SetIdent(matched_brain_samples,
+  value = "RNA_snn_res.0.75"
+)
+
+FeaturePlot(matched_brain_samples, features = "match", label = TRUE)
 ```
+
+Don't forget to save your data if you want to look at it later!
+
+```{r save data}
+# save
+saveRDS(matched_brain_samples,
+  file = here("data", "seurat", "matched_brain_samples.rds")
+)
+```
+
+To me, it looks like specific clusters are not matching and are therefore "problematic". These clusters are 18, 22, 23, 24, 26, 29, 31, and 32.
+
+```{r compare looking at features for "problematic" clusters}
+FeaturePlot(matched_brain_samples,
+  features = c("Slc1a3", "Gja1"),
+  label = TRUE
+)
+
+FeaturePlot(matched_brain_samples,
+  features = c("Nr4a2"),
+  label = TRUE
+) # this labels cluster 24
+# which JW used for fibroblasts but col1a1, col3a1, and Dcn are common markers
+
+FeaturePlot(matched_brain_samples,
+  features = c("Bnc2"),
+  label = TRUE
+)
+
+FeaturePlot(matched_brain_samples,
+  features = c("Col1a1"),
+  label = TRUE, repel = TRUE
+)
+FeaturePlot(matched_brain_samples,
+  features = c("Col3a1"),
+  label = TRUE, repel = TRUE
+)
+FeaturePlot(matched_brain_samples,
+  features = c("Dcn"),
+  label = TRUE, repel = TRUE
+)
+
+FeaturePlot(matched_brain_samples,
+  features = c("Slc17a7"),
+  label = TRUE, repel = TRUE
+) # confirm 24 expresses excitatory neuron marker
+
+FeaturePlot(matched_brain_samples,
+  features = c("Gad1"),
+  label = TRUE, repel = TRUE
+)
+
+FeaturePlot(matched_brain_samples,
+  features = c("Vtn"),
+  label = TRUE, repel = TRUE
+)
+
+FeaturePlot(matched_brain_samples,
+  features = c("Mgp"),
+  label = TRUE, repel = TRUE
+) # support for 32 being a kind of fibroblast
+
+FeaturePlot(matched_brain_samples,
+  features = c("Igfbp7"),
+  label = TRUE, repel = TRUE
+) # cluster 29 support for vascular cell?
+
+FeaturePlot(matched_brain_samples,
+  features = c("Pdgfrb"),
+  label = TRUE, repel = TRUE
+) # support for 26 being pericytes - tiny cluster to right is for sure
+
+FeaturePlot(matched_brain_samples,
+  features = c("Pdgfra"),
+  label = TRUE, repel = TRUE
+) # support for 26 being fibroblasts
+```
+
+We can also look at the QC of matching cell, this tells us the quality of the extra few hundred cells I picked up.
+
+```{r look at QC split by if they match or not}
+VlnPlot(matched_brain_samples,
+  features = c("percent_mt"), group.by = "match"
+)
+
+VlnPlot(matched_brain_samples,
+  features = c("nGene"), group.by = "match"
+)
+
+VlnPlot(matched_brain_samples,
+  features = c("nUMI"), group.by = "match"
+)
+```
+
+To me, it seems like mito isnt very different but nGene and nUMI are lower, indicating slightly lower quality cells and potenitally more non-nueronal cells.
+
+#### Style
+
+```{r tidy script}
+style_file("compare_jw_data.Rmd")
+
+lint("compare_jw_data.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
+```
+
+R version 4.3.1 (2023-06-16)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 22.04.3 LTS
+
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+ [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: Etc/UTC
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] presto_1.0.0       data.table_1.14.8  harmony_1.1.0      Rcpp_1.0.11       
+ [5] patchwork_1.1.3    Seurat_5.0.0       SeuratObject_5.0.0 sp_2.1-1          
+ [9] lubridate_1.9.3    forcats_1.0.0      stringr_1.5.1      dplyr_1.1.3       
+[13] purrr_1.0.2        readr_2.1.4        tidyr_1.3.0        tibble_3.2.1      
+[17] ggplot2_3.4.4      tidyverse_2.0.0    lintr_3.1.0        styler_1.10.2     
+[21] here_1.0.1        
+
+loaded via a namespace (and not attached):
+  [1] RColorBrewer_1.1-3     rstudioapi_0.15.0      jsonlite_1.8.7        
+  [4] magrittr_2.0.3         spatstat.utils_3.0-4   farver_2.1.1          
+  [7] rmarkdown_2.25         vctrs_0.6.4            ROCR_1.0-11           
+ [10] spatstat.explore_3.2-5 htmltools_0.5.6.1      sctransform_0.4.1     
+ [13] parallelly_1.36.0      KernSmooth_2.23-22     htmlwidgets_1.6.2     
+ [16] desc_1.4.2             ica_1.0-3              plyr_1.8.9            
+ [19] plotly_4.10.3          zoo_1.8-12             igraph_1.5.1          
+ [22] mime_0.12              lifecycle_1.0.4        pkgconfig_2.0.3       
+ [25] Matrix_1.6-1.1         R6_2.5.1               fastmap_1.1.1         
+ [28] fitdistrplus_1.1-11    future_1.33.0          shiny_1.7.5.1         
+ [31] digest_0.6.33          colorspace_2.1-0       ps_1.7.5              
+ [34] tensor_1.5             rprojroot_2.0.3        RSpectra_0.16-1       
+ [37] irlba_2.3.5.1          labeling_0.4.3         progressr_0.14.0      
+ [40] fansi_1.0.5            spatstat.sparse_3.0-3  timechange_0.2.0      
+ [43] polyclip_1.10-6        abind_1.4-5            httr_1.4.7            
+ [46] compiler_4.3.1         remotes_2.4.2.1        withr_2.5.2           
+ [49] backports_1.4.1        fastDummies_1.7.3      R.utils_2.12.2        
+ [52] MASS_7.3-60            tools_4.3.1            lmtest_0.9-40         
+ [55] httpuv_1.6.12          future.apply_1.11.0    goftest_1.2-3         
+ [58] R.oo_1.25.0            glue_1.6.2             callr_3.7.3           
+ [61] nlme_3.1-163           R.cache_0.16.0         promises_1.2.1        
+ [64] grid_4.3.1             Rtsne_0.16             cluster_2.1.4         
+ [67] reshape2_1.4.4         generics_0.1.3         gtable_0.3.4          
+ [70] spatstat.data_3.0-3    tzdb_0.4.0             R.methodsS3_1.8.2     
+ [73] hms_1.1.3              xml2_1.3.5             utf8_1.2.4            
+ [76] spatstat.geom_3.2-7    RcppAnnoy_0.0.21       ggrepel_0.9.4         
+ [79] RANN_2.6.1             pillar_1.9.0           spam_2.10-0           
+ [82] RcppHNSW_0.5.0         later_1.3.1            splines_4.3.1         
+ [85] lattice_0.21-8         deldir_1.0-9           survival_3.5-7        
+ [88] tidyselect_1.2.0       miniUI_0.1.1.1         pbapply_1.7-2         
+ [91] knitr_1.44             gridExtra_2.3          scattermore_1.2       
+ [94] xfun_0.40              matrixStats_1.0.0      rex_1.2.1             
+ [97] stringi_1.8.1          lazyeval_0.2.2         yaml_2.3.7            
+[100] evaluate_0.22          codetools_0.2-19       cli_3.6.1             
+[103] uwot_0.1.16            xtable_1.8-4           reticulate_1.34.0     
+[106] munsell_0.5.0          processx_3.8.2         xmlparsedata_1.0.5    
+[109] spatstat.random_3.2-1  globals_0.16.2         png_0.1-8             
+[112] parallel_4.3.1         ellipsis_0.3.2         dotCall64_1.1-0       
+[115] listenv_0.9.0          viridisLite_0.4.2      cyclocomp_1.1.1       
+[118] scales_1.2.1           ggridges_0.5.4         leiden_0.4.3          
+[121] crayon_1.5.2           rlang_1.1.2            cowplot_1.1.1 

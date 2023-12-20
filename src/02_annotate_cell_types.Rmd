@@ -183,10 +183,7 @@ FeaturePlot(clustered_brain_samples,
   label = TRUE, repel = TRUE
 ) # cluster 14 (macrophage and microglia)
 
-FeaturePlot(clustered_brain_samples,
-  features = c("Gm49906"),
-  label = TRUE, repel = TRUE
-)
+
 ```
 
 Assign cell types
