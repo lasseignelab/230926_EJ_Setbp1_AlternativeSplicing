@@ -62,13 +62,14 @@ top10 <- marker_genes %>%
   top_n(-10, p_val_adj)
 ```
 
+The markers I am using for neurons are:
+
+All neurons - Snap25
+Excitatory Neurons - Slc17a7
+Inhibitory Neurons - Gad1, Gad2
+We also looked at markers for specific kinds of inhibitory neurons: Sst, Pvalb, and Vip
 
 ```{r featureplots for neurons}
-FeaturePlot(clustered_brain_samples,
-  features = c("nGene"),
-  label = TRUE, repel = TRUE
-)
-
 FeaturePlot(clustered_brain_samples,
   features = c("Snap25"),
   label = TRUE, repel = TRUE
@@ -91,10 +92,6 @@ FeaturePlot(clustered_brain_samples,
   features = c("Gad2"),
   label = TRUE
 )
-FeaturePlot(clustered_brain_samples,
-  features = c("Synpr"),
-  label = TRUE
-)
 
 FeaturePlot(clustered_brain_samples,
   features = c("Sst"),
@@ -110,83 +107,82 @@ FeaturePlot(clustered_brain_samples,
 ) # vip - 11
 ```
 
+The markers I used for non-neuronal cells:
+Microglia - Cx3cr1, Cd68
+Astrocytes - Slc1a3, Gja1
+Vascular Cells (Pericytes/Fibroblasts/VLMCs/Endothelial Cells) - Vtn, Mgp, Bnc2, Pdgfrb, Col1a1, Dcn, Flt1
+OPCs - Pdgfra
+Oligodendrocytes - Mbp
+
 ```{r more exploratory cluster annotation non-neuronal cells}
 FeaturePlot(clustered_brain_samples,
   features = c("Cx3cr1"),
   label = TRUE
 ) # microglia - 14
-
-FeaturePlot(clustered_brain_samples,
-  features = c("Slc1a3", "Gja1"),
-  label = TRUE
-) # astrocytes - 3
-
-FeaturePlot(clustered_brain_samples,
-  features = c("Vtn"),
-  label = TRUE, repel = TRUE
-) # 26
-FeaturePlot(clustered_brain_samples,
-  features = c("Pdgfrb"),
-  label = TRUE, repel = TRUE
-) # 26
-
-FeaturePlot(clustered_brain_samples,
-  features = c("Slc47a1"),
-  label = TRUE, repel = TRUE
-) #
-FeaturePlot(clustered_brain_samples,
-  features = c("Flt1"),
-  label = TRUE, repel = TRUE
-) # 29
-FeaturePlot(clustered_brain_samples,
-  features = c("Cldn5"),
-  label = TRUE, repel = TRUE
-) # 29
-
-FeaturePlot(clustered_brain_samples,
-  features = c("Cald1"),
-  label = TRUE, repel = TRUE
-) # 26 and 32
-
-FeaturePlot(clustered_brain_samples,
-  features = c("Mbp"),
-  label = TRUE, repel = TRUE
-) # oligodendrocytes are 7, 20 ,22, 23, 31
-FeaturePlot(clustered_brain_samples,
-  features = c("Pdgfra"),
-  label = TRUE
-) # cluster 13 is OPCs
-FeaturePlot(clustered_brain_samples,
-  features = c("Olig2"),
-  label = TRUE
-)
-FeaturePlot(clustered_brain_samples,
-  features = c("Col1a1"),
-  label = TRUE, repel = TRUE
-)
-FeaturePlot(clustered_brain_samples,
-  features = c("Col3a1"),
-  label = TRUE, repel = TRUE
-)
-FeaturePlot(clustered_brain_samples,
-  features = c("Dcn"),
-  label = TRUE, repel = TRUE
-)
-
-FeaturePlot(clustered_brain_samples,
-  features = c("Pecam1"),
-  label = TRUE, repel = TRUE
-)
-
 FeaturePlot(clustered_brain_samples,
   features = c("Cd68"),
   label = TRUE, repel = TRUE
 ) # cluster 14 (macrophage and microglia)
 
 FeaturePlot(clustered_brain_samples,
-  features = c("Gm49906"),
+  features = c("Slc1a3", "Gja1"),
+  label = TRUE
+) # astrocyte marker - 3
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Mbp"),
   label = TRUE, repel = TRUE
-)
+) # oligodendrocytes are 7, 20 ,22, 23, 31
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Pdgfra"),
+  label = TRUE
+) # cluster 13 is OPCs
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Col1a1"),
+  label = TRUE, repel = TRUE
+) # fibroblast marker
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Dcn"),
+  label = TRUE, repel = TRUE
+) # fibroblast marker
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Mgp"),
+  label = TRUE, repel = TRUE
+) # fibroblast and vascular cell marker
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Cald1"),
+  label = TRUE, repel = TRUE
+) # fibroblast marker - 26 and 32
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Vtn"),
+  label = TRUE, repel = TRUE
+) # pericyte marker - 26
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Pdgfrb"),
+  label = TRUE, repel = TRUE
+) # pericyte marker - 26
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Flt1"),
+  label = TRUE, repel = TRUE
+) # endothelial cells - 29
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Cldn5"),
+  label = TRUE, repel = TRUE
+) # endothelial cells - 29
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Pecam1"),
+  label = TRUE, repel = TRUE
+) # endothelial cell marker
 ```
 
 Assign cell types
@@ -214,17 +210,17 @@ annotated_brain_samples <- RenameIdents(clustered_brain_samples,
   `19` = "Excitatory Neurons",
   `20` = "Oligodendrocytes",
   `21` = "Excitatory Neurons",
-  `22` = "Oligodendrocytes",
+  `22` = "Test",
   `23` = "Oligodendrocytes",
   `24` = "Excitatory Neurons",
   `25` = "Excitatory Neurons",
-  `26` = "Fibroblasts",
+  `26` = "Vascular Cells",
   `27` = "Excitatory Neurons",
   `28` = "Excitatory Neurons",
-  `29` = "Endothelial Cells",
+  `29` = "Vascular Cells",
   `30` = "Excitatory Neurons",
   `31` = "Oligodendrocytes",
-  `32` = "Pericytes"
+  `32` = "Vascular Cells"
 )
 
 annotated_brain_samples <-
@@ -237,14 +233,101 @@ annotated_brain_samples <-
 
 Now that we have cell types identified, we can see what the final UMAP looks like.
 
-```{r plot final umap}
+```{r plot umap}
+DimPlot(annotated_brain_samples)
+```
+There is a bit of oligodendrocytes that dont express Mbp and were not easily distinguishable as cluster 22. So, I want to subcluster 22.
+
+```{r subcluster 22}
+subclustered_brain_samples <- FindSubCluster(
+  clustered_brain_samples,
+  22,
+  "RNA_snn",
+  subcluster.name = "subcluster_22",
+  resolution = 0.05,
+  algorithm = 4
+)
+
+DimPlot(subclustered_brain_samples, group.by = "subcluster_22")
+```
+Reannotate based on the featureplots of these subclustered cells.
+
+```{r look at astrocyte and oligodendrocyte markers}
+subclustered_brain_samples <- SetIdent(subclustered_brain_samples,
+  value = "subcluster_22"
+)
+
+FeaturePlot(subclustered_brain_samples,
+  features = c("Slc1a3", "Gja1"),
+  label = TRUE
+) # astrocyte marker - 3
+
+FeaturePlot(subclustered_brain_samples,
+  features = c("Mbp"),
+  label = TRUE, repel = TRUE
+) # oligodendrocyte marker
+```
+
+Set new names for new cell type annotation.
+
+```{r annotate subclusters}
+annotated_brain_samples <- RenameIdents(subclustered_brain_samples,
+  `1` = "Excitatory Neurons",
+  `2` = "Excitatory Neurons",
+  `3` = "Astrocytes",
+  `4` = "Excitatory Neurons",
+  `5` = "Excitatory Neurons",
+  `6` = "Excitatory Neurons",
+  `7` = "Oligodendrocytes",
+  `8` = "Excitatory Neurons",
+  `9` = "Inhibitory Neurons",
+  `10` = "Excitatory Neurons",
+  `11` = "Inhibitory Neurons",
+  `12` = "Inhibitory Neurons",
+  `13` = "OPCs",
+  `14` = "Microglia",
+  `15` = "Excitatory Neurons",
+  `16` = "Excitatory Neurons",
+  `17` = "Excitatory Neurons",
+  `18` = "Inhibitory Neurons",
+  `19` = "Excitatory Neurons",
+  `20` = "Oligodendrocytes",
+  `21` = "Excitatory Neurons",
+  `22_1` = "Astrocytes",
+  `22_2` = "Oligodendrocytes",
+  `22_3` = "Oligodendrocytes",
+  `23` = "Oligodendrocytes",
+  `24` = "Excitatory Neurons",
+  `25` = "Excitatory Neurons",
+  `26` = "Vascular Cells",
+  `27` = "Excitatory Neurons",
+  `28` = "Excitatory Neurons",
+  `29` = "Vascular Cells",
+  `30` = "Excitatory Neurons",
+  `31` = "Oligodendrocytes",
+  `32` = "Vascular Cells"
+)
+
+annotated_brain_samples <-
+  AddMetaData(
+    object = annotated_brain_samples,
+    as.vector(annotated_brain_samples@active.ident),
+    col.name = "cell_type"
+  )
+```
+
+Let's look at the new umap.
+
+```{r plot umap}
+DimPlot(annotated_brain_samples)
+```
+Yes, I think this is better.
+
+```{r save umap}
 png(here("results", "seurat_outputs", "annotated_umap.png"))
 DimPlot(annotated_brain_samples)
 dev.off()
-
-DimPlot(annotated_brain_samples)
 ```
-
 
 Save annotated object!
 
