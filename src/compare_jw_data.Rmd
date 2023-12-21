@@ -92,6 +92,10 @@ both_cell_types <- data.frame(
 both_cell_types$JW_celltype <- gsub("_", " ", both_cell_types$JW_celltype)
 both_cell_types$JW_celltype <- str_to_title(both_cell_types$JW_celltype)
 both_cell_types$JW_celltype <- gsub("Opcs", "OPCs", both_cell_types$JW_celltype)
+both_cell_types$JW_celltype <-
+  gsub("Pericytes", "Vascular Cells", both_cell_types$JW_celltype)
+both_cell_types$JW_celltype <-
+  gsub("Fibroblasts", "Vascular Cells", both_cell_types$JW_celltype)
 
 both_cell_types$match <-
   both_cell_types$EJ_celltype == both_cell_types$JW_celltype
@@ -115,8 +119,6 @@ ggplot(nonmatching_cells, aes(x = EJ_celltype, fill = EJ_celltype)) +
 
 ggplot(nonmatching_cells, aes(x = JW_celltype, fill = JW_celltype)) +
   geom_bar()
-
-ggplot(matched_brain_samples@meta.data[is.na(matched_brain_samples@meta.data$match), ], aes(x = cell_type)) + geom_bar()
 ```
 
 Next, I want to look more closely at the non-matching clusters by applying the matching to a umap and show clusters. this Seurat object will be called matched_brain_samples.
@@ -172,6 +174,10 @@ FeaturePlot(matched_brain_samples,
 FeaturePlot(matched_brain_samples,
   features = c("Bnc2"),
   label = TRUE
+)
+FeaturePlot(matched_brain_samples,
+  features = c("Gja1"),
+  label = TRUE, repel = TRUE
 )
 
 FeaturePlot(matched_brain_samples,
