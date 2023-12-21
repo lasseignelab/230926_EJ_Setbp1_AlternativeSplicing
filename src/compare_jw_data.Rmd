@@ -115,6 +115,8 @@ ggplot(nonmatching_cells, aes(x = EJ_celltype, fill = EJ_celltype)) +
 
 ggplot(nonmatching_cells, aes(x = JW_celltype, fill = JW_celltype)) +
   geom_bar()
+
+ggplot(matched_brain_samples@meta.data[is.na(matched_brain_samples@meta.data$match), ], aes(x = cell_type)) + geom_bar()
 ```
 
 Next, I want to look more closely at the non-matching clusters by applying the matching to a umap and show clusters. this Seurat object will be called matched_brain_samples.
@@ -140,6 +142,8 @@ matched_brain_samples <- SetIdent(matched_brain_samples,
 )
 
 FeaturePlot(matched_brain_samples, features = "match", label = TRUE)
+
+DimPlot(matched_brain_samples, group.by = "match")
 ```
 
 Don't forget to save your data if you want to look at it later!
@@ -189,7 +193,7 @@ FeaturePlot(matched_brain_samples,
 ) # confirm 24 expresses excitatory neuron marker
 
 FeaturePlot(matched_brain_samples,
-  features = c("Gad1"),
+  features = c("Olig2"),
   label = TRUE, repel = TRUE
 )
 
@@ -217,6 +221,8 @@ FeaturePlot(matched_brain_samples,
   features = c("Pdgfra"),
   label = TRUE, repel = TRUE
 ) # support for 26 being fibroblasts
+
+DotPlot(matched_brain_samples, features = c("Mbp", "Olig2", "Pdgfra"))
 ```
 
 We can also look at the QC of matching cell, this tells us the quality of the extra few hundred cells I picked up.
@@ -236,6 +242,8 @@ VlnPlot(matched_brain_samples,
 ```
 
 To me, it seems like mito isnt very different but nGene and nUMI are lower, indicating slightly lower quality cells and potenitally more non-nueronal cells.
+
+We discussed in lab meeting, and I think that fibroblasts are actually VLMCs but am going to combine with pericytes and endothelial cells all as vascular cells.
 
 #### Style
 
