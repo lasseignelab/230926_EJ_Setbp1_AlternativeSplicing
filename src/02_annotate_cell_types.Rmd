@@ -5,7 +5,7 @@ date: "2023-11-15"
 output: html_document
 ---
 
-The purpose of this script is to annotate cell types in seurat.
+The purpose of this script is to annotate cell types using seurat. It is dependent on script 01. Please use docker image setbp1_alternative_splicing:1.0.4
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -35,12 +35,16 @@ set.seed(123)
 source(here("src", "functions.R"))
 ```
 
+## Load data
+
 ```{r load in data}
 clustered_brain_samples <- readRDS(here(
   "data", "seurat",
   "clustered_brain_samples.rds"
 ))
 ```
+
+## Find marker genes
 
 ```{r find markers}
 # set identity to best clustering after exploring data
@@ -61,6 +65,10 @@ top10 <- marker_genes %>%
   group_by(cluster) %>%
   top_n(-10, p_val_adj)
 ```
+
+## Use canonical cell type markers
+
+### Neuron cell annotation
 
 The markers I am using for neurons are:
 
@@ -106,6 +114,8 @@ FeaturePlot(clustered_brain_samples,
   label = TRUE
 ) # vip - 11
 ```
+
+### Glia cell annotation
 
 The markers I used for non-neuronal cells:
 Microglia - Cx3cr1, Cd68
@@ -185,7 +195,9 @@ FeaturePlot(clustered_brain_samples,
 ) # endothelial cell marker
 ```
 
-Assign cell types
+### Assign cell types
+
+Next, we assign cell types.
 
 ```{r assign cell types}
 annotated_brain_samples <- RenameIdents(clustered_brain_samples,
@@ -236,7 +248,12 @@ Now that we have cell types identified, we can see what the final UMAP looks lik
 ```{r plot umap}
 DimPlot(annotated_brain_samples)
 ```
+
 There is a bit of oligodendrocytes that dont express Mbp and were not easily distinguishable as cluster 22. So, I want to subcluster 22.
+
+### Subcluster 22
+
+We can use Seurat's FindSubCluster function to help here
 
 ```{r subcluster 22}
 subclustered_brain_samples <- FindSubCluster(
@@ -250,6 +267,7 @@ subclustered_brain_samples <- FindSubCluster(
 
 DimPlot(subclustered_brain_samples, group.by = "subcluster_22")
 ```
+
 Reannotate based on the featureplots of these subclustered cells.
 
 ```{r look at astrocyte and oligodendrocyte markers}
@@ -316,12 +334,19 @@ annotated_brain_samples <-
   )
 ```
 
+### Visualize finished UMAP
+
 Let's look at the new umap.
 
 ```{r plot umap}
 DimPlot(annotated_brain_samples)
 ```
+
 Yes, I think this is better.
+
+### Save
+
+Now, we can save the umap for later.
 
 ```{r save umap}
 png(here("results", "seurat_outputs", "annotated_umap.png"))
@@ -335,31 +360,6 @@ Save annotated object!
 # save
 saveRDS(annotated_brain_samples,
   file = here("data", "seurat", "annotated_brain_samples.rds")
-)
-```
-
-Look at cortical layer markers - I am leaving this code here in case we can to subcluster excitatory neurons later.
-
-```{r cortical layer markers}
-# layer 2/3
-FeaturePlot(clustered_brain_samples, features = c("Lamp5"), label = TRUE)
-# layer 2/4
-FeaturePlot(clustered_brain_samples, features = c("Cux2"), label = TRUE)
-# layer 2/5
-FeaturePlot(clustered_brain_samples, features = c("Rasgrf2"), label = TRUE)
-# layer 4/5
-FeaturePlot(clustered_brain_samples, features = c("Rorb"), label = TRUE)
-# layer 5
-FeaturePlot(clustered_brain_samples,
-  features = c("Kcnk2", "Sulf2", "Pcp4", "Fezf2"), label = TRUE
-)
-# layer 5/6
-FeaturePlot(clustered_brain_samples,
-  features = c("Etv1", "Rprm", "Rxfp1", "Foxp2"), label = TRUE
-)
-# layer 6
-FeaturePlot(clustered_brain_samples,
-  features = c("Syt6", "Oprk1", "Nr4a2", "Synpr"), label = TRUE
 )
 ```
 
@@ -454,3 +454,30 @@ loaded via a namespace (and not attached):
 [115] listenv_0.9.0          viridisLite_0.4.2      cyclocomp_1.1.1       
 [118] scales_1.2.1           ggridges_0.5.4         leiden_0.4.3          
 [121] crayon_1.5.2           rlang_1.1.2            cowplot_1.1.1    
+
+
+## Archive
+Look at cortical layer markers - I am leaving this code here in case we can to subcluster excitatory neurons later.
+
+```{r cortical layer markers}
+# layer 2/3
+FeaturePlot(clustered_brain_samples, features = c("Lamp5"), label = TRUE)
+# layer 2/4
+FeaturePlot(clustered_brain_samples, features = c("Cux2"), label = TRUE)
+# layer 2/5
+FeaturePlot(clustered_brain_samples, features = c("Rasgrf2"), label = TRUE)
+# layer 4/5
+FeaturePlot(clustered_brain_samples, features = c("Rorb"), label = TRUE)
+# layer 5
+FeaturePlot(clustered_brain_samples,
+  features = c("Kcnk2", "Sulf2", "Pcp4", "Fezf2"), label = TRUE
+)
+# layer 5/6
+FeaturePlot(clustered_brain_samples,
+  features = c("Etv1", "Rprm", "Rxfp1", "Foxp2"), label = TRUE
+)
+# layer 6
+FeaturePlot(clustered_brain_samples,
+  features = c("Syt6", "Oprk1", "Nr4a2", "Synpr"), label = TRUE
+)
+```
