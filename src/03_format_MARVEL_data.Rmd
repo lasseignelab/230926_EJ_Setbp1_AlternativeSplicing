@@ -1,0 +1,97 @@
+---
+title: "Format Data for import into MARVEL"
+output: html_document
+date: "2023-12-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The purpose of this script is to format expression data from seurat and SJ outputs from STARsolo for MARVEL. It is dependent on running the scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.4
+
+```{r load packages}
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
+
+  # Load Seurat and other single-cell packages
+  library(tidyverse)
+  library(Seurat)
+  library(patchwork)
+  library(harmony)
+  library(presto)
+
+  # Load MARVEL package
+  library(MARVEL)
+
+  # Load adjunct MARVEL packages
+  library(ggnewscale)
+  library(ggrepel)
+  library(reshape2)
+  library(plyr)
+  library(stringr)
+  library(textclean)
+  library(AnnotationDbi)
+  library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(org.Mm.eg.db)
+  library(gtools)
+  library(GenomicRanges)
+  library(IRanges)
+  library(S4Vectors)
+  library(wiggleplotr)
+  library(Matrix)
+  library(data.table)
+  library(ggplot2)
+  library(gridExtra)
+})
+
+# set seed
+set.seed(123)
+```
+
+#### Style
+
+```{r tidy script}
+style_file("03_import_MARVEL_data.Rmd")
+
+lint("03_import_MARVEL_data.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+```{r import data}
+
+annotated_brain_samples <- readRDS("/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/seurat/annotated_brain_samples.rds")
+
+gene_norm <- annotated_brain_samples@assays[["RNA"]]@layers[["data"]]
+gene_metadata <- annotated_brain_samples@meta.data
+gene_features <- rownames(annotated_brain_samples)
+
+gene_counts <- annotated_brain_samples@assays[["RNA"]]@layers[["counts"]]
+```
+
+These software developers have a separate argument for df.gene.feature/df.count.feature and df.gene.pheno/df.count.pheno but they are the same files!!! So I am calling them gene_features, and gene_metadata.
+
+The cell IDs of splice junction counts also have to match the expression cell IDs, meaning I need to data wrangle these files together to make a single splice junction out file.
+
+```{r load in all SJ out files}
+
+J1_sj_matrix <- readMM(here::here("data", "star", "J1", "Solo.out", "SJ", "raw", "matrix.mtx"))
+
+```
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
+```
