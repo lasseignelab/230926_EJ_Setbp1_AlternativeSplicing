@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 The purpose of this script is to format expression data from seurat and SJ outputs from STARsolo for MARVEL. It is dependent on running the scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.4
 
+## Load Packages
+
 ```{r load packages}
 suppressPackageStartupMessages({
   # Load Lasseigne Lab standard packages
@@ -51,14 +53,121 @@ suppressPackageStartupMessages({
 
 # set seed
 set.seed(123)
+
+# source functions
+source(here::here("src", "functions.R"))
 ```
+
+## Import Expression Data
+
+First, you need to import and data wrangle the seurat expression data.
+
+```{r import seurat expression data}
+annotated_brain_samples <- readRDS(
+  here::here("data", "seurat", "annotated_brain_samples.rds")
+)
+
+gene_norm <- annotated_brain_samples@assays[["RNA"]]@layers[["data"]]
+gene_norm <- as(gene_norm, "dgTMatrix")
+gene_norm[gene_norm[, 1] != 0, ][1:5, 1:5]
+
+gene_metadata <- annotated_brain_samples@meta.data
+gene_metadata <- tibble::rownames_to_column(gene_metadata, "cell.id")
+head(gene_metadata)
+
+gene_features <- rownames(annotated_brain_samples)
+head(gene_features)
+
+gene_counts <- annotated_brain_samples@assays[["RNA"]]@layers[["counts"]]
+gene_counts <- as(gene_counts, "dgTMatrix")
+gene_counts[gene_counts[, 1] != 0, ][1:5, 1:5]
+```
+
+These software developers have a separate argument for df.gene.feature/df.count.feature and df.gene.pheno/df.count.pheno but they are the same files!!! So I am calling them gene_features, and gene_metadata.
+
+## Import Splice Junction Data
+
+The cell IDs of splice junction counts also have to match the expression cell IDs, meaning I need to data wrangle these files together to make a single splice junction out file.
+
+I made a function to extract splice junction information for each sample to simplify the data wrangling required for this project, so we can just use that.
+
+```{r use function to extract splice information}
+# sample J1
+J1_sj_info <- split_sj_info(
+  sample_id = "J1",
+  condition = "het",
+  sample_id_mod = "J_1"
+)
+# sample J2
+J2_sj_info <- split_sj_info(
+  sample_id = "J2",
+  condition = "ctrl",
+  sample_id_mod = "J_2"
+)
+# sample J3
+J3_sj_info <- split_sj_info(
+  sample_id = "J3",
+  condition = "ctrl",
+  sample_id_mod = "J_3"
+)
+# sample J4
+J4_sj_info <- split_sj_info(
+  sample_id = "J4",
+  condition = "ctrl",
+  sample_id_mod = "J_4"
+)
+# sample J13
+J13_sj_info <- split_sj_info(
+  sample_id = "J13",
+  condition = "het",
+  sample_id_mod = "J_13"
+)
+# sample J15
+J15_sj_info <- split_sj_info(
+  sample_id = "J15",
+  condition = "het",
+  sample_id_mod = "J_15"
+)
+```
+
+Now massage these separate SJ files into one larger expression matrix. Data is too large to pivot longer so need to do this method of joining specifically. The next solution fills in values based on the indexed feature name on where they should be.
+
+```{r massage data frames}
+# Make list of all matrices
+matrices <- list(J1_sj_info, J2_sj_info, J3_sj_info, J4_sj_info, J13_sj_info, J15_sj_info)
+
+# Identify all unique features
+all_features <- unique(unlist(lapply(matrices, rownames)))
+
+# Function to align matrix rows
+align_matrix <- function(mat, all_features) {
+  # Create an empty sparse matrix with all features
+  aligned_mat <- sparseMatrix(i = numeric(0), j = numeric(0), repr = "T",
+                              dims = c(length(all_features), ncol(mat)))
+  rownames(aligned_mat) <- all_features
+  
+  # Fill in existing values
+  intersecting_features <- intersect(rownames(mat), all_features)
+  aligned_mat[intersecting_features, ] <- mat[intersecting_features, ]
+  return(aligned_mat)
+}
+
+# Align and combine matrices
+combined_matrix <- do.call(cbind, lapply(matrices, align_matrix, all_features))
+
+# Add correct colnames
+colnames(combined_matrix) <- gene_metadata$cell.id
+
+```
+
+The default repr = "C" created a ngCMatrix which made values logical. Going to try running this as repr = "T" to hopefully fix, but I have to go home then on vacation so hopefully my notes make enough sense when I get back in Jan!
 
 #### Style
 
 ```{r tidy script}
-style_file("03_import_MARVEL_data.Rmd")
+style_file("03_format_MARVEL_data.Rmd")
 
-lint("03_import_MARVEL_data.Rmd",
+lint("03_format_MARVEL_data.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,
@@ -67,26 +176,6 @@ lint("03_import_MARVEL_data.Rmd",
 )
 ```
 
-```{r import data}
-
-annotated_brain_samples <- readRDS("/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/seurat/annotated_brain_samples.rds")
-
-gene_norm <- annotated_brain_samples@assays[["RNA"]]@layers[["data"]]
-gene_metadata <- annotated_brain_samples@meta.data
-gene_features <- rownames(annotated_brain_samples)
-
-gene_counts <- annotated_brain_samples@assays[["RNA"]]@layers[["counts"]]
-```
-
-These software developers have a separate argument for df.gene.feature/df.count.feature and df.gene.pheno/df.count.pheno but they are the same files!!! So I am calling them gene_features, and gene_metadata.
-
-The cell IDs of splice junction counts also have to match the expression cell IDs, meaning I need to data wrangle these files together to make a single splice junction out file.
-
-```{r load in all SJ out files}
-
-J1_sj_matrix <- readMM(here::here("data", "star", "J1", "Solo.out", "SJ", "raw", "matrix.mtx"))
-
-```
 
 #### Software versions
 
