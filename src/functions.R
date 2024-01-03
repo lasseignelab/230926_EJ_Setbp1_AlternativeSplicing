@@ -198,7 +198,14 @@ split_sj_info <- function(sample_id, condition, sample_id_mod) {
   return(sj_matrix)
 }
 
-
-
-
-
+# Function to align matrix rows
+align_matrix <- function(mat, all_features) {
+  # Create an empty sparse matrix with all features
+  aligned_mat <- emptySparse(nrow = length(all_features), ncol = ncol(mat))
+  rownames(aligned_mat) <- all_features
+  
+  # Fill in existing values
+  intersecting_features <- intersect(rownames(mat), all_features)
+  aligned_mat[intersecting_features, ] <- mat[intersecting_features, ]
+  return(aligned_mat)
+}

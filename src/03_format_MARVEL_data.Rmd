@@ -60,7 +60,7 @@ source(here::here("src", "functions.R"))
 
 ## Import Expression Data
 
-First, you need to import and data wrangle the seurat expression data.
+First, you need to import and data wrangle the Seurat expression data.
 
 ```{r import seurat expression data}
 annotated_brain_samples <- readRDS(
@@ -133,34 +133,57 @@ J15_sj_info <- split_sj_info(
 Now massage these separate SJ files into one larger expression matrix. Data is too large to pivot longer so need to do this method of joining specifically. The next solution fills in values based on the indexed feature name on where they should be.
 
 ```{r massage data frames}
-# Make list of all matrices
-matrices <- list(J1_sj_info, J2_sj_info, J3_sj_info, J4_sj_info, J13_sj_info, J15_sj_info)
+library(MatrixExtra) # add this to docker later if it works.
+# This is required to use this way of checking values
+options("MatrixExtra.quick_show" = FALSE)
+
+# Make list of all matrices - make sure these are in the order of your gene data
+matrices <- list(J1_sj_info, J13_sj_info, J15_sj_info, J2_sj_info, J3_sj_info, J4_sj_info)
 
 # Identify all unique features
 all_features <- unique(unlist(lapply(matrices, rownames)))
 
-# Function to align matrix rows
-align_matrix <- function(mat, all_features) {
-  # Create an empty sparse matrix with all features
-  aligned_mat <- sparseMatrix(i = numeric(0), j = numeric(0), repr = "T",
-                              dims = c(length(all_features), ncol(mat)))
-  rownames(aligned_mat) <- all_features
-  
-  # Fill in existing values
-  intersecting_features <- intersect(rownames(mat), all_features)
-  aligned_mat[intersecting_features, ] <- mat[intersecting_features, ]
-  return(aligned_mat)
-}
-
-# Align and combine matrices
+# Align and combine matrices using custom function
 combined_matrix <- do.call(cbind, lapply(matrices, align_matrix, all_features))
 
 # Add correct colnames
 colnames(combined_matrix) <- gene_metadata$cell.id
 
+# Coerce to correct format
+combined_matrix <- as(combined_matrix, "TsparseMatrix")
+
+# Check values where each new sample starts
+combined_matrix[combined_matrix[, 1] != 0, ][1:5, 1:5]
+
+J1_sj_info[J1_sj_info[, 1] != 0, ][1:5, 1:5]
+
+# Check each sample - J13
+combined_matrix[combined_matrix[, 5039] != 0, ][1:5, 5039:5047]
+
+J13_sj_info[J13_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J15
+combined_matrix[combined_matrix[, 14474] != 0, ][1:5, 14474:14482]
+
+J15_sj_info[J15_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J2
+combined_matrix[combined_matrix[, 23427] != 0, ][1:5, 23427:23435]
+
+J2_sj_info[J2_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J3
+combined_matrix[combined_matrix[, 30507] != 0, ][1:5, 30507:30515]
+
+J3_sj_info[J3_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J4
+combined_matrix[combined_matrix[, 40978] != 0, ][1:5, 40978:40986]
+
+J4_sj_info[J4_sj_info[, 1] != 0, ][1:5, 1:9]
 ```
 
-The default repr = "C" created a ngCMatrix which made values logical. Going to try running this as repr = "T" to hopefully fix, but I have to go home then on vacation so hopefully my notes make enough sense when I get back in Jan!
+
 
 #### Style
 
