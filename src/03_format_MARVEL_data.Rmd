@@ -77,6 +77,8 @@ head(gene_metadata)
 
 gene_features <- rownames(annotated_brain_samples)
 head(gene_features)
+gene_features <- as.data.frame(gene_features)
+colnames(gene_features) <- "gene_short_name"
 
 gene_counts <- annotated_brain_samples@assays[["RNA"]]@layers[["counts"]]
 gene_counts <- as(gene_counts, "dgTMatrix")
@@ -138,7 +140,10 @@ library(MatrixExtra) # add this to docker later if it works.
 options("MatrixExtra.quick_show" = FALSE)
 
 # Make list of all matrices - make sure these are in the order of your gene data
-matrices <- list(J1_sj_info, J13_sj_info, J15_sj_info, J2_sj_info, J3_sj_info, J4_sj_info)
+matrices <- list(
+  J1_sj_info, J13_sj_info, J15_sj_info, J2_sj_info, J3_sj_info,
+  J4_sj_info
+)
 
 # Identify all unique features
 all_features <- unique(unlist(lapply(matrices, rownames)))
@@ -181,8 +186,57 @@ J3_sj_info[J3_sj_info[, 1] != 0, ][1:5, 1:9]
 combined_matrix[combined_matrix[, 40978] != 0, ][1:5, 40978:40986]
 
 J4_sj_info[J4_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# rename matrix for ease
+all_sj_counts <- combined_matrix
+
+# get metadata (colnames)
+sj_metadata <- colnames(combined_matrix)
+sj_metadata <- as.data.frame(sj_metadata)
+colnames(sj_metadata) <- "cell.id"
+
+# get splice junction location names
+sj_features <- rownames(combined_matrix)
+sj_features <- as.data.frame(sj_features)
+colnames(sj_features) <- "coord.intron"
 ```
 
+### Get UMAP coordinates
+
+```{r get UMAP coordinates}
+umap_coords <-
+  annotated_brain_samples@reductions[["umap_harmony"]]@cell.embeddings
+
+umap_coords <- tibble::rownames_to_column(as.data.frame(umap_coords), "cell.id")
+
+colnames(umap_coords) <- c("cell.id", "x", "y")
+```
+
+### Get GTF
+
+```{r get gtf in r env}
+m31_gtf <- as.data.frame(fread("/data/project/lasseigne_lab/GENOME_dir/GENCODE_mm39/release_M31/GTF/gencode.vM31.primary_assembly.annotation.gtf"), sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+```
+
+I got a warning when importing this, so might have to wrangle it a bit to get it the exact way marvel wants it. For now, I'm going to try making the marvel object.
+
+## Make MARVEL object
+
+```{r make marvel object}
+setbp1_marvel <- CreateMarvelObject.10x(
+  gene.norm.matrix = gene_norm,
+  gene.norm.pheno = gene_metadata,
+  gene.norm.feature = gene_features,
+  gene.count.matrix = gene_counts,
+  gene.count.pheno = gene_metadata,
+  gene.count.feature = gene_features,
+  sj.count.matrix = all_sj_counts,
+  sj.count.pheno = sj_metadata,
+  sj.count.feature = sj_features,
+  pca = umap_coords,
+  gtf = m31_gtf
+)
+```
 
 
 #### Style
