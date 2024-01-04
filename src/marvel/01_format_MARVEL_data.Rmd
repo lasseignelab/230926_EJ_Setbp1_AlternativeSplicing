@@ -8,7 +8,7 @@ date: "2023-12-21"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to format expression data from seurat and SJ outputs from STARsolo for MARVEL. It is dependent on running the scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.4
+The purpose of this script is to format expression data from seurat and SJ outputs from STARsolo for MARVEL. It is dependent on running the scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.5.
 
 ## Load Packages
 
@@ -49,13 +49,19 @@ suppressPackageStartupMessages({
   library(data.table)
   library(ggplot2)
   library(gridExtra)
+  
+  # Load this for data wrangling ease
+  library(MatrixExtra)
+  # Disable this option to use the following indexing method of checking values
+  options("MatrixExtra.quick_show" = FALSE)
+  
 })
 
 # set seed
 set.seed(123)
 
 # source functions
-source(here::here("src", "functions.R"))
+source(here::here("src", "marvel", "functions.R"))
 ```
 
 ## Import Expression Data
@@ -135,10 +141,6 @@ J15_sj_info <- split_sj_info(
 Now massage these separate SJ files into one larger expression matrix. Data is too large to pivot longer so need to do this method of joining specifically. The next solution fills in values based on the indexed feature name on where they should be.
 
 ```{r massage data frames}
-library(MatrixExtra) # add this to docker later if it works.
-# This is required to use this way of checking values
-options("MatrixExtra.quick_show" = FALSE)
-
 # Make list of all matrices - make sure these are in the order of your gene data
 matrices <- list(
   J1_sj_info, J13_sj_info, J15_sj_info, J2_sj_info, J3_sj_info,

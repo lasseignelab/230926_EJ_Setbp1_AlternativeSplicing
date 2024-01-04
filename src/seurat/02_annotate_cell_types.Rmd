@@ -5,7 +5,7 @@ date: "2023-11-15"
 output: html_document
 ---
 
-The purpose of this script is to annotate cell types using seurat. It is dependent on script 01. Please use docker image setbp1_alternative_splicing:1.0.4
+The purpose of this script is to annotate cell types using seurat. It is dependent on script 01. Please use docker image setbp1_alternative_splicing:1.0.4 or above.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -32,7 +32,7 @@ suppressPackageStartupMessages({
 set.seed(123)
 
 # source functions
-source(here("src", "functions.R"))
+source(here("src", "seurat", "functions.R"))
 ```
 
 ## Load data
