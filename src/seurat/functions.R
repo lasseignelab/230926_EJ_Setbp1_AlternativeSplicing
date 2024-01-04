@@ -1,7 +1,7 @@
-### Functions for Setbp1 Alternative Splicing Project
+### Seurat functions for Setbp1 Alternative Splicing Project
 # Emma F. Jones (EJ)
-# Note: Many of these functions are borrowed/modified from Tabea Soelter
-# Those functions will be marked accordingly.
+# Note: These functions are borrowed/modified from Tabea Soelter
+# Those modified functions will be marked accordingly.
 
 ## calculate_qc - c/o Tabea Soelter, modified by EJ
 # A function which calculates quality control metrics for a merged seurat object
