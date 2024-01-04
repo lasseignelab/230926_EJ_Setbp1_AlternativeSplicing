@@ -1,0 +1,265 @@
+---
+title: "Format Data for import into MARVEL"
+output: html_document
+date: "2023-12-21"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The purpose of this script is to format expression data from seurat and SJ outputs from STARsolo for MARVEL. It is dependent on running the scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.5.
+
+## Load Packages
+
+```{r load packages}
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
+
+  # Load Seurat and other single-cell packages
+  library(tidyverse)
+  library(Seurat)
+  library(patchwork)
+  library(harmony)
+  library(presto)
+
+  # Load MARVEL package
+  library(MARVEL)
+
+  # Load adjunct MARVEL packages
+  library(ggnewscale)
+  library(ggrepel)
+  library(reshape2)
+  library(plyr)
+  library(stringr)
+  library(textclean)
+  library(AnnotationDbi)
+  library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(org.Mm.eg.db)
+  library(gtools)
+  library(GenomicRanges)
+  library(IRanges)
+  library(S4Vectors)
+  library(wiggleplotr)
+  library(Matrix)
+  library(data.table)
+  library(ggplot2)
+  library(gridExtra)
+  
+  # Load this for data wrangling ease
+  library(MatrixExtra)
+  # Disable this option to use the following indexing method of checking values
+  options("MatrixExtra.quick_show" = FALSE)
+  
+})
+
+# set seed
+set.seed(123)
+
+# source functions
+source(here::here("src", "marvel", "functions.R"))
+```
+
+## Import Expression Data
+
+First, you need to import and data wrangle the Seurat expression data.
+
+```{r import seurat expression data}
+annotated_brain_samples <- readRDS(
+  here::here("data", "seurat", "annotated_brain_samples.rds")
+)
+
+gene_norm <- annotated_brain_samples@assays[["RNA"]]@layers[["data"]]
+gene_norm <- as(gene_norm, "dgTMatrix")
+gene_norm[gene_norm[, 1] != 0, ][1:5, 1:5]
+
+gene_metadata <- annotated_brain_samples@meta.data
+gene_metadata <- tibble::rownames_to_column(gene_metadata, "cell.id")
+head(gene_metadata)
+
+gene_features <- rownames(annotated_brain_samples)
+head(gene_features)
+gene_features <- as.data.frame(gene_features)
+colnames(gene_features) <- "gene_short_name"
+
+gene_counts <- annotated_brain_samples@assays[["RNA"]]@layers[["counts"]]
+gene_counts <- as(gene_counts, "dgTMatrix")
+gene_counts[gene_counts[, 1] != 0, ][1:5, 1:5]
+```
+
+These software developers have a separate argument for df.gene.feature/df.count.feature and df.gene.pheno/df.count.pheno but they are the same files!!! So I am calling them gene_features, and gene_metadata.
+
+## Import Splice Junction Data
+
+The cell IDs of splice junction counts also have to match the expression cell IDs, meaning I need to data wrangle these files together to make a single splice junction out file.
+
+I made a function to extract splice junction information for each sample to simplify the data wrangling required for this project, so we can just use that.
+
+```{r use function to extract splice information}
+# sample J1
+J1_sj_info <- split_sj_info(
+  sample_id = "J1",
+  condition = "het",
+  sample_id_mod = "J_1"
+)
+# sample J2
+J2_sj_info <- split_sj_info(
+  sample_id = "J2",
+  condition = "ctrl",
+  sample_id_mod = "J_2"
+)
+# sample J3
+J3_sj_info <- split_sj_info(
+  sample_id = "J3",
+  condition = "ctrl",
+  sample_id_mod = "J_3"
+)
+# sample J4
+J4_sj_info <- split_sj_info(
+  sample_id = "J4",
+  condition = "ctrl",
+  sample_id_mod = "J_4"
+)
+# sample J13
+J13_sj_info <- split_sj_info(
+  sample_id = "J13",
+  condition = "het",
+  sample_id_mod = "J_13"
+)
+# sample J15
+J15_sj_info <- split_sj_info(
+  sample_id = "J15",
+  condition = "het",
+  sample_id_mod = "J_15"
+)
+```
+
+Now massage these separate SJ files into one larger expression matrix. Data is too large to pivot longer so need to do this method of joining specifically. The next solution fills in values based on the indexed feature name on where they should be.
+
+```{r massage data frames}
+# Make list of all matrices - make sure these are in the order of your gene data
+matrices <- list(
+  J1_sj_info, J13_sj_info, J15_sj_info, J2_sj_info, J3_sj_info,
+  J4_sj_info
+)
+
+# Identify all unique features
+all_features <- unique(unlist(lapply(matrices, rownames)))
+
+# Align and combine matrices using custom function
+combined_matrix <- do.call(cbind, lapply(matrices, align_matrix, all_features))
+
+# Add correct colnames
+colnames(combined_matrix) <- gene_metadata$cell.id
+
+# Coerce to correct format
+combined_matrix <- as(combined_matrix, "TsparseMatrix")
+
+# Check values where each new sample starts
+combined_matrix[combined_matrix[, 1] != 0, ][1:5, 1:5]
+
+J1_sj_info[J1_sj_info[, 1] != 0, ][1:5, 1:5]
+
+# Check each sample - J13
+combined_matrix[combined_matrix[, 5039] != 0, ][1:5, 5039:5047]
+
+J13_sj_info[J13_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J15
+combined_matrix[combined_matrix[, 14474] != 0, ][1:5, 14474:14482]
+
+J15_sj_info[J15_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J2
+combined_matrix[combined_matrix[, 23427] != 0, ][1:5, 23427:23435]
+
+J2_sj_info[J2_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J3
+combined_matrix[combined_matrix[, 30507] != 0, ][1:5, 30507:30515]
+
+J3_sj_info[J3_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J4
+combined_matrix[combined_matrix[, 40978] != 0, ][1:5, 40978:40986]
+
+J4_sj_info[J4_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# rename matrix for ease
+all_sj_counts <- combined_matrix
+
+# get metadata (colnames)
+sj_metadata <- colnames(combined_matrix)
+sj_metadata <- as.data.frame(sj_metadata)
+colnames(sj_metadata) <- "cell.id"
+
+# get splice junction location names
+sj_features <- rownames(combined_matrix)
+sj_features <- as.data.frame(sj_features)
+colnames(sj_features) <- "coord.intron"
+```
+
+### Get UMAP coordinates
+
+```{r get UMAP coordinates}
+umap_coords <-
+  annotated_brain_samples@reductions[["umap_harmony"]]@cell.embeddings
+
+umap_coords <- tibble::rownames_to_column(as.data.frame(umap_coords), "cell.id")
+
+colnames(umap_coords) <- c("cell.id", "x", "y")
+```
+
+### Get GTF
+
+```{r get gtf in r env}
+m31_gtf <- as.data.frame(fread("/data/project/lasseigne_lab/GENOME_dir/GENCODE_mm39/release_M31/GTF/gencode.vM31.primary_assembly.annotation.gtf"), sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+```
+
+I got a warning when importing this, so might have to wrangle it a bit to get it the exact way marvel wants it. For now, I'm going to try making the marvel object.
+
+## Make MARVEL object
+
+```{r make marvel object}
+setbp1_marvel <- CreateMarvelObject.10x(
+  gene.norm.matrix = gene_norm,
+  gene.norm.pheno = gene_metadata,
+  gene.norm.feature = gene_features,
+  gene.count.matrix = gene_counts,
+  gene.count.pheno = gene_metadata,
+  gene.count.feature = gene_features,
+  sj.count.matrix = all_sj_counts,
+  sj.count.pheno = sj_metadata,
+  sj.count.feature = sj_features,
+  pca = umap_coords,
+  gtf = m31_gtf
+)
+```
+
+
+#### Style
+
+```{r tidy script}
+style_file("03_format_MARVEL_data.Rmd")
+
+lint("03_format_MARVEL_data.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
+```
