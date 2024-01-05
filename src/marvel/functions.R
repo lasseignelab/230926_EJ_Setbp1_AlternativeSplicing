@@ -1,7 +1,7 @@
 ### MARVEL functions for Setbp1 Alternative Splicing Project
 # Emma F. Jones (EJ)
 ## split_sj_info - Emma Jones
-# This function serves as a way to get the splice junction information for each sample
+# This function gets the splice junction information for each sample
 split_sj_info <- function(sample_id, condition, sample_id_mod) {
   # get cell barcodes
   sj_barcodes <- read.table(
@@ -31,11 +31,14 @@ split_sj_info <- function(sample_id, condition, sample_id_mod) {
       "features.tsv"
     )
   )
-  sj_features <- paste(sj_features$V1, sj_features$V2, sj_features$V3, sep = ":")
+  sj_features <- paste(sj_features$V1, sj_features$V2,
+    sj_features$V3,
+    sep = ":"
+  )
   # make everything into a single dataframe
   colnames(sj_matrix) <- sj_barcodes[barcode_order, ]
   rownames(sj_matrix) <- sj_features
-  
+
   # export data in long dataframe format for that sample
   return(sj_matrix)
 }
@@ -46,7 +49,7 @@ align_matrix <- function(mat, all_features) {
   # Create an empty sparse matrix with all features
   aligned_mat <- emptySparse(nrow = length(all_features), ncol = ncol(mat))
   rownames(aligned_mat) <- all_features
-  
+
   # Fill in existing values
   intersecting_features <- intersect(rownames(mat), all_features)
   aligned_mat[intersecting_features, ] <- mat[intersecting_features, ]
