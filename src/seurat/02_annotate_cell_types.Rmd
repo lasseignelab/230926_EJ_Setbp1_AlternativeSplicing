@@ -363,6 +363,28 @@ saveRDS(annotated_brain_samples,
 )
 ```
 
+Finally, make a dot plot with all the cell type markers after we annotated all cell types to show expression of all markers. For this plot, I am just using one marker per type, but we used more than one marker when annotating.
+
+Excitatory Neurons - Slc17a7
+Inhibitory Neurons - Gad2
+Microglia - Cx3cr1
+Astrocytes - Slc1a3
+OPCs - Pdgfra
+Oligodendrocytes - Mbp
+Vascular Cells (Pericytes/Fibroblasts/VLMCs/Endothelial Cells) - Vtn
+
+```{r make dot plot}
+# plot and save cell type markers for all cell types
+png(here("results", "seurat_outputs", "cell_type_markers.png"))
+DotPlot(annotated_brain_samples, features = c("Vtn", "Cx3cr1", "Pdgfra", "Gad2", "Mbp", "Slc1a3", "Slc17a7")) + theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
+dev.off()
+
+# additional plot for all vascular cell markers to show specificity
+png(here("results", "seurat_outputs", "vascular_cell_type_markers.png"))
+DotPlot(annotated_brain_samples, features = c("Vtn", "Bnc2", "Col1a1","Dcn", "Flt1", "Pdgfrb")) + theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
+dev.off()
+```
+
 #### Style
 
 ```{r tidy script}
@@ -454,30 +476,3 @@ loaded via a namespace (and not attached):
 [115] listenv_0.9.0          viridisLite_0.4.2      cyclocomp_1.1.1       
 [118] scales_1.2.1           ggridges_0.5.4         leiden_0.4.3          
 [121] crayon_1.5.2           rlang_1.1.2            cowplot_1.1.1    
-
-
-## Archive
-Look at cortical layer markers - I am leaving this code here in case we can to subcluster excitatory neurons later.
-
-```{r cortical layer markers}
-# layer 2/3
-FeaturePlot(clustered_brain_samples, features = c("Lamp5"), label = TRUE)
-# layer 2/4
-FeaturePlot(clustered_brain_samples, features = c("Cux2"), label = TRUE)
-# layer 2/5
-FeaturePlot(clustered_brain_samples, features = c("Rasgrf2"), label = TRUE)
-# layer 4/5
-FeaturePlot(clustered_brain_samples, features = c("Rorb"), label = TRUE)
-# layer 5
-FeaturePlot(clustered_brain_samples,
-  features = c("Kcnk2", "Sulf2", "Pcp4", "Fezf2"), label = TRUE
-)
-# layer 5/6
-FeaturePlot(clustered_brain_samples,
-  features = c("Etv1", "Rprm", "Rxfp1", "Foxp2"), label = TRUE
-)
-# layer 6
-FeaturePlot(clustered_brain_samples,
-  features = c("Syt6", "Oprk1", "Nr4a2", "Synpr"), label = TRUE
-)
-```
