@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to format expression data from seurat and SJ outputs from STARsolo for MARVEL. It is dependent on running the scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.5.
+The purpose of this script is to run differential analysis with MARVEL. It is dependent on running all seurat scripts, and marvel script 01. Please use docker image setbp1_alternative_splicing:1.0.5.
 
 ## Load Packages
 
@@ -56,6 +56,10 @@ source(here::here("src", "marvel", "functions.R"))
 ## Import MARVEL Object
 
 ```{r import marvel object}
+setbp1_marvel <- readRDS(here::here(
+  "data", "marvel",
+  "setbp1_marvel_aligned.rds"
+))
 ```
 
 
