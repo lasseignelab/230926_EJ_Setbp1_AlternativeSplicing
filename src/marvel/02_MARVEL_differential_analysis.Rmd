@@ -1,0 +1,86 @@
+---
+title: "MARVEL Differential Analysis"
+author: "Emma Jones"
+date: "2024-01-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The purpose of this script is to format expression data from seurat and SJ outputs from STARsolo for MARVEL. It is dependent on running the scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.5.
+
+## Load Packages
+
+```{r load packages}
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
+  library(tidyverse)
+  library(patchwork)
+
+  # Load MARVEL package
+  library(MARVEL)
+
+  # Load adjunct MARVEL packages
+  library(ggnewscale)
+  library(ggrepel)
+  library(reshape2)
+  library(plyr)
+  library(stringr)
+  library(textclean)
+  library(AnnotationDbi)
+  library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(org.Mm.eg.db)
+  library(gtools)
+  library(GenomicRanges)
+  library(IRanges)
+  library(S4Vectors)
+  library(wiggleplotr)
+  library(Matrix)
+  library(data.table)
+  library(gridExtra)
+})
+
+# set seed
+set.seed(123)
+
+# source functions
+source(here::here("src", "marvel", "functions.R"))
+```
+
+## Import MARVEL Object
+
+```{r import marvel object}
+```
+
+
+
+
+
+#### Style
+
+```{r tidy script}
+style_file("02_MARVEL_differential_analysis.Rmd")
+
+lint("02_MARVEL_differential_analysis.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
+```
