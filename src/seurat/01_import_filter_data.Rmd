@@ -37,6 +37,8 @@ source(here("src", "seurat", "functions.R"))
 
 ## Load in Data
 
+NOTE: SEURAT IS PICKY HERE, AND IF YOUR FILES ARE NOT GZIPPED IT WILL NOT READ THEM IN CORRECTLY. PLEASE MAKE SURE THESE FILES HAVE THE .GZ EXTENSION BEFORE PROCEEDING.
+
 ```{r load data}
 # brain sample J1
 J1_data <- Read10X(here(

@@ -49,12 +49,11 @@ suppressPackageStartupMessages({
   library(data.table)
   library(ggplot2)
   library(gridExtra)
-  
+
   # Load this for data wrangling ease
   library(MatrixExtra)
   # Disable this option to use the following indexing method of checking values
   options("MatrixExtra.quick_show" = FALSE)
-  
 })
 
 # set seed
@@ -74,7 +73,7 @@ annotated_brain_samples <- readRDS(
 )
 
 gene_norm <- annotated_brain_samples@assays[["RNA"]]@layers[["data"]]
-gene_norm <- as(gene_norm, "dgTMatrix")
+gene_norm <- as(gene_norm, "TsparseMatrix")
 gene_norm[gene_norm[, 1] != 0, ][1:5, 1:5]
 
 gene_metadata <- annotated_brain_samples@meta.data
@@ -103,38 +102,32 @@ I made a function to extract splice junction information for each sample to simp
 # sample J1
 J1_sj_info <- split_sj_info(
   sample_id = "J1",
-  condition = "het",
-  sample_id_mod = "J_1"
+  condition = "het"
 )
 # sample J2
 J2_sj_info <- split_sj_info(
   sample_id = "J2",
-  condition = "ctrl",
-  sample_id_mod = "J_2"
+  condition = "ctrl"
 )
 # sample J3
 J3_sj_info <- split_sj_info(
   sample_id = "J3",
-  condition = "ctrl",
-  sample_id_mod = "J_3"
+  condition = "ctrl"
 )
 # sample J4
 J4_sj_info <- split_sj_info(
   sample_id = "J4",
-  condition = "ctrl",
-  sample_id_mod = "J_4"
+  condition = "ctrl"
 )
 # sample J13
 J13_sj_info <- split_sj_info(
   sample_id = "J13",
-  condition = "het",
-  sample_id_mod = "J_13"
+  condition = "het"
 )
 # sample J15
 J15_sj_info <- split_sj_info(
   sample_id = "J15",
-  condition = "het",
-  sample_id_mod = "J_15"
+  condition = "het"
 )
 ```
 
@@ -218,9 +211,13 @@ colnames(umap_coords) <- c("cell.id", "x", "y")
 
 ```{r get gtf in r env}
 m31_gtf <- as.data.frame(fread("/data/project/lasseigne_lab/GENOME_dir/GENCODE_mm39/release_M31/GTF/gencode.vM31.primary_assembly.annotation.gtf"), sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+# rename columns
+colnames(m31_gtf) <- c("V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9")
+# drop chr from chromosome numbers in gtf column 1
+m31_gtf$V1 <- substr(m31_gtf$V1, 4, nchar(m31_gtf$V1))
 ```
 
-I got a warning when importing this, so might have to wrangle it a bit to get it the exact way marvel wants it. For now, I'm going to try making the marvel object.
+Now, I'm going to try making the marvel object.
 
 ## Make MARVEL object
 
@@ -240,13 +237,82 @@ setbp1_marvel <- CreateMarvelObject.10x(
 )
 ```
 
+## Pre-process MARVEL object
+
+First, we annotate the gene metadata.
+
+```{r annotate gene metadta}
+setbp1_marvel <- AnnotateGenes.10x(MarvelObject = setbp1_marvel)
+
+head(setbp1_marvel$gene.metadata)
+
+table(setbp1_marvel$gene.metadata$gene_type)
+```
+
+Now, we annotate the splice junction metadata.
+
+```{r annotate junction metadata}
+setbp1_marvel <- AnnotateSJ.10x(MarvelObject = setbp1_marvel)
+
+head(setbp1_marvel$sj.metadata)
+```
+
+Now, we want to validate these splice junctions whose start and end are mapped to the same gene (no multi-gene splicing is included downstream because of this step).
+
+```{r validate splice junctions}
+setbp1_marvel <- ValidateSJ.10x(MarvelObject = setbp1_marvel)
+```
+
+Lastly, we will remove gene that are non-coding genes.
+
+```{r subset cds genes}
+setbp1_marvel <- FilterGenes.10x(
+  MarvelObject = setbp1_marvel,
+  gene.type = "protein_coding"
+)
+```
+
+Last, before proceeding, we must check the alignment of the marvel object.
+
+```{r check alignment}
+setbp1_marvel <- CheckAlignment.10x(MarvelObject = setbp1_marvel)
+```
+Expected output:
+
+Matching gene list in normalised and raw (count) gene matrices...
+21935 genes found in normalised gene matrix
+56979 genes found in raw (count) gene matrix
+21935 overlapping genes found and retained
+Matching cells across normalised gene, raw (count) gene, raw (count) SJ matrices...
+51465 cells found in normalised gene matrix
+51465 cells found in raw (count) gene matrix
+51465 cells found in raw (count) SJ matrix
+51465 overlapping cells found and retained
+Checking column (sample) alignment...
+Sample metadata and normalised gene matrix column names MATCHED
+Normalised and raw (count) gene matrix column names MATCHED
+Raw (Count) gene and SJ matrix column names MATCHED
+Checking row (gene names/SJ coordinates) alignment...
+Gene metadata and normalised gene matrix row names MATCHED
+Normalised and raw (count) gene matrix row names MATCHED
+SJ metadata and raw (count) SJ matrix row names MATCHED
+51465 cells and 15633 genes consisting of 186562 splice junctions included for further analysis
+
+Looks good! Now we can save our marvel object before proceeding.
+
+```{r save marvel object}
+# save object
+saveRDS(setbp1_marvel,
+  file = here::here("data", "marvel", "setbp1_marvel_aligned.rds")
+)
+```
 
 #### Style
 
 ```{r tidy script}
-style_file("03_format_MARVEL_data.Rmd")
+style_file("01_format_MARVEL_data.Rmd")
 
-lint("03_format_MARVEL_data.Rmd",
+lint("01_format_MARVEL_data.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,

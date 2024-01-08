@@ -2,7 +2,11 @@
 # Emma F. Jones (EJ)
 ## split_sj_info - Emma Jones
 # This function gets the splice junction information for each sample
-split_sj_info <- function(sample_id, condition, sample_id_mod) {
+split_sj_info <- function(sample_id, condition) {
+  # split the sample ID string into individual characters
+  char_vector <- strsplit(sample_id, "")[[1]]
+  # add an underscore after the first character
+  sample_id_mod <- paste0(char_vector[1], "_", paste0(char_vector[-1], collapse = ""))
   # get cell barcodes
   sj_barcodes <- read.table(
     here::here(
