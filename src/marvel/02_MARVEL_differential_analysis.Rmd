@@ -60,6 +60,8 @@ setbp1_marvel <- readRDS(here::here(
   "data", "marvel",
   "setbp1_marvel_aligned.rds"
 ))
+# Retrieve sample metadata
+sample_metadata <- setbp1_marvel$sample.metadata
 ```
 
 ## Explore expression
@@ -67,16 +69,13 @@ setbp1_marvel <- readRDS(here::here(
 We do this in a pairwise fashion, and need to determine which expression thresholds to use. This will likely change for the comparisons being done. For now, I'll compare excitatory to inhibitory neurons since those have the biggest numbers of cells.
 
 ```{r define cell groups}
-# Retrieve sample metadata
-sample_metadata <- setbp1_marvel$sample.metadata
-
 # Group 1 (reference)
-index <- which(sample_metadata$cell_type == "Excitatory Neurons")
+index <- which(sample_metadata$cell_type == "Excitatory Neurons" & sample_metadata$seq_folder == "mutant")
 cell.ids.1 <- sample_metadata[index, "cell.id"]
 length(cell.ids.1)
 
 # Group 2
-index <- which(sample_metadata$cell_type == "Inhibitory Neurons")
+index <- which(sample_metadata$cell_type == "Excitatory Neurons" & sample_metadata$seq_folder == "wildtype")
 cell.ids.2 <- sample_metadata[index, "cell.id"]
 length(cell.ids.2)
 ```
@@ -117,70 +116,126 @@ head(setbp1_marvel$pct.cells.expr$SJ$Data)
 
 For, now I will use the default expression cutoffs for differential analysis.
 
-## Differential Analysis
+### Use in-house function for running marvel on a single cell type
 
-First we can do differential splicing analysis
+```{r test function for running marvel on single cell type}
 
-```{r differential splicing analysis}
-setbp1_marvel <- CompareValues.SJ.10x(
-  MarvelObject = setbp1_marvel,
-  cell.group.g1 = cell.ids.1,
-  cell.group.g2 = cell.ids.2,
-  min.pct.cells.genes = 10,
-  min.pct.cells.sj = 10,
-  min.gene.norm = 1.0,
-  seed = 1,
-  n.iterations = 100,
-  downsample = TRUE,
-  show.progress = TRUE
-)
+excitatory_marvel <- run_marvel_cell_type(marvel_object = setbp1_marvel,
+                                   cell_type = "Excitatory Neurons")
+
+
+inhibitory_marvel <- run_marvel_cell_type(marvel_object = setbp1_marvel,
+                                   cell_type = "Inhibitory Neurons")
+
+
+astrocytes_marvel <- run_marvel_cell_type(marvel_object = setbp1_marvel,
+                                   cell_type = "Astrocytes")
+
+
+oligodendrocytes_marvel <- run_marvel_cell_type(marvel_object = setbp1_marvel,
+                                   cell_type = "Oligodendrocytes")
+
+
+opcs_marvel <- run_marvel_cell_type(marvel_object = setbp1_marvel,
+                                   cell_type = "OPCs")
+
+microglia_marvel <- run_marvel_cell_type(marvel_object = setbp1_marvel,
+                                   cell_type = "Microglia")
+
+
+vascular_marvel <- run_marvel_cell_type(marvel_object = setbp1_marvel,
+                                   cell_type = "Vascular Cells")
+
 ```
 
-Then, we can do differential gene analysis
 
-```{r differential gene analysis}
-setbp1_marvel <- CompareValues.Genes.10x(
-  MarvelObject = setbp1_marvel,
-  show.progress = TRUE
-)
+```{r do for all cell types}
 
-head(setbp1_marvel$DE$SJ$Table)
+  all_types_marvel <- setbp1_marvel
+  
+  # Group 1 (reference)
+  index_1 <- which(sample_metadata$seq_folder == "mutant")
+  cell_ids_1 <- sample_metadata[index_1, "cell.id"]
+  
+  # Group 2
+  index_2 <- which(sample_metadata$seq_folder == "wildtype")
+  cell_ids_2 <- sample_metadata[index_2, "cell.id"]
+  
+  # Explore % of cells expressing genes
+  all_types_marvel <- PlotPctExprCells.Genes.10x(
+    MarvelObject = all_types_marvel,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells = 5
+  )
+  
+  # Explore % of cells expressing junctions
+  all_types_marvel <- PlotPctExprCells.SJ.10x(
+    MarvelObject = all_types_marvel,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells.genes = 5,
+    min.pct.cells.sj = 5,
+    downsample = TRUE,
+    downsample.pct.sj = 10
+  )
+  
+  # Differential Splicing Analysis
+  all_types_marvel <- CompareValues.SJ.10x(
+    MarvelObject = all_types_marvel,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells.genes = 5,
+    min.pct.cells.sj = 5,
+    min.gene.norm = 1,
+    seed = 1,
+    n.iterations = 100,
+    downsample = TRUE,
+    show.progress = TRUE
+  )
+  
+  # Differential Gene Analysis
+  all_types_marvel <- CompareValues.Genes.10x(
+    MarvelObject = all_types_marvel,
+    show.progress = TRUE
+  )
+  
+  # Make volcano plot
+  all_types_marvel <- PlotDEValues.SJ.10x(
+    MarvelObject = all_types_marvel,
+    pval = 0.05,
+    delta = 1,
+    min.gene.norm = 1,
+    anno = FALSE
+  )
+  # Assign kinds of iso-switching
+  all_types_marvel <- IsoSwitch.10x(
+    MarvelObject = all_types_marvel,
+    pval.sj = 0.05,
+    delta.sj = 1,
+    min.gene.norm = 1,
+    pval.adj.gene = 0.05,
+    log2fc.gene = 0.5
+  )
+  
+  # Pull significant genes
+  significant_genes <- all_types_marvel[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
+  
+  # Save final
+  saveRDS(all_types_marvel,
+          file = here::here("data", "marvel",
+                            paste0("All_Cell_Types_marvel_object.rds"))
+  )
 ```
-### Volcano plots!
 
-```{r make splicing volcano plot}
-setbp1_marvel <- PlotDEValues.SJ.10x(
-  MarvelObject = setbp1_marvel,
-  pval = 0.1,
-  delta = 1,
-  min.gene.norm = 0.5,
-  anno = FALSE
-)
 
-setbp1_marvel$DE$SJ$VolcanoPlot$SJ$Plot
-```
-
-This volcano plot is pretty wack, but maybe we can work on this a bit. For now, I am going to work with the whole vignette with my example data.
-
-```{r assign dynamics}
-setbp1_marvel <- IsoSwitch.10x(
-  MarvelObject = setbp1_marvel,
-  pval.sj = 0.05,
-  delta.sj = 1,
-  min.gene.norm = 1.0,
-  pval.adj.gene = 0.05,
-  log2fc.gene = 0.5
-)
-
-setbp1_marvel$SJ.Gene.Cor$Proportion$Plot
-```
 ### Gene-splicing dynamics
 
 ```{r visualize gene-splicing dynamics}
 # Save into list
 cell.group.list <- list(
-  "Exitatory" = cell.ids.1,
-  "Inhibitory" = cell.ids.2
+  "Mutant" = cell.ids.1,
+  "Wildtype" = cell.ids.2
 )
 
 # Plot cell groups
@@ -196,7 +251,7 @@ plot_group <- setbp1_marvel$adhocPlot$PCA$CellGroup
 # Plot gene expression
 setbp1_marvel <- PlotValues.PCA.Gene.10x(
   MarvelObject = setbp1_marvel,
-  gene_short_name = "Dst",
+  gene_short_name = "Kif21a",
   color.gradient = c("grey", "cyan", "green", "yellow", "red"),
   type = "umap"
 )
@@ -207,7 +262,7 @@ plot_gene <- setbp1_marvel$adhocPlot$PCA$Gene
 # Plot PSI
 setbp1_marvel <- PlotValues.PCA.PSI.10x(
   MarvelObject = setbp1_marvel,
-  coord.intron = "chr1:34007985:34045271",
+  coord.intron = "chr15:90881929:90882035",
   min.gene.count = 3,
   log2.transform = FALSE,
   color.gradient = c("grey", "cyan", "green", "yellow", "red"),
