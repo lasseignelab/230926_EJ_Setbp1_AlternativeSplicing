@@ -66,7 +66,7 @@ source(here::here("src", "marvel", "functions.R"))
 First, you need to import and data wrangle the Seurat expression data.
 
 ```{r import seurat expression data}
-annotated_brain_samples <- readRDS(
+annotated_brain_samples <- read_rds(
   here::here("data", "seurat", "annotated_brain_samples.rds")
 )
 
@@ -300,7 +300,7 @@ Looks good! Now we can save our marvel object before proceeding.
 
 ```{r save marvel object}
 # save object
-saveRDS(setbp1_marvel,
+write_rds(setbp1_marvel,
   file = here::here("data", "marvel", "setbp1_marvel_aligned.rds")
 )
 ```
