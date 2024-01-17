@@ -225,7 +225,7 @@ run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5,
   significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
   
   # Save MARVEL object
-  saveRDS(marvel_object,
+  write_rds(marvel_object,
           file = here::here("data", "marvel",
                             paste0(cell_type, "_marvel_object.rds"))
   )
@@ -233,3 +233,76 @@ run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5,
   # Return list
   return(marvel_object)
 }
+
+## plot_marvel_umap - Emma Jones
+# This function a wrapper function for plotting marvel umaps for a cell type,
+# gene, and splice junction locus. User can also customize the colors used.
+plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
+                             color_grad_gene = c("grey", "cyan", "green",
+                                                 "yellow", "red"),
+                             color_grad_psi = c("grey", "cyan", "green",
+                                                 "yellow", "red")) {
+  # Group 1 (reference)
+  index_1 <- which(sample_metadata$seq_folder == "mutant")
+  cell_ids_1 <- sample_metadata[index_1, "cell.id"]
+  
+  # Group 2
+  index_2 <- which(sample_metadata$seq_folder == "wildtype")
+  cell_ids_2 <- sample_metadata[index_2, "cell.id"]
+  
+  # Save into list
+  cell_group_list <- list(
+    "Mutant" = cell_ids_1,
+    "Wildtype" = cell_ids_2
+  )
+  
+  # Print generation message
+  message("Generating Plots...")
+  
+  # Plot cell groups
+  marvel_object <- PlotValues.PCA.CellGroup.10x(
+    MarvelObject = marvel_object,
+    cell.group.list = cell_group_list,
+    legendtitle = "Cell group",
+    type = "umap"
+  )
+  
+  plot_group <- marvel_object$adhocPlot$PCA$CellGroup
+  
+  # Plot gene expression
+  marvel_object <- PlotValues.PCA.Gene.10x(
+    MarvelObject = marvel_object,
+    gene_short_name = gene,
+    color.gradient = color_grad_gene,
+    type = "umap"
+  )
+  
+  
+  plot_gene <- excitatory_marvel$adhocPlot$PCA$Gene
+  
+  # Plot PSI
+  marvel_object <- PlotValues.PCA.PSI.10x(
+    MarvelObject = marvel_object,
+    coord.intron = sj_loc,
+    min.gene.count = 3,
+    log2.transform = FALSE,
+    color.gradient = color_grad_psi,
+    type = "umap"
+  )
+  
+  plot_sj <- marvel_object$adhocPlot$PCA$PSI
+  
+  # Print plotting message
+  message("Saving Plot...")
+  
+  # Save UMAP
+  png(here::here("results", "marvel_outputs",
+                 paste0(prefix, "_", gene, ".png")),
+      width = 1200, height = 600)
+  grid.arrange(plot_group, plot_gene, plot_sj, nrow = 1)
+  dev.off()
+  
+  # Return object
+  return(marvel_object)
+}
+
