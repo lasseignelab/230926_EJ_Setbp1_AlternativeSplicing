@@ -260,7 +260,7 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
   message("Generating Plots...")
   
   # Plot cell groups
-  marvel_object <- PlotValues.PCA.CellGroup.10x(
+  marvel_object <- PlotValues_PCA_CellGroup_EJ(
     MarvelObject = marvel_object,
     cell.group.list = cell_group_list,
     legendtitle = "Cell group",
@@ -276,7 +276,6 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
     color.gradient = color_grad_gene,
     type = "umap"
   )
-  
   
   plot_gene <- excitatory_marvel$adhocPlot$PCA$Gene
   
@@ -306,3 +305,82 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
   return(marvel_object)
 }
 
+### EJ EDIT OF PLOTTING FUNCTION TO SHUFFLE POINTS
+PlotValues_PCA_CellGroup_EJ <-
+function (MarvelObject, cell.group.list, legendtitle = "Cell group", 
+          alpha = 0.75, point.size = 1, point.stroke = 0.1, point.colors = NULL, 
+          point.size.legend = 2, type, shuffle = TRUE) 
+{
+  MarvelObject <- MarvelObject
+  df <- MarvelObject$pca
+  cell.group.list <- cell.group.list
+  legendtitle <- legendtitle
+  alpha <- alpha
+  point.size <- point.size
+  point.stroke <- point.stroke
+  point.colors <- point.colors
+  point.size.legend <- point.size.legend
+  type <- type
+  .list <- list()
+  for (i in 1:length(cell.group.list)) {
+    . <- data.frame(cell.id = cell.group.list[[i]], group = names(cell.group.list)[i])
+    .list[[i]] <- .
+  }
+  ref <- do.call(rbind.data.frame, .list)
+  df <- join(df, ref, by = "cell.id", type = "left")
+  df$group <- factor(df$group, levels = names(cell.group.list))
+  n.anno.missing <- sum(is.na(df$group))
+  if (n.anno.missing == 0) {
+    message("All cells defined with coordinates found")
+  }
+  else {
+    message(paste(n.anno.missing, " cells defined with no coordinates found", 
+                  sep = ""))
+  }
+  data <- df
+  if (isTRUE(x = shuffle)) {
+    data <- data[sample(x = 1:nrow(x = data)), ]
+  }
+  x <- data$x
+  y <- data$y
+  z <- data$group
+  if (type == "umap") {
+    xtitle <- "UMAP-1"
+    ytitle <- "UMAP-2"
+  }
+  else if (type == "tsne") {
+    xtitle <- "tSNE-1"
+    ytitle <- "tSNE-2"
+  }
+  if (is.null(point.colors[1])) {
+    gg_color_hue <- function(n) {
+      hues = seq(15, 375, length = n + 1)
+      hcl(h = hues, l = 65, c = 100)[1:n]
+    }
+    n = length(levels(z))
+    point.colors = gg_color_hue(n)
+  }
+  if (length(unique(z)) > 20) {
+    ncol.legend <- 3
+  }
+  else if (length(unique(z)) > 10) {
+    ncol.legend <- 2
+  }
+  else if (length(unique(z)) <= 10) {
+    ncol.legend <- 1
+  }
+  plot <- ggplot() + geom_point(data, mapping = aes(x = x, 
+                                                    y = y, fill = z), color = "black", pch = 21, size = point.size, 
+                                alpha = alpha, stroke = point.stroke) + scale_fill_manual(values = point.colors) + 
+    labs(title = NULL, x = xtitle, y = ytitle, fill = legendtitle) + 
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+          panel.background = element_blank(), plot.title = element_text(size = 12, 
+                                                                        hjust = 0.5), axis.line = element_line(colour = "black"), 
+          axis.title = element_text(size = 12), axis.text.x = element_text(size = 10, 
+                                                                           colour = "black"), axis.text.y = element_text(size = 10, 
+                                                                                                                         colour = "black"), legend.title = element_text(size = 8), 
+          legend.text = element_text(size = 8)) + guides(fill = guide_legend(override.aes = list(size = point.size.legend, 
+                                                                                                 alpha = alpha, stroke = point.stroke), ncol = ncol.legend))
+  MarvelObject$adhocPlot$PCA$CellGroup <- plot
+  return(MarvelObject)
+}
