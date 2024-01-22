@@ -20,7 +20,7 @@
 
 # Define variables
 GENOME="${USER_DATA}/codeReview"
-OUTDIR="${USER_DATA}/codeReview"
+OUTDIR="${USER_SCRATCH}"
 
 cd /data/project/lasseigne_lab/DATASET_dir/Setbp1S858R_snRNAseq/
 
