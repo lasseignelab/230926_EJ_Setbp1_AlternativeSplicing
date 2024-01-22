@@ -8,7 +8,7 @@ date: "2024-01-18"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to analyze differential analysis results MARVEL. It is dependent on running all seurat scripts, and marvel scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.5.
+The purpose of this script is to analyze differential analysis results MARVEL. It is dependent on running all seurat scripts, and marvel scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.6, since you need ComplexHeatmap so make the UpSet plots.
 
 ## Load Packages
 
@@ -20,6 +20,8 @@ suppressPackageStartupMessages({
   library(lintr)
   library(tidyverse)
   library(patchwork)
+  library(ComplexHeatmap)
+  library(viridis)
 
   # Load MARVEL package
   library(MARVEL)
@@ -50,8 +52,53 @@ set.seed(123)
 
 # source functions
 source(here::here("src", "marvel", "functions.R"))
+source(here::here("src", "marvel", "PlotSJPosition_modification.R"))
 ```
 
+## Load in Data
+
+```{read in marvel objects}
+
+excitatory_marvel <- readRDS(here::here(
+  "data", "marvel",
+  "Excitatory Neurons_marvel_object.rds"
+))
+
+inhibitory_marvel <- readRDS(
+  "/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/marvel/Inhibitory Neurons_marvel_object.rds")
+
+astrocytes_marvel <- readRDS(here::here(
+  "data", "marvel",
+  "Astrocytes_marvel_object"
+))
+
+oligodendrocytes_marvel <- readRDS(here::here(
+  "data", "marvel",
+  "Oligodendrocytes_marvel_object"
+))
+
+opcs_marvel <- readRDS(here::here(
+  "data", "marvel",
+  "OPCs_marvel_object"
+))
+
+vascular_marvel <- readRDS(here::here(
+  "data", "marvel",
+  "Vascular Cells_marvel_object"
+))
+
+all_types_marvel <- readRDS(here::here(
+  "data", "marvel",
+  "All_Cell_Types_marvel_object"
+))
+
+```
+
+```{r test}
+
+print("test2")
+
+```
 
 ## Gene-splicing dynamics visalization - excitatory neurons
 
@@ -147,7 +194,6 @@ It looks like I can make as many cell groups and label as I like. This may help 
 ### Plot SJ position
 
 ```{r plot SJ position}
-#install.packages(here::here("bin", "custom_packages", "wiggleplotr_1.18.0.tar.gz"), repos = NULL, type = "source")
 
 excitatory_marvel <- adhocGene_PlotSJPosition_EJ(
   MarvelObject = excitatory_marvel,
@@ -192,22 +238,7 @@ astrocytes_sig_coords <-
 ```
 
 
-```{r what are the significant astrocyte genes}
-# Pull significant genes
-astrocytes_sig_table <-
-  astrocytes_marvel[["SJ.Gene.Cor"]][["Data"]]
-
-# Pull significant genes
-astrocytes_sig_genes <-
-  astrocytes_marvel[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
-
-# Pull SJ locations
-astrocytes_sig_coords <-
-  astrocytes_marvel[["SJ.Gene.Cor"]][["Data"]]$coord.intron
-```
-
-
-```{r what are the significant astrocyte genes}
+```{r what are the significant oligo genes}
 # Pull significant genes
 oligodendrocytes_sig_table <-
   oligodendrocytes_marvel[["SJ.Gene.Cor"]][["Data"]]
@@ -222,7 +253,7 @@ oligodendrocytes_sig_coords <-
 ```
 
 
-```{r what are the significant astrocyte genes}
+```{r what are the significant opc genes}
 # Pull significant genes
 opcs_sig_table <-
   opcs_marvel[["SJ.Gene.Cor"]][["Data"]]
@@ -237,7 +268,7 @@ opcs_sig_coords <-
 ```
 
 
-```{r what are the significant astrocyte genes}
+```{r what are the significant vascular genes}
 # Pull significant genes
 vascular_sig_table <-
   vascular_marvel[["SJ.Gene.Cor"]][["Data"]]
@@ -252,6 +283,102 @@ vascular_sig_coords <-
 ```
 
 
-```{r plot umaps for specific genes}
+```{r what are the significant microglia genes}
+# Pull significant genes
+microglia_sig_table <-
+  microglia_marvel[["SJ.Gene.Cor"]][["Data"]]
+
+# Pull significant genes
+microglia_sig_genes <-
+  microglia_marvel[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
+
+# Pull SJ locations
+microglia_sig_coords <-
+  microglia_marvel[["SJ.Gene.Cor"]][["Data"]]$coord.intron
 ```
+
+
+```{r what are the significant all cell type genes}
+# Pull significant genes
+all_types_sig_table <-
+  all_types_marvel[["SJ.Gene.Cor"]][["Data"]]
+
+# Pull significant genes
+all_types_sig_genes <-
+  all_types_marvel[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
+
+# Pull SJ locations
+all_types_sig_coords <-
+  all_types_marvel[["SJ.Gene.Cor"]][["Data"]]$coord.intron
+```
+
+
+```{r compare to known setbp1 targets}
+
+setbp1_targets <- read_csv("/data/project/lasseigne_lab/JordanWhitlock/230227_Setbp1Manuscript/230227_JW_Setbp1Manuscript_EVERYTHING/results/seurat/setbp1_targets.csv", col_types = cols(...1 = col_skip()))
+
+```
+
+```{r save only the significant tables}
+
+save(list = ls(pattern = "_sig_table"), file = here::here("data/marvel/significant_tables.RData"))
+
+```
+
+
+```{r load significant tables, if needed}
+```
+
+```{r make upset plot}
+# make list of sig tables
+tables_list <- mget(ls(pattern = "_sig_table"))
+
+#remove all cell types from list
+tables_list <- tables_list[2:8]
+
+# pull out only genes
+gene_lists <- map(tables_list, ~select(.x, gene_short_name))
+
+# make into character list
+gene_lists <- map(gene_lists, ~flatten(.))
+
+# create matrix
+gene_lists_mat <- ComplexHeatmap::list_to_matrix(gene_lists)
+
+# rename columns
+colnames(gene_lists_mat) <- c("Astrocytes", "Excitatory Neurons",
+                              "Inhibitory Neurons", "Microglia",
+                              "Oligodendrocytes", "OPCs", "Vascular Cells")
+
+# generate combination matrix
+gene_lists_comb_mat <- make_comb_mat(gene_lists_mat)
+
+# make UpSet plot (ComplexHeatmap)
+png(here::here("results", "upset_plots", "sig_gene_overlap.png"),
+  width = 8, height = 5, units = "in", res = 300
+)
+gene_lists_upset_plot <- UpSet(gene_lists_comb_mat,
+  comb_col = viridis(8)[2:7][comb_degree(gene_lists_comb_mat)],
+  top_annotation = upset_top_annotation(gene_lists_comb_mat,
+    add_numbers = TRUE, annotation_name_gp = gpar(fontface = "bold"),
+    axis_param = list(gp = gpar(fontface = "bold")),
+    numbers_gp = gpar(fontface = "bold")
+  ),
+  right_annotation = upset_right_annotation(gene_lists_comb_mat,
+    add_numbers = TRUE, annotation_name_gp = gpar(fontface = "bold"),
+    axis_param = list(gp = gpar(fontface = "bold")),
+    numbers_gp = gpar(fontface = "bold")
+  ),
+  row_names_gp = gpar(fontface = "bold")
+)
+draw(gene_lists_upset_plot)
+dev.off()
+
+# view upsetplot
+gene_lists_upset_plot
+
+```
+
+
+
 
