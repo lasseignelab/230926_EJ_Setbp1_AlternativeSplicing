@@ -5,7 +5,7 @@ date: "2023-12-05"
 output: html_document
 ---
 
-The purpose of this script is to import and filter data using seurat. It is dependent on running the scripts in STARsolo_conda or downloading the data to start. Please use docker image setbp1_alternative_splicing:1.0.4 or above.
+The purpose of this script is to import and filter data using seurat. It is dependent on running the scripts in STARsolo_conda or downloading the data to start. Please use docker image setbp1_alternative_splicing:1.0.4.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
