@@ -89,8 +89,8 @@ Now, we know that on average, neurons express more genes than glia, so only usin
 # Explore % of cells expressing genes
 setbp1_marvel <- PlotPctExprCells.Genes.10x(
   MarvelObject = setbp1_marvel,
-  cell.group.g1 = cell.ids.1,
-  cell.group.g2 = cell.ids.2,
+  cell.group.g1 = cell_ids_1,
+  cell.group.g2 = cell_ids_2,
   min.pct.cells = 5
 )
 
@@ -104,8 +104,8 @@ We can also look at this at the splice junction level.
 ```{r explore percent of cells expressing splice junctions}
 setbp1_marvel <- PlotPctExprCells.SJ.10x(
   MarvelObject = setbp1_marvel,
-  cell.group.g1 = cell.ids.1,
-  cell.group.g2 = cell.ids.2,
+  cell.group.g1 = cell_ids_1,
+  cell.group.g2 = cell_ids_2,
   min.pct.cells.genes = 5,
   min.pct.cells.sj = 5,
   downsample = TRUE,
