@@ -1,6 +1,10 @@
 Scripts for running STARsolo pipeline
 Emma Jones - Updated Jan 29, 2024
 
+Original snRNA-Seq data is from Whitlock et al., Cellular and Molecular Medicine 2023. Other informaton about the sequencing generation (age, nuclei extraction, and sequencing depth) is available from https://onlinelibrary.wiley.com/doi/full/10.1111/jcmm.18001
+
+Raw sequencing data is available on GEO at acession GSE237816
+
 To run STAR, please build a conda env using the environemnt.yml file in bin/conda
 
 First you need to run 01_build_STAR_genome.sh
@@ -13,7 +17,7 @@ Most of the space making up the 2 TB is contained in the Aligned.out.sam files f
 
 Sample information:
 
-In our analyses, we have J and K samples. These letters were added by the sequencing core and we did not choose them. J samples are brain samples and K samples are kidney. The numbers next to them represent the sample numbers. In our fastq files, this is tissue_number (output_dir) and then sample_id (fastq_prefix), e.g. J-1_S7. Each sample has 8 fastqfiles, as a product of 4 lanes with 2 reads each lane.
+In our analyses, we have J and K samples. These letters and numbers were assigned by the sequencing core. J samples are brain samples and K samples are kidney. The numbers next to them represent the sample numbers. In our fastq files, this is tissue_number (output_dir) and then sample_id (fastq_prefix), e.g. J-1_S7. Each sample has 8 fastqfiles, as a product of 4 lanes with 2 reads each lane.
 
 The following sample numbers apply to each sample:
 
