@@ -1,13 +1,19 @@
 Scripts for running STARsolo pipeline
+Emma Jones - Updated Jan 29, 2024
 
+To run STAR, please build a conda env using the environemnt.yml file in bin/conda
+
+First you need to run 01_build_STAR_genome.sh
 Expected file output for STAR genome: 25 GB
-Expected file output for STARsolo outputs: 2TB
+
+Next, you can run 02_run_STARsolo.sh for as many samples as you wish.
+Expected file output for all 12 STARsolo outputs: 2TB
 
 Most of the space making up the 2 TB is contained in the Aligned.out.sam files for each sample, which we do not use for downstream analyses. If desired, run STAR in a scratch space and move all files except the .sam to majorly cut down on space.
 
 Sample information:
 
-In our analyses, we have J and K samples. J samples are brain samples and K samples are kidney. The numbers next to them represent the sample numbers. In our fastq files, this is tissue_number (output_dir) and then sample_id (fastq_prefix), e.g. J-1_S7. Each sample has 8 fastqfiles, as a product of 4 lanes with 2 reads each lane.
+In our analyses, we have J and K samples. These letters were added by the sequencing core and we did not choose them. J samples are brain samples and K samples are kidney. The numbers next to them represent the sample numbers. In our fastq files, this is tissue_number (output_dir) and then sample_id (fastq_prefix), e.g. J-1_S7. Each sample has 8 fastqfiles, as a product of 4 lanes with 2 reads each lane.
 
 The following sample numbers apply to each sample:
 
