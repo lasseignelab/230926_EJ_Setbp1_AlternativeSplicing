@@ -270,6 +270,11 @@ setbp1_marvel <- FilterGenes.10x(
 )
 ```
 
+Expected output:
+21935 of 56831 genes met filtering criteria and retained
+186562 of 196293 SJ met filtering criteria and retained
+Normalised gene and SJ metadata and matrix updated
+
 Last, before proceeding, we must check the alignment of the marvel object.
 
 ```{r check alignment}

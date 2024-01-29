@@ -277,7 +277,7 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
     type = "umap"
   )
   
-  plot_gene <- excitatory_marvel$adhocPlot$PCA$Gene
+  plot_gene <- marvel_object$adhocPlot$PCA$Gene
   
   # Plot PSI
   marvel_object <- PlotValues.PCA.PSI.10x(
