@@ -70,17 +70,18 @@ We do this in a pairwise fashion, and need to determine which expression thresho
 
 ```{r define cell groups for excitatory neurons}
 # Group 1 (reference)
-index <- which(sample_metadata$cell_type == "Excitatory Neurons" &
-  sample_metadata$seq_folder == "mutant")
+index <-
+  which(sample_metadata$cell_type == "Excitatory Neurons" &
+          sample_metadata$seq_folder == "mutant")
 cell_ids_1 <- sample_metadata[index, "cell.id"]
 length(cell_ids_1)
 
 # Group 2
-index <- which(sample_metadata$cell_type == "Excitatory Neurons" &
-  sample_metadata$seq_folder == "wildtype")
+index <-
+  which(sample_metadata$cell_type == "Excitatory Neurons" &
+          sample_metadata$seq_folder == "wildtype")
 cell_ids_2 <- sample_metadata[index, "cell.id"]
 length(cell_ids_2)
-
 ```
 
 Now, we know that on average, neurons express more genes than glia, so only using neurons for expression cutoffs means that the cutoffs should only be used for neuron-specific analyses.
