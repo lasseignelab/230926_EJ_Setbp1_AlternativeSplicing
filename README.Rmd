@@ -19,11 +19,39 @@ The purpose of this project is to analyze cell-type specific patterns of alterna
 
 ## Scripts 
 
-Include a code chunk (if relevant) on what your project depends on. Include a "script tree" on how to reproduce your results with descriptions for all scripts
+#### STARsolo
+
+The following bash scripts are for running STARsolo on the raw fastq files. The J samples are all brain samples, while K samples are kidney. These scripts are not required to run if you download processed data from zenodo.
 
 ```{r echo = FALSE}
-fs::dir_tree("src", recurse = FALSE)
+fs::dir_tree("src/starsolo_conda", recurse = FALSE, regexp = "*.sh")
 ```
+
+* 01_build_STAR_genome.sh
+* run_STARsolo_*
+
+#### Seurat
+
+The following scripts are for processing and filtering the gene expression data.
+
+```{r echo = FALSE}
+fs::dir_tree("src/seurat", recurse = FALSE)
+```
+
+* 01_import_filter_data.Rmd
+* 02_annotate_cell_types.Rmd
+* functions.R
+
+#### MARVEL
+
+The following scripts are for formatting and importing splice junction and expression data for MARVEL analyses.
+
+```{r echo = FALSE}
+fs::dir_tree("src/marvel", recurse = FALSE)
+```
+
+* 01_format_MARVEL_data.Rmd
+* functions.R
 
 ## Lasseigne Lab 
 
@@ -37,7 +65,7 @@ List project funding sources.
 
 ## Acknowledgements 
 
-List project acknowledgements.
+We would like to thank all members of the Lasseigne Lab for their thoughtful feedback.
 
 ## License 
 

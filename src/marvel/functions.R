@@ -2,7 +2,11 @@
 # Emma F. Jones (EJ)
 ## split_sj_info - Emma Jones
 # This function gets the splice junction information for each sample
-split_sj_info <- function(sample_id, condition, sample_id_mod) {
+split_sj_info <- function(sample_id, condition) {
+  # split the sample ID string into individual characters
+  char_vector <- strsplit(sample_id, "")[[1]]
+  # add an underscore after the first character
+  sample_id_mod <- paste0(char_vector[1], "_", paste0(char_vector[-1], collapse = ""))
   # get cell barcodes
   sj_barcodes <- read.table(
     here::here(
@@ -44,7 +48,7 @@ split_sj_info <- function(sample_id, condition, sample_id_mod) {
 }
 
 ## align_matrix - Emma Jones
-# Function to align matrix rows
+# This function is made to align sparse matrix rows so they can be combined
 align_matrix <- function(mat, all_features) {
   # Create an empty sparse matrix with all features
   aligned_mat <- emptySparse(nrow = length(all_features), ncol = ncol(mat))
@@ -54,4 +58,329 @@ align_matrix <- function(mat, all_features) {
   intersecting_features <- intersect(rownames(mat), all_features)
   aligned_mat[intersecting_features, ] <- mat[intersecting_features, ]
   return(aligned_mat)
+}
+
+## run_marvel_cell_type - Emma Jones
+# This function is a wrapper function for comparing mutant and wildtype splicing
+# within a given cell type. The thresholds may need adjusting, but have defaults.
+run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5, 
+                       min_pct_cells_gene = 5, min_pct_cells_sj = 5,
+                       min_gene_norm = 1) {
+  
+  # Assign MARVEL object to start from
+  marvel_object <- setbp1_marvel
+  
+  # Group 1 (reference)
+  index_1 <- which(sample_metadata$cell_type == cell_type & 
+                     sample_metadata$seq_folder == "mutant")
+  cell_ids_1 <- sample_metadata[index_1, "cell.id"]
+  
+  # Group 2
+  index_2 <- which(sample_metadata$cell_type == cell_type & 
+                     sample_metadata$seq_folder == "wildtype")
+  cell_ids_2 <- sample_metadata[index_2, "cell.id"]
+  
+  # Explore % of cells expressing genes
+  marvel_object <- PlotPctExprCells.Genes.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells = min_pct_cells
+  )
+  
+  # Explore % of cells expressing junctions
+  marvel_object <- PlotPctExprCells.SJ.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells.genes = min_pct_cells_gene,
+    min.pct.cells.sj = min_pct_cells_sj,
+    downsample = TRUE,
+    downsample.pct.sj = 10
+  )
+  
+  # Differential Splicing Analysis
+  marvel_object <- CompareValues.SJ.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells.genes = min_pct_cells_gene,
+    min.pct.cells.sj = min_pct_cells_sj,
+    min.gene.norm = min_gene_norm,
+    seed = 1,
+    n.iterations = 100,
+    downsample = TRUE,
+    show.progress = TRUE
+  )
+  
+  # Differential Gene Analysis
+  marvel_object <- CompareValues.Genes.10x(
+    MarvelObject = marvel_object,
+    show.progress = TRUE
+  )
+  
+  # Make volcano plot
+  marvel_object <- PlotDEValues.SJ.10x(
+    MarvelObject = marvel_object,
+    pval = 0.05,
+    delta = 1,
+    min.gene.norm = min_gene_norm,
+    anno = FALSE
+  )
+  # Assign kinds of iso-switching
+  marvel_object <- IsoSwitch.10x(
+    MarvelObject = marvel_object,
+    pval.sj = 0.05,
+    delta.sj = 1,
+    min.gene.norm = min_gene_norm,
+    pval.adj.gene = 0.05,
+    log2fc.gene = 0.5
+  )
+  
+  # Pull significant genes
+  significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]
+  
+  # Return list
+  return(list(marvel_object, significant_genes))
+}
+
+## run_marvel_cell_type - Emma Jones
+# This function is a wrapper function for comparing mutant and wildtype splicing
+# within a given cell type. The thresholds may need adjusting, but have defaults.
+run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5, 
+                       min_pct_cells_gene = 5, min_pct_cells_sj = 5,
+                       min_gene_norm = 1) {
+  
+  # Assign MARVEL object to start from
+  marvel_object <- setbp1_marvel
+  
+  # Group 1 (reference)
+  index_1 <- which(sample_metadata$cell_type == cell_type & 
+                     sample_metadata$seq_folder == "mutant")
+  cell_ids_1 <- sample_metadata[index_1, "cell.id"]
+  
+  # Group 2
+  index_2 <- which(sample_metadata$cell_type == cell_type & 
+                     sample_metadata$seq_folder == "wildtype")
+  cell_ids_2 <- sample_metadata[index_2, "cell.id"]
+  
+  # Explore % of cells expressing genes
+  marvel_object <- PlotPctExprCells.Genes.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells = min_pct_cells
+  )
+  
+  # Explore % of cells expressing junctions
+  marvel_object <- PlotPctExprCells.SJ.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells.genes = min_pct_cells_gene,
+    min.pct.cells.sj = min_pct_cells_sj,
+    downsample = TRUE,
+    downsample.pct.sj = 10
+  )
+  
+  # Differential Splicing Analysis
+  marvel_object <- CompareValues.SJ.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells.genes = min_pct_cells_gene,
+    min.pct.cells.sj = min_pct_cells_sj,
+    min.gene.norm = min_gene_norm,
+    seed = 1,
+    n.iterations = 100,
+    downsample = TRUE,
+    show.progress = TRUE
+  )
+  
+  # Differential Gene Analysis
+  marvel_object <- CompareValues.Genes.10x(
+    MarvelObject = marvel_object,
+    show.progress = TRUE
+  )
+  
+  # Make volcano plot
+  marvel_object <- PlotDEValues.SJ.10x(
+    MarvelObject = marvel_object,
+    pval = 0.05,
+    delta = 1,
+    min.gene.norm = min_gene_norm,
+    anno = FALSE
+  )
+  # Assign kinds of iso-switching
+  marvel_object <- IsoSwitch.10x(
+    MarvelObject = marvel_object,
+    pval.sj = 0.05,
+    delta.sj = 1,
+    min.gene.norm = min_gene_norm,
+    pval.adj.gene = 0.05,
+    log2fc.gene = 0.5
+  )
+  
+  # Pull significant genes
+  significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
+  
+  # Save MARVEL object
+  write_rds(marvel_object,
+          file = here::here("data", "marvel",
+                            paste0(cell_type, "_marvel_object.rds"))
+  )
+  
+  # Return list
+  return(marvel_object)
+}
+
+## plot_marvel_umap - Emma Jones
+# This function a wrapper function for plotting marvel umaps for a cell type,
+# gene, and splice junction locus. User can also customize the colors used.
+plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
+                             color_grad_gene = c("grey", "cyan", "green",
+                                                 "yellow", "red"),
+                             color_grad_psi = c("grey", "cyan", "green",
+                                                 "yellow", "red")) {
+  # Group 1 (reference)
+  index_1 <- which(sample_metadata$seq_folder == "mutant")
+  cell_ids_1 <- sample_metadata[index_1, "cell.id"]
+  
+  # Group 2
+  index_2 <- which(sample_metadata$seq_folder == "wildtype")
+  cell_ids_2 <- sample_metadata[index_2, "cell.id"]
+  
+  # Save into list
+  cell_group_list <- list(
+    "Mutant" = cell_ids_1,
+    "Wildtype" = cell_ids_2
+  )
+  
+  # Print generation message
+  message("Generating Plots...")
+  
+  # Plot cell groups
+  marvel_object <- PlotValues_PCA_CellGroup_EJ(
+    MarvelObject = marvel_object,
+    cell.group.list = cell_group_list,
+    legendtitle = "Cell group",
+    type = "umap"
+  )
+  
+  plot_group <- marvel_object$adhocPlot$PCA$CellGroup
+  
+  # Plot gene expression
+  marvel_object <- PlotValues.PCA.Gene.10x(
+    MarvelObject = marvel_object,
+    gene_short_name = gene,
+    color.gradient = color_grad_gene,
+    type = "umap"
+  )
+  
+  plot_gene <- marvel_object$adhocPlot$PCA$Gene
+  
+  # Plot PSI
+  marvel_object <- PlotValues.PCA.PSI.10x(
+    MarvelObject = marvel_object,
+    coord.intron = sj_loc,
+    min.gene.count = 3,
+    log2.transform = FALSE,
+    color.gradient = color_grad_psi,
+    type = "umap"
+  )
+  
+  plot_sj <- marvel_object$adhocPlot$PCA$PSI
+  
+  # Print plotting message
+  message("Saving Plot...")
+  
+  # Save UMAP
+  png(here::here("results", "marvel_outputs",
+                 paste0(prefix, "_", gene, ".png")),
+      width = 1200, height = 600)
+  grid.arrange(plot_group, plot_gene, plot_sj, nrow = 1)
+  dev.off()
+  
+  # Return object
+  return(marvel_object)
+}
+
+### EJ EDIT OF PLOTTING FUNCTION TO SHUFFLE POINTS
+PlotValues_PCA_CellGroup_EJ <-
+function (MarvelObject, cell.group.list, legendtitle = "Cell group", 
+          alpha = 0.75, point.size = 1, point.stroke = 0.1, point.colors = NULL, 
+          point.size.legend = 2, type, shuffle = TRUE) 
+{
+  MarvelObject <- MarvelObject
+  df <- MarvelObject$pca
+  cell.group.list <- cell.group.list
+  legendtitle <- legendtitle
+  alpha <- alpha
+  point.size <- point.size
+  point.stroke <- point.stroke
+  point.colors <- point.colors
+  point.size.legend <- point.size.legend
+  type <- type
+  .list <- list()
+  for (i in 1:length(cell.group.list)) {
+    . <- data.frame(cell.id = cell.group.list[[i]], group = names(cell.group.list)[i])
+    .list[[i]] <- .
+  }
+  ref <- do.call(rbind.data.frame, .list)
+  df <- join(df, ref, by = "cell.id", type = "left")
+  df$group <- factor(df$group, levels = names(cell.group.list))
+  n.anno.missing <- sum(is.na(df$group))
+  if (n.anno.missing == 0) {
+    message("All cells defined with coordinates found")
+  }
+  else {
+    message(paste(n.anno.missing, " cells defined with no coordinates found", 
+                  sep = ""))
+  }
+  data <- df
+  if (isTRUE(x = shuffle)) {
+    data <- data[sample(x = 1:nrow(x = data)), ]
+  }
+  x <- data$x
+  y <- data$y
+  z <- data$group
+  if (type == "umap") {
+    xtitle <- "UMAP-1"
+    ytitle <- "UMAP-2"
+  }
+  else if (type == "tsne") {
+    xtitle <- "tSNE-1"
+    ytitle <- "tSNE-2"
+  }
+  if (is.null(point.colors[1])) {
+    gg_color_hue <- function(n) {
+      hues = seq(15, 375, length = n + 1)
+      hcl(h = hues, l = 65, c = 100)[1:n]
+    }
+    n = length(levels(z))
+    point.colors = gg_color_hue(n)
+  }
+  if (length(unique(z)) > 20) {
+    ncol.legend <- 3
+  }
+  else if (length(unique(z)) > 10) {
+    ncol.legend <- 2
+  }
+  else if (length(unique(z)) <= 10) {
+    ncol.legend <- 1
+  }
+  plot <- ggplot() + geom_point(data, mapping = aes(x = x, 
+                                                    y = y, fill = z), color = "black", pch = 21, size = point.size, 
+                                alpha = alpha, stroke = point.stroke) + scale_fill_manual(values = point.colors) + 
+    labs(title = NULL, x = xtitle, y = ytitle, fill = legendtitle) + 
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+          panel.background = element_blank(), plot.title = element_text(size = 12, 
+                                                                        hjust = 0.5), axis.line = element_line(colour = "black"), 
+          axis.title = element_text(size = 12), axis.text.x = element_text(size = 10, 
+                                                                           colour = "black"), axis.text.y = element_text(size = 10, 
+                                                                                                                         colour = "black"), legend.title = element_text(size = 8), 
+          legend.text = element_text(size = 8)) + guides(fill = guide_legend(override.aes = list(size = point.size.legend, 
+                                                                                                 alpha = alpha, stroke = point.stroke), ncol = ncol.legend))
+  MarvelObject$adhocPlot$PCA$CellGroup <- plot
+  return(MarvelObject)
 }
