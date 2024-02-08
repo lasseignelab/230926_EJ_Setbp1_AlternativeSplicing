@@ -51,6 +51,7 @@ set.seed(123)
 
 # source functions
 source(here::here("src", "marvel", "functions.R"))
+source(here::here("src", "marvel", "PlotSJPosition_modification.R"))
 ```
 
 ## Import MARVEL Object
@@ -244,6 +245,149 @@ saveRDS(all_types_marvel,
     paste0("All_Cell_Types_marvel_object.rds")
   )
 )
+```
+
+## Extract and save significant gene lists
+
+Saving and loading the objects takes tons of extra time, and for looking at specific aspects it is more convenient to just pull the significant gene and SJ info into an easily readable table, instead of 266 GB of objects.
+
+```{r what are the significant genes for this analysis}
+# Pull significant genes - excitatory
+excitatory_sig_table <-
+  excitatory_marvel[["SJ.Gene.Cor"]][["Data"]]
+
+# Pull significant genes - inhibitory
+inhibitory_sig_table <-
+  inhibitory_marvel[["SJ.Gene.Cor"]][["Data"]]
+
+# Pull significant genes - astrocytes
+astrocytes_sig_table <-
+  astrocytes_marvel[["SJ.Gene.Cor"]][["Data"]]
+
+# Pull significant genes - oligodendrocytes
+oligodendrocytes_sig_table <-
+  oligodendrocytes_marvel[["SJ.Gene.Cor"]][["Data"]]
+
+# Pull significant genes - opcs
+opcs_sig_table <-
+  opcs_marvel[["SJ.Gene.Cor"]][["Data"]]
+
+# Pull significant genes - vascular
+vascular_sig_table <-
+  vascular_marvel[["SJ.Gene.Cor"]][["Data"]]
+
+# Pull significant genes - microglia
+microglia_sig_table <-
+  microglia_marvel[["SJ.Gene.Cor"]][["Data"]]
+
+# Pull significant genes - all types
+all_types_sig_table <-
+  all_types_marvel[["SJ.Gene.Cor"]][["Data"]]
+```
+
+## Save all significant tables
+
+```{r save significant tables}
+# Save
+save(
+  list = ls(pattern = "_sig_table"),
+  file = here::here("data", "marvel", "significant_tables.RData")
+)
+```
+
+### Plot UMAPs
+
+Plot UMAPS for excitatory genes with custom function. Note: Might remove this code later?
+
+```{r run umap plotting function on all excitatory genes}
+excitatory_marvel <- plot_marvel_umap(
+  marvel_object = excitatory_marvel,
+  prefix = "excitatory",
+  gene = "Kif21a",
+  sj_loc = "chr15:90881929:90882035"
+)
+
+excitatory_marvel <- plot_marvel_umap(
+  marvel_object = excitatory_marvel,
+  prefix = "excitatory",
+  gene = "Pnisr",
+  sj_loc = "chr4:21859308:21860819"
+)
+
+excitatory_marvel <- plot_marvel_umap(
+  marvel_object = excitatory_marvel,
+  prefix = "excitatory",
+  gene = "Igf1r",
+  sj_loc = "chr7:67602701:67653557"
+)
+
+excitatory_marvel <- plot_marvel_umap(
+  marvel_object = excitatory_marvel,
+  prefix = "excitatory",
+  gene = "Luc7l3",
+  sj_loc = "chr11:94200518:94212515"
+)
+
+excitatory_marvel <- plot_marvel_umap(
+  marvel_object = excitatory_marvel,
+  prefix = "excitatory",
+  gene = "Phf14",
+  sj_loc = "chr6:11926837:11933251"
+)
+
+excitatory_marvel <- plot_marvel_umap(
+  marvel_object = excitatory_marvel,
+  prefix = "excitatory",
+  gene = "Calm1",
+  sj_loc = "chr12:100172493:100172658"
+)
+
+excitatory_marvel <- plot_marvel_umap(
+  marvel_object = excitatory_marvel,
+  prefix = "excitatory",
+  gene = "Son",
+  sj_loc = "chr16:91448685:91451498"
+)
+
+excitatory_marvel <- plot_marvel_umap(
+  marvel_object = excitatory_marvel,
+  prefix = "excitatory",
+  gene = "Afdn",
+  sj_loc = "chr17:14024397:14027538"
+)
+
+excitatory_marvel <- plot_marvel_umap(
+  marvel_object = excitatory_marvel,
+  prefix = "excitatory",
+  gene = "Srrm2",
+  sj_loc = "chr17:24027148:24027327"
+)
+```
+
+Also can do for other cell types.
+
+```{r plot umaps}
+
+setbp1_marvel <- plot_marvel_umap(
+  marvel_object = setbp1_marvel,
+  prefix = "vascular",
+  gene = "Tcf4",
+  sj_loc = "chr18:69815895:69816147"
+)
+```
+
+### Plot SJ position
+
+```{r plot SJ position}
+excitatory_marvel <- adhocGene_PlotSJPosition_EJ(
+  MarvelObject = excitatory_marvel,
+  coord.intron = "chr15:90881929:90882035",
+  rescale_introns = FALSE,
+  show.protein.coding.only = TRUE,
+  anno.label.size = 1.5
+)
+
+excitatory_marvel$adhocGene$SJPosition$Plot
 ```
 
 #### Style
