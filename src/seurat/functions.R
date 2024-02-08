@@ -130,9 +130,6 @@ convert_human_gene_list <- function(gene_list) {
 evaluate_cell_cycle <- function(filtered_seurat) {
   # log normalize -----
   filtered_seurat <- NormalizeData(filtered_seurat)
-  # convert human cell cycle markers to mouse -----
-  s.genes <- convert_human_gene_list(cc.genes.updated.2019$s.genes)
-  g2m.genes <- convert_human_gene_list(cc.genes.updated.2019$g2m.genes)
   # EJ V5 BUG FIX: JOIN LAYERS
   filtered_seurat <- JoinLayers(filtered_seurat)
   # score cells based in gex of genes -----

@@ -5,7 +5,7 @@ date: "2023-12-05"
 output: html_document
 ---
 
-The purpose of this script is to import and filter data using seurat. It is dependent on running the scripts in STARsolo_conda or downloading the data to start. Please use docker image setbp1_alternative_splicing:1.0.4 or above.
+The purpose of this script is to import and filter data using seurat. It is dependent on running the scripts in STARsolo_conda or downloading the data to start. Please use docker image setbp1_alternative_splicing:1.0.4.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -36,6 +36,8 @@ source(here("src", "seurat", "functions.R"))
 ```
 
 ## Load in Data
+
+NOTE: SEURAT IS PICKY HERE, AND IF YOUR FILES ARE NOT GZIPPED IT WILL NOT READ THEM IN CORRECTLY. PLEASE MAKE SURE THESE FILES HAVE THE .GZ EXTENSION BEFORE PROCEEDING.
 
 ```{r load data}
 # brain sample J1
@@ -231,7 +233,19 @@ saveRDS(filtered_brain_samples,
 ## Evaluate cell cycle effects and run PCA
 
 ```{r evaluate cell cycle effects and run PCA}
-pdf(here("results", "seurat_outputs", "cellcycle_pca.pdf"))
+s.genes <- unlist(as.list(read_csv(
+  here("doc/SGenes.csv"),
+  col_names = FALSE,
+  show_col_types = FALSE
+)))
+
+g2m.genes <- unlist(as.list(read_csv(
+  here("doc/G2MGenes.csv"),
+  col_names = FALSE,
+  show_col_types = FALSE
+)))
+
+pdf(here("results", "seurat_outputs", "cellcycle_pca.pdf"), )
 
 filtered_brain_samples <- evaluate_cell_cycle(filtered_brain_samples)
 
