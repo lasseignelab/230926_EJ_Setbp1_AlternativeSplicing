@@ -45,6 +45,11 @@ suppressPackageStartupMessages({
   library(Matrix)
   library(data.table)
   library(gridExtra)
+
+  # Load this for data wrangling ease
+  library(MatrixExtra)
+  # Disable this option to use the following indexing method of checking values
+  options("MatrixExtra.quick_show" = FALSE)
 })
 
 # set seed
@@ -52,12 +57,13 @@ set.seed(123)
 
 # source functions
 source(here::here("src", "marvel", "functions.R"))
+source(here::here("src", "marvel", "get_psi_df.R"))
 source(here::here("src", "marvel", "PlotSJPosition_modification.R"))
 ```
 
 ## Load in Data 
 
-```{r load significant gene tables}
+```{r load marvel object and significant gene tables}
 # Load MARVEL object
 setbp1_marvel <- read_rds(here::here(
   "data", "marvel",
@@ -68,7 +74,7 @@ setbp1_marvel <- read_rds(here::here(
 sample_metadata <- setbp1_marvel$sample.metadata
 
 # Load significant gene tables
-load(here:here("data", "marvel", "significant_tables.RData"))
+load(here::here("data", "marvel", "significant_tables.RData"))
 ```
 
 ## Make UpSet Plot
@@ -173,7 +179,7 @@ setbp1_marvel <- adhocGene.TabulateExpression.PSI.10x(
 setbp1_marvel$adhocGene$Expression$PSI$Plot
 ```
 
-
+Plot gene and splice junction positions on genome track
 
 ```{r plot son gene plot}
 setbp1_marvel <- adhocGene_PlotSJPosition_EJ(
@@ -194,35 +200,135 @@ setbp1_marvel$adhocGene$SJPosition$Plot
 dev.off()
 ```
 
-## Learn to extract PSI values
+## Extract PSI values
 
-```{r get psi data}
-son_psi_table <-
-  setbp1_marvel[["adhocGene"]][["Expression"]][["PSI"]][["Table"]]
-```
-
-This doesn't have the value per cell..
-
-I looked at the code and there is a violin plot option actually but for the plotvalues.psi function
-
-```{r plot psi}
-PlotValues.PSI.Pseudobulk.10x(
+```{r make son violin plot}
+son_data_values <- get_psi_df(
   MarvelObject = setbp1_marvel,
-  cell.group.list = cell_group_list,
   coord.intron = "chr16:91444873:91448517",
-  min.pct.cells.gene.expr = 5
+  log2.transform = FALSE
 )
-```
-I keep getting an error here:
 
-Error in data.frame(sample.id = names(cell.group.list.small)[i], n.cells.total = n.cells,  : 
-  arguments imply differing number of rows: 0, 1
-  
-  
-I'm going to try to make violinplot from scratch since these functions are not working as planned.
+son_data_values <- left_join(son_data_values, sample_metadata[, c(1, 6, 17)])
 
-```{r plot psi}
+ggplot(son_data_values, aes(x = cell_type, y = psi, fill = seq_folder)) +
+  geom_violin()
 ```
+
+### Calculate PSI Values
+
+The current MARVEL setup doesn't have PSI values for every cell for every splice junction. we can remedy this ourselves.
+
+Remember, PSI is the count of splice junctions divided by the counts for that gene multiplied by 100.
+
+```{r prep dfs for psi calc}
+# pull out dfs
+sj_counts <- setbp1_marvel[["sj.count.matrix"]]
+gene_counts <- setbp1_marvel[["gene.count.matrix"]]
+
+# get order of genes
+gene_order <- setbp1_marvel[["sj.metadata"]][["gene_short_name.start"]]
+
+# make empty sparse matrix for expanded gene counts
+expanded_gene_counts <-
+  emptySparse(nrow = nrow(sj_counts), ncol = ncol(sj_counts))
+
+# repeat gene values for each splice junction
+expanded_gene_counts <- gene_counts[gene_order, ]
+
+# rename so no rows have repeated names
+rownames(expanded_gene_counts) <- rownames(sj_counts)
+```
+
+##### Run function to fill in psi matrix
+
+The issue with this for loop is that it works, but is too slow to work on all 186,000 splice junctions at once. Therefore, we recommend running this on only a subset of genes/splice junctions.
+
+First, I'll create the subsets. One will have all splice junctions for setbp1, and the other will be all genes with significant psi changes.
+
+```{r create desired subsets}
+setbp1_sj <- as.vector(setbp1_marvel[["sj.metadata"]][setbp1_marvel[["sj.metadata"]][["gene_short_name.start"]] == "Setbp1", "coord.intron"])
+
+son_sj <- as.vector(setbp1_marvel[["sj.metadata"]][setbp1_marvel[["sj.metadata"]][["gene_short_name.start"]] == "Son", "coord.intron"])
+
+as_genes <- rownames(gene_lists_mat)
+as_genes_sj <- as.vector(setbp1_marvel[["sj.metadata"]][setbp1_marvel[["sj.metadata"]][["gene_short_name.start"]] %in% as_genes, "coord.intron"])
+```
+
+```{r use function on subset of splice junctions}
+setbp1_psi_matrix <- make_psi_matrix(setbp1_sj)
+
+as_genes_psi_matrix <- make_psi_matrix(as_genes_sj)
+```
+
+I also want to run this functions on all splice junctions. Therefore we will create the required lists.
+
+
+Now, we need to pivot the data longer so we can plot with ggplot
+
+```{r pivot data}
+# convert to dense dataframe
+setbp1_psi_df <- as.data.frame(as.matrix(setbp1_psi_matrix))
+colnames(setbp1_psi_df) <- sj_counts@Dimnames[[2]]
+
+# pivot longer
+setbp1_psi_df <- setbp1_psi_df %>% 
+    as_tibble(rownames = "splice_junction") %>%
+  pivot_longer(values_to = "psi", cols = colnames(setbp1_psi_df),
+               names_to = "cell_id")
+
+# add extra metadata
+setbp1_psi_df <- left_join(setbp1_psi_df, sample_metadata, by = c("cell_id" = "cell.id"))
+
+## DO FOR SON< MAKE INTO FUNCTION LATER
+son_psi_matrix <- make_psi_matrix(son_sj)
+# convert to dense dataframe
+son_psi_df <- as.data.frame(as.matrix(son_psi_matrix))
+colnames(son_psi_df) <- sj_counts@Dimnames[[2]]
+
+# pivot longer
+son_psi_df <- son_psi_df %>% 
+    as_tibble(rownames = "splice_junction") %>%
+  pivot_longer(values_to = "psi", cols = colnames(son_psi_df),
+               names_to = "cell_id")
+
+# add extra metadata
+son_psi_df <- left_join(son_psi_df, sample_metadata, by = c("cell_id" = "cell.id"))
+
+```
+
+
+Make density plots of PSI for setbp1 splice junctions!!
+
+```{r make density plots}
+
+ggplot(setbp1_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
+  geom_density(alpha = 0.2)
+
+ggplot(setbp1_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
+  geom_density(alpha = 0.2) + facet_wrap(seq_folder ~ .)
+
+ggplot(setbp1_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
+  geom_density(alpha = 0.2) + facet_grid(seq_folder ~ cell_type)
+
+ggplot(setbp1_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
+  geom_density(alpha = 0.2) + facet_wrap(cell_type ~ .)
+
+ggplot(setbp1_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
+  geom_density(alpha = 0.2)
+
+###
+ggplot(son_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
+  geom_density(alpha = 0.2) + facet_wrap(seq_folder ~ .)
+
+ggplot(son_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
+  geom_density(alpha = 0.2) + facet_grid(seq_folder ~ cell_type)
+
+ggplot(son_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
+  geom_density(alpha = 0.2) + facet_wrap(cell_type ~ .)
+
+```
+
 
 #### Style
 
