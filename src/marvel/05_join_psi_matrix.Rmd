@@ -8,7 +8,7 @@ date: "2024-02-09"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to combine PSI matrices. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Script 04 is a bash and accompanying R script to submit parallell jobs for calculating PSI. Please use docker image setbp1_alternative_splicing:1.0.6.
+The purpose of this script is to combine PSI matrices. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Script 04 is a bash and accompanying R script to submit parallel jobs for calculating PSI. Please use docker image setbp1_alternative_splicing:1.0.6.
 
 ## Load Packages
 
@@ -59,35 +59,52 @@ set.seed(123)
 source(here::here("src", "marvel", "functions.R"))
 ```
 
+## Load in data
+
+These files are large, so this chunk takes a couple of minutes to run.
 
 ```{r load in data}
 # List all files with the specified extension in the directory
-files <- list.files(here::here("data", "marvel"), pattern = "_psi_matrix.Rds", full.names = TRUE)
+files <- list.files(here::here("data", "marvel"), pattern = "_psi_matrix.Rds",
+                    full.names = TRUE)
 
 # Loop through each file and load it into the R environment
 for (file in files) {
   # Extract the file name without extension
   file_name <- tools::file_path_sans_ext(basename(file))
-  
-  # Load the file
-  assign(file_name, read_rds(file)) 
+  # Get object
+  object <- read_rds(file)
+  # Convert all NAs and NaNs to zero to reduce file size
+  object@x[is.nan(object@x)] <- 0
+  # drop non-structural zeroes
+  object <- drop0(object)
+  # name the file
+  assign(file_name, object)
 }
+```
 
+Now, I must combine files.
+
+```{r combine files into a list}
 # List all objects in the environment
 matching_objects <- ls(pattern = "_psi_matrix")
+matching_objects <- matching_objects[1:21] # remove function
 
 # Initialize an empty list to store the matched objects
-object_list <- list()
+matrices <- list()
 
-# Loop through the matching objects and bind them row-wise
-for (object_name in matching_objects[1:21]) {
+# Loop through the matching objects and get them
+for (object_name in matching_objects) {
   # Get the object from the environment
   object <- get(object_name)
   # Add the object to the list
-  object_list[[object_name]] <- object
+  matrices[[object_name]] <- object
 }
 
-# Combine all objects in the list using rbind
-psi_matrix <- do.call(rbind, object_list)
+```
 
+Now rbind each one.
+
+```{r combine matrices with do.call}
+psi_matrix <- do.call(rbind, matrices)
 ```
