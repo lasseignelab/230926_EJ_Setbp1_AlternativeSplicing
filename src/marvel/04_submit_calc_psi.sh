@@ -6,8 +6,8 @@
 #SBATCH --nodes=1
 #SBATCH --mem-per-cpu=128G
 #SBATCH --partition=short
-#SBATCH --error=%x_%j_%a.err.txt
-#SBATCH --output=%x_%j_%a.out.txt
+#SBATCH --error=logs/%x_%j_%a.err.txt
+#SBATCH --output=logs/%x_%j_%a.out.txt
 #SBATCH --array=0-20
 
 ########################################
