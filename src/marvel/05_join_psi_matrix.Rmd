@@ -103,7 +103,7 @@ for (object_name in matching_objects) {
 
 ```
 
-Now rbind each one.
+Now rbind each one together using do.call.
 
 ```{r combine matrices with do.call}
 psi_matrix <- do.call(rbind, matrices)
