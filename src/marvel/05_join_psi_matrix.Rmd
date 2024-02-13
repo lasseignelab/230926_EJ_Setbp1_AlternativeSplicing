@@ -64,9 +64,20 @@ source(here::here("src", "marvel", "functions.R"))
 These files are large, so this chunk takes a couple of minutes to run.
 
 ```{r load in data}
+# Load MARVEL object
+setbp1_marvel <- read_rds(here::here(
+  "data", "marvel",
+  "setbp1_marvel_aligned.rds"
+))
+
+# Retrieve sample metadata
+sample_metadata <- setbp1_marvel$sample.metadata
+
 # List all files with the specified extension in the directory
-files <- list.files(here::here("data", "marvel"), pattern = "_psi_matrix.Rds",
-                    full.names = TRUE)
+files <- list.files(here::here("data", "marvel"),
+  pattern = "_psi_matrix.Rds",
+  full.names = TRUE
+)
 
 # Loop through each file and load it into the R environment
 for (file in files) {
@@ -74,15 +85,19 @@ for (file in files) {
   file_name <- tools::file_path_sans_ext(basename(file))
   # Get object
   object <- read_rds(file)
-  # Convert all NAs and NaNs to zero to reduce file size
+  # Convert all NaNs and Infs to zero to reduce file size
   object@x[is.nan(object@x)] <- 0
-  # drop non-structural zeroes
+  object@x[is.infinite(object@x)] <- 0
+  # Any SJ with psi over 100 should be 100 maximum
+  object@x[object@x > 100] <- 100
+  # Drop non-structural zeroes
   object <- drop0(object)
-  # name the file
+  # Name the file
   assign(file_name, object)
 }
 ```
 
+## Combine data
 Now, I must combine files.
 
 ```{r combine files into a list}
@@ -100,11 +115,139 @@ for (object_name in matching_objects) {
   # Add the object to the list
   matrices[[object_name]] <- object
 }
-
 ```
 
 Now rbind each one together using do.call.
 
 ```{r combine matrices with do.call}
+# rbind matrices together
 psi_matrix <- do.call(rbind, matrices)
+
+# save the final psi matrix
+write_rds(psi_matrix, here::here("data", "marvel", "psi_matrix.Rds"))
 ```
+
+## Plot PSI distribution
+
+```{r try plotting all nonzero values in x}
+hist(psi_matrix@x)
+
+hist(log(setbp1_marvel$sj.count.matrix@x))
+
+hist(setbp1_marvel$gene.norm.matrix@x)
+
+hist(log(setbp1_marvel$gene.count.matrix@x))
+```
+
+```{r try rowMeans}
+psi_means <- rowMeans(psi_matrix)
+hist(psi_means)
+
+sj_means <- rowMeans(setbp1_marvel$sj.count.matrix)
+hist(sj_means)
+
+gene_norm_means <- rowMeans(setbp1_marvel$gene.norm.matrix)
+
+gene_count_means <- rowMeans(setbp1_marvel$gene.count.matrix)
+```
+
+#### Style
+
+```{r tidy script}
+style_file("05_join_psi_matrix.Rmd")
+
+lint("05_join_psi_matrix.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
+```
+R version 4.3.1 (2023-06-16)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 22.04.3 LTS
+
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+ [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: Etc/UTC
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats4    grid      stats     graphics  grDevices utils     datasets  methods  
+[9] base     
+
+other attached packages:
+ [1] MatrixExtra_0.1.14    gridExtra_2.3         data.table_1.14.8    
+ [4] Matrix_1.6-1.1        wiggleplotr_1.24.0    GenomicRanges_1.52.1 
+ [7] GenomeInfoDb_1.36.4   gtools_3.9.4          org.Mm.eg.db_3.17.0  
+[10] org.Hs.eg.db_3.17.0   clusterProfiler_4.8.3 AnnotationDbi_1.62.2 
+[13] IRanges_2.34.1        S4Vectors_0.38.2      Biobase_2.60.0       
+[16] BiocGenerics_0.46.0   textclean_0.9.3       plyr_1.8.9           
+[19] reshape2_1.4.4        ggrepel_0.9.4         ggnewscale_0.4.9     
+[22] MARVEL_2.0.5          viridis_0.6.4         viridisLite_0.4.2    
+[25] ComplexHeatmap_2.16.0 patchwork_1.1.3       lubridate_1.9.3      
+[28] forcats_1.0.0         stringr_1.5.1         dplyr_1.1.3          
+[31] purrr_1.0.2           readr_2.1.4           tidyr_1.3.0          
+[34] tibble_3.2.1          ggplot2_3.4.4         tidyverse_2.0.0      
+[37] lintr_3.1.0           styler_1.10.2         here_1.0.1           
+
+loaded via a namespace (and not attached):
+  [1] RColorBrewer_1.1-3      jsonlite_1.8.7          rstudioapi_0.15.0      
+  [4] shape_1.4.6             magrittr_2.0.3          farver_2.1.1           
+  [7] rmarkdown_2.25          fs_1.6.3                GlobalOptions_0.1.2    
+ [10] zlibbioc_1.46.0         vctrs_0.6.4             memoise_2.0.1          
+ [13] RCurl_1.98-1.12         ggtree_3.8.2            htmltools_0.5.6.1      
+ [16] qdapRegex_0.7.8         gridGraphics_0.5-1      desc_1.4.2             
+ [19] cachem_1.0.8            igraph_1.5.1            lifecycle_1.0.4        
+ [22] iterators_1.0.14        pkgconfig_2.0.3         gson_0.1.0             
+ [25] R6_2.5.1                fastmap_1.1.1           GenomeInfoDbData_1.2.10
+ [28] clue_0.3-65             aplot_0.2.2             digest_0.6.33          
+ [31] enrichplot_1.20.3       colorspace_2.1-0        ps_1.7.5               
+ [34] rprojroot_2.0.3         RSQLite_2.3.1           fansi_1.0.5            
+ [37] timechange_0.2.0        polyclip_1.10-6         httr_1.4.7             
+ [40] compiler_4.3.1          remotes_2.4.2.1         bit64_4.0.5            
+ [43] withr_2.5.2             doParallel_1.0.17       downloader_0.4         
+ [46] backports_1.4.1         BiocParallel_1.34.2     DBI_1.1.3              
+ [49] ggforce_0.4.1           R.utils_2.12.2          float_0.3-2            
+ [52] MASS_7.3-60             rjson_0.2.21            HDO.db_0.99.1          
+ [55] tools_4.3.1             scatterpie_0.2.1        ape_5.7-1              
+ [58] R.oo_1.25.0             glue_1.6.2              callr_3.7.3            
+ [61] nlme_3.1-163            R.cache_0.16.0          GOSemSim_2.26.1        
+ [64] shadowtext_0.1.2        cluster_2.1.4           fgsea_1.26.0           
+ [67] generics_0.1.3          gtable_0.3.4            tzdb_0.4.0             
+ [70] R.methodsS3_1.8.2       hms_1.1.3               tidygraph_1.2.3        
+ [73] xml2_1.3.5              utf8_1.2.4              XVector_0.40.0         
+ [76] foreach_1.5.2           pillar_1.9.0            yulab.utils_0.1.0      
+ [79] circlize_0.4.15         splines_4.3.1           tweenr_2.0.2           
+ [82] treeio_1.24.3           lattice_0.21-8          bit_4.0.5              
+ [85] tidyselect_1.2.0        GO.db_3.17.0            Biostrings_2.68.1      
+ [88] knitr_1.44              RhpcBLASctl_0.23-42     xfun_0.40              
+ [91] graphlayouts_1.0.1      matrixStats_1.0.0       rex_1.2.1              
+ [94] stringi_1.8.1           ggfun_0.1.3             lazyeval_0.2.2         
+ [97] yaml_2.3.7              evaluate_0.22           codetools_0.2-19       
+[100] ggraph_2.1.0            qvalue_2.32.0           ggplotify_0.1.2        
+[103] cli_3.6.1               munsell_0.5.0           processx_3.8.2         
+[106] xmlparsedata_1.0.5      Rcpp_1.0.11             png_0.1-8              
+[109] parallel_4.3.1          blob_1.2.4              DOSE_3.26.2            
+[112] bitops_1.0-7            tidytree_0.4.5          cyclocomp_1.1.1        
+[115] scales_1.2.1            crayon_1.5.2            GetoptLong_1.0.5       
+[118] rlang_1.1.2             cowplot_1.1.1           fastmatch_1.1-4        
+[121] KEGGREST_1.40.1 
