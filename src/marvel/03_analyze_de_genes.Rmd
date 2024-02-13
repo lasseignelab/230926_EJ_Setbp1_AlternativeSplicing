@@ -261,7 +261,15 @@ setbp1_psi_matrix <- make_psi_matrix(setbp1_sj)
 as_genes_psi_matrix <- make_psi_matrix(as_genes_sj)
 ```
 
-I also want to run this functions on all splice junctions. Therefore we will create the required lists.
+I also want to run this functions on all splice junctions. Therefore we will create the required list of chromosome names.
+
+```{r make list of chr names}
+chr_prefixes <- paste0("chr", 1:19, ":")
+chr_prefixes <- c(chr_prefixes, "chrX:", "chrY:")
+
+writeLines(chr_prefixes, here::here("bin", "slurm", "chromosome_prefixes.txt"))
+
+```
 
 
 Now, we need to pivot the data longer so we can plot with ggplot
@@ -301,7 +309,7 @@ son_psi_df <- left_join(son_psi_df, sample_metadata, by = c("cell_id" = "cell.id
 Make density plots of PSI for setbp1 splice junctions!!
 
 ```{r make density plots}
-
+### setbp1
 ggplot(setbp1_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
   geom_density(alpha = 0.2)
 
@@ -317,7 +325,7 @@ ggplot(setbp1_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_
 ggplot(setbp1_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
   geom_density(alpha = 0.2)
 
-###
+### son gene
 ggplot(son_psi_df, aes(x = log2(psi), color = splice_junction, fill = splice_junction)) +
   geom_density(alpha = 0.2) + facet_wrap(seq_folder ~ .)
 
