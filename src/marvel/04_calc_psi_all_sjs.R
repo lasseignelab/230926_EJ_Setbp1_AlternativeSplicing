@@ -9,12 +9,7 @@ print("enabled args usage")
 # load packages
 suppressPackageStartupMessages({
   # Load Lasseigne Lab standard packages
-  library(here)
-  library(styler)
-  library(lintr)
   library(tidyverse)
-  library(ComplexHeatmap)
-  library(viridis)
   
   # Load MARVEL package
   library(MARVEL)
@@ -26,12 +21,6 @@ suppressPackageStartupMessages({
   library(plyr)
   library(stringr)
   library(textclean)
-  library(AnnotationDbi)
-  library(gtools)
-  library(GenomicRanges)
-  library(IRanges)
-  library(S4Vectors)
-  library(wiggleplotr)
   library(Matrix)
   library(data.table)
   library(gridExtra)
@@ -93,6 +82,7 @@ print("for loop finished")
 
 # save subset of splice junctions psi sparse matrix
 write_rds(subset_psi_matrix,
-          here("data", "marvel", paste0(sub(".$", "", chr), "_psi_matrix.Rds")))
+          paste0("data/marvel/",
+                 paste0(sub(".$", "", chr), "_psi_matrix.Rds")))
 
 print("psi matrix saved")
