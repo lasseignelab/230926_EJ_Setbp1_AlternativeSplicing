@@ -1,0 +1,93 @@
+---
+title: "Combine PSI matrices"
+output: html_document
+date: "2024-02-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The purpose of this script is to combine PSI matrices. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Script 04 is a bash and accompanying R script to submit parallell jobs for calculating PSI. Please use docker image setbp1_alternative_splicing:1.0.6.
+
+## Load Packages
+
+```{r load packages}
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
+  library(tidyverse)
+  library(patchwork)
+  library(ComplexHeatmap)
+  library(viridis)
+
+  # Load MARVEL package
+  library(MARVEL)
+
+  # Load adjunct MARVEL packages
+  library(ggnewscale)
+  library(ggrepel)
+  library(reshape2)
+  library(plyr)
+  library(stringr)
+  library(textclean)
+  library(AnnotationDbi)
+  library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(org.Mm.eg.db)
+  library(gtools)
+  library(GenomicRanges)
+  library(IRanges)
+  library(S4Vectors)
+  library(wiggleplotr)
+  library(Matrix)
+  library(data.table)
+  library(gridExtra)
+
+  # Load this for data wrangling ease
+  library(MatrixExtra)
+  # Disable this option to use the following indexing method of checking values
+  options("MatrixExtra.quick_show" = FALSE)
+})
+
+# set seed
+set.seed(123)
+
+# source functions
+source(here::here("src", "marvel", "functions.R"))
+```
+
+
+```{r load in data}
+# List all files with the specified extension in the directory
+files <- list.files(here::here("data", "marvel"), pattern = "_psi_matrix.Rds", full.names = TRUE)
+
+# Loop through each file and load it into the R environment
+for (file in files) {
+  # Extract the file name without extension
+  file_name <- tools::file_path_sans_ext(basename(file))
+  
+  # Load the file
+  assign(file_name, read_rds(file)) 
+}
+
+# List all objects in the environment
+matching_objects <- ls(pattern = "_psi_matrix")
+
+# Initialize an empty list to store the matched objects
+object_list <- list()
+
+# Loop through the matching objects and bind them row-wise
+for (object_name in matching_objects[1:21]) {
+  # Get the object from the environment
+  object <- get(object_name)
+  # Add the object to the list
+  object_list[[object_name]] <- object
+}
+
+# Combine all objects in the list using rbind
+psi_matrix <- do.call(rbind, object_list)
+
+```
