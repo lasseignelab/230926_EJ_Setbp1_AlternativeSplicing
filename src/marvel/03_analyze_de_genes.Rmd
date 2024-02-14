@@ -138,12 +138,12 @@ There is one gene that has signfificant PSI in all non-vascular cell types. This
 
 ```{r get cell groups}
 # Pull cell types and matching ids
-cell_type_ids <- sample_metadata %>%
+cell_group_list <- sample_metadata %>%
   group_split(cell_type, .keep = TRUE) %>%
   map(~ set_names(.$cell.id, .$cell_type[1]))
 
 # Rename
-cell_group_list <- set_names(cell_type_ids, c(
+cell_group_list <- set_names(cell_group_list, c(
   "Astrocytes", "Excitatory Neurons",
   "Inhibitory Neurons", "Microglia", "OPCs",
   "Oligodendrocytes", "Vascular Cells"
