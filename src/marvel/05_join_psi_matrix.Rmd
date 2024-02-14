@@ -8,7 +8,7 @@ date: "2024-02-09"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to combine PSI matrices. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Script 04 is a bash and accompanying R script to submit parallel jobs for calculating PSI. Please use docker image setbp1_alternative_splicing:1.0.6.
+The purpose of this script is to combine and visualize PSI matrices and splice junction information. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Script 04 is a bash and accompanying R script to submit parallel jobs for calculating PSI. Please use docker image setbp1_alternative_splicing:1.0.6.
 
 ## Load Packages
 
@@ -61,7 +61,7 @@ source(here::here("src", "marvel", "functions.R"))
 
 ## Load in data
 
-These files are large, so this chunk takes a couple of minutes to run.
+Lod in setbp1 marvel object
 
 ```{r load in data}
 # Load MARVEL object
@@ -73,6 +73,8 @@ setbp1_marvel <- read_rds(here::here(
 # Retrieve sample metadata
 sample_metadata <- setbp1_marvel$sample.metadata
 ```
+
+These psi files are large, so this chunk takes a couple of minutes to run.
 
 ```{r pull in psi matrix data}
 # List all files with the specified extension in the directory
@@ -125,6 +127,9 @@ Now rbind each one together using do.call.
 # rbind matrices together
 psi_matrix <- do.call(rbind, matrices)
 
+# rename the columns with cell ids
+psi_matrix@Dimnames[[2]] <- sample_metadata$cell.id
+
 # save the final psi matrix
 write_rds(psi_matrix, here::here("data", "marvel", "psi_matrix.Rds"))
 ```
@@ -132,38 +137,222 @@ write_rds(psi_matrix, here::here("data", "marvel", "psi_matrix.Rds"))
 ## Plot PSI distribution
 
 ```{r try plotting all nonzero values in x}
-
+# save and plot nonzero psi values
 png(here::here("results", "distributions", "psi_nonzero_hist.png"),
-  width = 8, height = 6, units = "in", res = 300)
+  width = 8, height = 6, units = "in", res = 300
+)
 hist(psi_matrix@x)
 dev.off()
-
+# save and plot nonzero log of sj counts
 png(here::here("results", "distributions", "log_sj_counts_hist.png"),
-  width = 8, height = 6, units = "in", res = 300)
+  width = 8, height = 6, units = "in", res = 300
+)
 hist(log(setbp1_marvel$sj.count.matrix@x))
 dev.off()
-
+# save and plot nonzero normalized gene expression
 png(here::here("results", "distributions", "gene_norm_hist.png"),
-  width = 8, height = 6, units = "in", res = 300)
+  width = 8, height = 6, units = "in", res = 300
+)
 hist(setbp1_marvel$gene.norm.matrix@x)
 dev.off()
-
+# save and plot nonzero log of gene expression
 png(here::here("results", "distributions", "log_gene_counts_hist.png"),
-  width = 8, height = 6, units = "in", res = 300)
+  width = 8, height = 6, units = "in", res = 300
+)
 hist(log(setbp1_marvel$gene.count.matrix@x))
 dev.off()
 ```
 
-```{r try rowMeans}
-psi_means <- rowMeans(psi_matrix)
-hist(psi_means)
+## Determine numbers of SJ detected per gene for each cell type
 
-sj_means <- rowMeans(setbp1_marvel$sj.count.matrix)
-hist(sj_means)
+First, I'll split up the psi matrix by cell type
 
-gene_norm_means <- rowMeans(setbp1_marvel$gene.norm.matrix)
+```{r get cell groups}
+# Pull cell types and matching ids
+cell_group_list <- sample_metadata %>%
+  group_split(cell_type, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$cell_type[1]))
 
-gene_count_means <- rowMeans(setbp1_marvel$gene.count.matrix)
+# Rename
+cell_group_list <- set_names(cell_group_list, c(
+  "Astrocytes", "Excitatory Neurons",
+  "Inhibitory Neurons", "Microglia", "OPCs",
+  "Oligodendrocytes", "Vascular Cells"
+))
+```
+
+Now split matrices by cell type
+
+```{r split psi matrices by cell type}
+astrocytes_psi <- subset_sparse_matrix(
+  matrix = psi_matrix,
+  cell_type = "Astrocytes"
+)
+
+excitatory_psi <- subset_sparse_matrix(
+  matrix = psi_matrix,
+  cell_type = "Excitatory Neurons"
+)
+
+inhibitory_psi <- subset_sparse_matrix(
+  matrix = psi_matrix,
+  cell_type = "Inhibitory Neurons"
+)
+
+microglia_psi <- subset_sparse_matrix(
+  matrix = psi_matrix,
+  cell_type = "Microglia"
+)
+
+opcs_psi <- subset_sparse_matrix(
+  matrix = psi_matrix,
+  cell_type = "OPCs"
+)
+
+oligodendrocytes_psi <- subset_sparse_matrix(
+  matrix = psi_matrix,
+  cell_type = "Oligodendrocytes"
+)
+
+vascular_psi <- subset_sparse_matrix(
+  matrix = psi_matrix,
+  cell_type = "Vascular Cells"
+)
+```
+
+Can also do this for raw SJ counts
+
+```{r split splice junction count matrices by cell type}
+# separate sj counts
+sj_counts <- setbp1_marvel[["sj.count.matrix"]]
+
+# subset each cell type
+astrocytes_sj_count <- subset_sparse_matrix(
+  matrix = sj_counts,
+  cell_type = "Astrocytes"
+)
+
+excitatory_sj_count <- subset_sparse_matrix(
+  matrix = sj_counts,
+  cell_type = "Excitatory Neurons"
+)
+
+inhibitory_sj_count <- subset_sparse_matrix(
+  matrix = sj_counts,
+  cell_type = "Inhibitory Neurons"
+)
+
+microglia_sj_count <- subset_sparse_matrix(
+  matrix = sj_counts,
+  cell_type = "Microglia"
+)
+
+opcs_sj_count <- subset_sparse_matrix(
+  matrix = sj_counts,
+  cell_type = "OPCs"
+)
+
+oligodendrocytes_sj_count <- subset_sparse_matrix(
+  matrix = sj_counts,
+  cell_type = "Oligodendrocytes"
+)
+
+vascular_sj_count <- subset_sparse_matrix(
+  matrix = sj_counts,
+  cell_type = "Vascular Cells"
+)
+```
+
+And can do for gene counts
+
+```{r split splice junction count matrices by cell type}
+# separate gene counts
+gene_counts <- setbp1_marvel[["gene.count.matrix"]]
+
+# subset each cell type
+astrocytes_gene_count <- subset_sparse_matrix(
+  matrix = gene_counts,
+  cell_type = "Astrocytes"
+)
+
+excitatory_gene_count <- subset_sparse_matrix(
+  matrix = gene_counts,
+  cell_type = "Excitatory Neurons"
+)
+
+inhibitory_gene_count <- subset_sparse_matrix(
+  matrix = gene_counts,
+  cell_type = "Inhibitory Neurons"
+)
+
+microglia_gene_count <- subset_sparse_matrix(
+  matrix = gene_counts,
+  cell_type = "Microglia"
+)
+
+opcs_gene_count <- subset_sparse_matrix(
+  matrix = gene_counts,
+  cell_type = "OPCs"
+)
+
+oligodendrocytes_gene_count <- subset_sparse_matrix(
+  matrix = gene_counts,
+  cell_type = "Oligodendrocytes"
+)
+
+vascular_gene_count <- subset_sparse_matrix(
+  matrix = gene_counts,
+  cell_type = "Vascular Cells"
+)
+```
+
+Now, we can make a dataframe with the total number of rows divided by number of cells
+
+```{r get how many sjs per cell type}
+sj_per_cell_type <- data.frame(
+  "cell_type" = c(
+    "Astrocytes", "Excitatory Neurons",
+    "Inhibitory Neurons", "Microglia", "OPCs",
+    "Oligodendrocytes", "Vascular Cells"
+  ),
+  "sj_number" = c(length(astrocytes_sj_count@Dimnames[[1]]),
+                  length(excitatory_sj_count@Dimnames[[1]]),
+                  length(inhibitory_sj_count@Dimnames[[1]]),
+                  length(microglia_sj_count@Dimnames[[1]]),
+                  length(oligodendrocytes_sj_count@Dimnames[[1]]),
+                  length(opcs_sj_count@Dimnames[[1]]),
+                  length(vascular_sj_count@Dimnames[[1]])),
+  
+  "sjs_per_cell" = c(length(astrocytes_sj_count@Dimnames[[1]]) /
+                              length(astrocytes_sj_count@Dimnames[[2]]),
+                  length(excitatory_sj_count@Dimnames[[1]]) /
+                              length(excitatory_sj_count@Dimnames[[2]]),
+                  length(inhibitory_sj_count@Dimnames[[1]]) /
+                              length(inhibitory_sj_count@Dimnames[[2]]),
+                  length(microglia_sj_count@Dimnames[[1]]) /
+                              length(microglia_sj_count@Dimnames[[2]]),
+                  length(oligodendrocytes_sj_count@Dimnames[[1]]) /
+                              length(oligodendrocytes_sj_count@Dimnames[[2]]),
+                  length(opcs_sj_count@Dimnames[[1]]) /
+                              length(opcs_sj_count@Dimnames[[2]]),
+                  length(vascular_sj_count@Dimnames[[1]]) /
+                              length(vascular_sj_count@Dimnames[[2]])),
+  
+  "sjs_per_gene" = c(length(astrocytes_sj_count@Dimnames[[1]]) /
+                              length(astrocytes_gene_count@Dimnames[[1]]),
+                  length(excitatory_sj_count@Dimnames[[1]]) /
+                              length(excitatory_gene_count@Dimnames[[1]]),
+                  length(inhibitory_sj_count@Dimnames[[1]]) /
+                              length(inhibitory_gene_count@Dimnames[[1]]),
+                  length(microglia_sj_count@Dimnames[[1]]) /
+                              length(microglia_gene_count@Dimnames[[1]]),
+                  length(oligodendrocytes_sj_count@Dimnames[[1]]) /
+                              length(oligodendrocytes_gene_count@Dimnames[[1]]),
+                  length(opcs_sj_count@Dimnames[[1]]) /
+                              length(opcs_gene_count@Dimnames[[1]]),
+                  length(vascular_sj_count@Dimnames[[1]]) /
+                              length(vascular_gene_count@Dimnames[[1]]))
+)
 ```
 
 #### Style

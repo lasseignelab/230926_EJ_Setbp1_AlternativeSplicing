@@ -425,3 +425,14 @@ make_psi_matrix <- function(splice_junctions) {
   # return psi matrix
   return(psi_matrix)
 }
+
+## subset_psi_matrix - Emma Jones
+# The purpose of this function is to subset a sparse matrix by cell type.
+# It also drop rows that are all zeroes.
+subset_sparse_matrix <- function(matrix, cell_type){
+  # subset matrix based on cell type
+  subset_matrix <- matrix[, colnames(matrix) %in% cell_group_list[[cell_type]]]
+  # drop rows with all zeroes
+  subset_matrix <- subset_matrix[rowSums(subset_matrix) > 0, ]
+  return(subset_matrix)
+}
