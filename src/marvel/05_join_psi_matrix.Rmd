@@ -72,7 +72,9 @@ setbp1_marvel <- read_rds(here::here(
 
 # Retrieve sample metadata
 sample_metadata <- setbp1_marvel$sample.metadata
+```
 
+```{r pull in psi matrix data}
 # List all files with the specified extension in the directory
 files <- list.files(here::here("data", "marvel"),
   pattern = "_psi_matrix.Rds",
@@ -130,13 +132,26 @@ write_rds(psi_matrix, here::here("data", "marvel", "psi_matrix.Rds"))
 ## Plot PSI distribution
 
 ```{r try plotting all nonzero values in x}
+
+png(here::here("results", "distributions", "psi_nonzero_hist.png"),
+  width = 8, height = 6, units = "in", res = 300)
 hist(psi_matrix@x)
+dev.off()
 
+png(here::here("results", "distributions", "log_sj_counts_hist.png"),
+  width = 8, height = 6, units = "in", res = 300)
 hist(log(setbp1_marvel$sj.count.matrix@x))
+dev.off()
 
+png(here::here("results", "distributions", "gene_norm_hist.png"),
+  width = 8, height = 6, units = "in", res = 300)
 hist(setbp1_marvel$gene.norm.matrix@x)
+dev.off()
 
+png(here::here("results", "distributions", "log_gene_counts_hist.png"),
+  width = 8, height = 6, units = "in", res = 300)
 hist(log(setbp1_marvel$gene.count.matrix@x))
+dev.off()
 ```
 
 ```{r try rowMeans}
