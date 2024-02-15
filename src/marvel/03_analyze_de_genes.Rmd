@@ -57,7 +57,7 @@ source(here::here("src", "marvel", "PlotSJPosition_modification.R"))
 
 ## Load in Data 
 
-```{r load significant gene tables}
+```{r load marvel object and significant gene tables}
 # Load MARVEL object
 setbp1_marvel <- read_rds(here::here(
   "data", "marvel",
@@ -68,7 +68,7 @@ setbp1_marvel <- read_rds(here::here(
 sample_metadata <- setbp1_marvel$sample.metadata
 
 # Load significant gene tables
-load(here:here("data", "marvel", "significant_tables.RData"))
+load(here::here("data", "marvel", "significant_tables.RData"))
 ```
 
 ## Make UpSet Plot
@@ -130,39 +130,43 @@ dev.off()
 gene_lists_upset_plot
 ```
 
-## In depth gene analysis: Son
+There is one gene that has signfificant PSI in all non-vascular cell types. This is the Son gene.
+
+## Son gene analysis
+
+#### Rename cell groups
 
 ```{r get cell groups}
 # Pull cell types and matching ids
-cell_type_ids <- sample_metadata %>%
-  group_split(cell_type, .keep = FALSE) %>%
+cell_group_list <- sample_metadata %>%
+  group_split(cell_type, .keep = TRUE) %>%
   map(~ set_names(.$cell.id, .$cell_type[1]))
 
 # Rename
-cell_group_list <- set_names(cell_type_ids, c(
+cell_group_list <- set_names(cell_group_list, c(
   "Astrocytes", "Excitatory Neurons",
   "Inhibitory Neurons", "Microglia", "OPCs",
   "Oligodendrocytes", "Vascular Cells"
 ))
 ```
 
-### Make MARVEL default plots
+### Make MARVEL default plots for showing Son expression
 
-MARVEL gene expression plot
+#### MARVEL gene expression plot
 
 ```{r make marvel plot first}
 setbp1_marvel <- adhocGene.TabulateExpression.Gene.10x(
   MarvelObject = setbp1_marvel,
   cell.group.list = cell_group_list,
   gene_short_name = "Son",
-  min.pct.cells = 10,
+  min.pct.cells = 5,
   downsample = FALSE
 )
 
 setbp1_marvel$adhocGene$Expression$Gene$Plot
 ```
 
-MARVEL SJ Expression Plot
+#### MARVEL SJ Expression Plot
 
 ```{r look at SJ usage}
 setbp1_marvel <- adhocGene.TabulateExpression.PSI.10x(
@@ -173,7 +177,9 @@ setbp1_marvel <- adhocGene.TabulateExpression.PSI.10x(
 setbp1_marvel$adhocGene$Expression$PSI$Plot
 ```
 
+#### Plot gene and splice junction positions on genome track
 
+This MARVEL function had errors, so I manually fixed its problems. It only shows one splice junction at a time. It also exports at a very low resolution, so I think it would be a better use of time to plot using some other package if we need it for publication.
 
 ```{r plot son gene plot}
 setbp1_marvel <- adhocGene_PlotSJPosition_EJ(
@@ -194,35 +200,22 @@ setbp1_marvel$adhocGene$SJPosition$Plot
 dev.off()
 ```
 
-## Learn to extract PSI values
+## Calculate PSI Values
 
-```{r get psi data}
-son_psi_table <-
-  setbp1_marvel[["adhocGene"]][["Expression"]][["PSI"]][["Table"]]
+The current MARVEL setup doesn't have PSI values for every cell for every splice junction. we can remedy this ourselves.
+
+Remember, PSI is the count of splice junctions divided by the counts for that gene multiplied by 100.
+
+I also want to run this function on all splice junctions. Therefore we will create the required list of chromosome names.
+
+```{r make list of chr names}
+chr_prefixes <- paste0("chr", 1:19, ":")
+chr_prefixes <- c(chr_prefixes, "chrX:", "chrY:")
+
+writeLines(chr_prefixes, here::here("bin", "slurm", "chromosome_prefixes.txt"))
 ```
 
-This doesn't have the value per cell..
-
-I looked at the code and there is a violin plot option actually but for the plotvalues.psi function
-
-```{r plot psi}
-PlotValues.PSI.Pseudobulk.10x(
-  MarvelObject = setbp1_marvel,
-  cell.group.list = cell_group_list,
-  coord.intron = "chr16:91444873:91448517",
-  min.pct.cells.gene.expr = 5
-)
-```
-I keep getting an error here:
-
-Error in data.frame(sample.id = names(cell.group.list.small)[i], n.cells.total = n.cells,  : 
-  arguments imply differing number of rows: 0, 1
-  
-  
-I'm going to try to make violinplot from scratch since these functions are not working as planned.
-
-```{r plot psi}
-```
+Now that the chromosome prefixes list has been saved, you may calculate psi for all chromosomes using script 04 (sbatch 04_submit_calc_psi.sh in terminal). For continuing Rmd analyses, move on to script 05 when that has finished running.
 
 #### Style
 

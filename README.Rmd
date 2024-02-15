@@ -28,7 +28,7 @@ fs::dir_tree("src/starsolo_conda", recurse = FALSE, regexp = "*.sh")
 ```
 
 * 01_build_STAR_genome.sh
-* run_STARsolo_*
+* 02_run_STARsolo.sh
 
 #### Seurat
 
@@ -51,6 +51,12 @@ fs::dir_tree("src/marvel", recurse = FALSE)
 ```
 
 * 01_format_MARVEL_data.Rmd
+* 02_MARVEL_differential_analysis.Rmd
+* 03_analyze_de_genes.Rmd
+* 04_calc_psi_all.Rmd
+* 04_submit_calc_psi.Rmd
+* 05_join_psi_matrix.Rmd
+* setbp1_targets_properties.Rmd
 * functions.R
 
 ## Lasseigne Lab 
