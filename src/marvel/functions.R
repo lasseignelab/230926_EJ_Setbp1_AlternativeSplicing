@@ -434,5 +434,65 @@ subset_sparse_matrix <- function(matrix, cell_type){
   subset_matrix <- matrix[, colnames(matrix) %in% cell_group_list[[cell_type]]]
   # drop rows with all zeroes
   subset_matrix <- subset_matrix[rowSums(subset_matrix) > 0, ]
+  # return matrix subset
   return(subset_matrix)
+}
+
+## subset_cell_type - Emma Jones
+# This function uses subset_psi_matrix 3 times for gene, splice junction,
+# and psi matrices for a given cell type. The default args are already in the
+# environment and are the full sized versions of the counts matrices.
+subset_cell_type_matrices <- function(gene_matrix = gene_counts,
+                                      sj_matrix = sj_counts,
+                                      psi_matrix = full_psi_matrix, cell_type) {
+  # run function
+  gene_subset <- subset_sparse_matrix(gene_matrix, cell_type)
+  sj_subset <- subset_sparse_matrix(sj_matrix, cell_type)
+  psi_subset <- subset_sparse_matrix(psi_matrix, cell_type)
+  # make into single list
+  list <- list(gene_subset, sj_subset, psi_subset)
+  # name list
+  names(list) <- c("Gene Counts", "Splice Junction Counts", "PSI")
+  # return object
+  return(list)
+}
+
+## subset_mutant_matrices - Emma Jones
+# The purpose of this function is to subset a list of sparse matrices by
+# condition. It also drop rows that are all zeroes.
+subset_mutant_matrices <- function(cell_type_subset_list){
+  ## start with mutant
+  # initialize empty list
+  subset_matrices_list_1 <- list()
+  # loop through each list
+  for(i in 1:length(cell_type_subset_list)){
+    # set matrix
+    matrix <- cell_type_subset_list[[i]]
+    # subset matrix based on cell type
+    subset_matrix <- matrix[, colnames(matrix) %in% mutant_list[["Mutant"]]]
+    # drop rows with all zeroes
+    subset_matrices_list_1[[i]] <- subset_matrix[rowSums(subset_matrix) > 0, ]
+  }
+  # rename list elements
+  names(subset_matrices_list_1) <- c("Gene Counts", "Splice Junction Counts", "PSI")
+  ## now for wildtype
+  # initialize empty list
+  subset_matrices_list_2 <- list()
+  # loop through each list
+  for(i in 1:length(cell_type_subset_list)){
+    # set matrix
+    matrix <- cell_type_subset_list[[i]]
+    # subset matrix based on cell type
+    subset_matrix <- matrix[, colnames(matrix) %in% mutant_list[["Wildtype"]]]
+    # drop rows with all zeroes
+    subset_matrices_list_2[[i]] <- subset_matrix[rowSums(subset_matrix) > 0, ]
+  }
+  # rename list elements
+  names(subset_matrices_list_2) <- c("Gene Counts", "Splice Junction Counts", "PSI")
+  ## combine lists
+  subset_matrices_lists <- list(subset_matrices_list_1, subset_matrices_list_2)
+  # rename list elements
+  names(subset_matrices_lists) <- c("Mutant", "Wildtype")
+  # return matrix subset
+  return(subset_matrices_lists)
 }

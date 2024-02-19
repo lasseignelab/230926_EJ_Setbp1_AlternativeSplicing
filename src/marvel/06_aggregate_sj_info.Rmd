@@ -1,0 +1,326 @@
+---
+title: "Aggregate Splice Junction Information"
+author: "Emma Jones"
+date: "2024-02-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Aggregate Splice Junction Information
+
+The purpose of this script is to aggregate sj and expression information by cell type in a meaningful way. It is dependent on all seurat and marvel scripts 01-05. Please run in docker 1.0.6.
+
+## Load Packages
+
+```{r load packages}
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
+  library(tidyverse)
+  library(patchwork)
+  library(ComplexHeatmap)
+  library(viridis)
+
+  # Load MARVEL package
+  library(MARVEL)
+
+  # Load adjunct MARVEL packages
+  library(ggnewscale)
+  library(ggrepel)
+  library(reshape2)
+  library(plyr)
+  library(stringr)
+  library(textclean)
+  library(AnnotationDbi)
+  library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(org.Mm.eg.db)
+  library(gtools)
+  library(GenomicRanges)
+  library(IRanges)
+  library(S4Vectors)
+  library(wiggleplotr)
+  library(Matrix)
+  library(data.table)
+  library(gridExtra)
+})
+
+# set seed
+set.seed(123)
+
+# source functions
+source(here::here("src", "marvel", "functions.R"))
+```
+
+And load in data
+
+```{r load in data}
+# load in PSI matrix from script 05
+full_psi_matrix <- readRDS("/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/marvel/full_psi_matrix.Rds")
+
+# Load MARVEL object
+setbp1_marvel <- read_rds(here::here(
+  "data", "marvel",
+  "setbp1_marvel_aligned.rds"
+))
+
+# Retrieve sample metadata
+sample_metadata <- setbp1_marvel$sample.metadata
+
+# Save counts objects for easy accessibility
+sj_counts <- setbp1_marvel[["sj.count.matrix"]]
+gene_counts <- setbp1_marvel[["gene.count.matrix"]]
+
+# Convert data type
+sj_counts <- as(sj_counts, "CsparseMatrix")
+gene_counts <- as(gene_counts, "CsparseMatrix")
+```
+
+## Determine numbers of SJ detected per gene for each cell type
+
+First, I'll split up the psi matrix by cell type
+
+```{r get cell groups}
+# Pull cell types and matching ids
+cell_group_list <- sample_metadata %>%
+  group_split(cell_type, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$cell_type[1]))
+
+# Rename
+cell_group_list <- set_names(cell_group_list, c(
+  "Astrocytes", "Excitatory Neurons",
+  "Inhibitory Neurons", "Microglia", "OPCs",
+  "Oligodendrocytes", "Vascular Cells"
+))
+
+# Pull mutant vs wildtype and matching ids
+mutant_list <- sample_metadata %>%
+  group_split(seq_folder, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$seq_folder[[1]]))
+
+# Rename
+mutant_list <- set_names(mutant_list, c(
+  "Mutant", "Wildtype"
+))
+```
+
+Now split all matrices by cell type
+
+```{r split matrices by cell type}
+astrocytes_matrices <- subset_cell_type_matrices(cell_type = "Astrocytes")
+
+excitatory_matrices <- subset_cell_type_matrices(
+  cell_type = "Excitatory Neurons"
+)
+
+inhibitory_matrices <- subset_cell_type_matrices(
+  cell_type = "Inhibitory Neurons"
+)
+
+microglia_matrices <- subset_cell_type_matrices(cell_type = "Microglia")
+
+opcs_matrices <- subset_cell_type_matrices(cell_type = "OPCs")
+
+oligodendrocyte_matrices <- subset_cell_type_matrices(
+  cell_type = "Oligodendrocytes"
+)
+
+vascular_matrices <- subset_cell_type_matrices(cell_type = "Vascular Cells")
+```
+
+
+Now, we can make a dataframe with the total number of rows divided by number of cells
+
+```{r get how many sjs per cell type}
+sj_per_cell_type <- data.frame(
+  "cell_type" = c(
+    "Astrocytes", "Excitatory Neurons",
+    "Inhibitory Neurons", "Microglia", "OPCs",
+    "Oligodendrocytes", "Vascular Cells"
+  ),
+  "sj_number" = c(
+    nrow(astrocytes_matrices[[2]]),
+    nrow(excitatory_matrices[[2]]),
+    nrow(inhibitory_matrices[[2]]),
+    nrow(microglia_matrices[[2]]),
+    nrow(oligodendrocyte_matrices[[2]]),
+    nrow(opcs_matrices[[2]]),
+    nrow(vascular_matrices[[2]])
+  ),
+  "sjs_per_gene" = c(
+    nrow(astrocytes_matrices[[2]]) /
+  nrow(astrocytes_matrices[[1]]),
+nrow(excitatory_matrices[[2]]) /
+  nrow(excitatory_matrices[[1]]),
+nrow(inhibitory_matrices[[2]]) /
+  nrow(inhibitory_matrices[[1]]),
+nrow(microglia_matrices[[2]]) /
+  nrow(microglia_matrices[[1]]),
+nrow(oligodendrocyte_matrices[[2]]) /
+  nrow(oligodendrocyte_matrices[[1]]),
+nrow(opcs_matrices[[2]]) /
+  nrow(opcs_matrices[[1]]),
+nrow(vascular_matrices[[2]]) /
+  nrow(vascular_matrices[[1]])
+  )
+)
+```
+
+
+```{r visualize splice junctions per cell type}
+
+ggplot(sj_per_cell_type, aes(x = cell_type, y = sjs_per_gene, fill = cell_type)) +
+  geom_bar(stat = "identity") +
+  theme(legend.position = "none")
+
+```
+
+## Aggregate metrics by mutant and wildtype
+
+I made a function called subset_mutant_matrices. I can use this to split the sj and gene count matrices
+
+```{r split into mutant and wildtype}
+
+astrocytes_mutants <- subset_mutant_matrices(astrocytes_matrices)
+
+excitatory_mutants <- subset_mutant_matrices(excitatory_matrices)
+
+inhibitory_mutants <- subset_mutant_matrices(inhibitory_matrices)
+
+microglia_mutants <- subset_mutant_matrices(microglia_matrices)
+
+oligodendrocyte_mutants <- subset_mutant_matrices(oligodendrocyte_matrices)
+
+opcs_mutants <- subset_mutant_matrices(opcs_matrices)
+
+vascular_mutants <- subset_mutant_matrices(vascular_matrices)
+
+```
+
+Beep boop
+
+```{r make aggregated df for mutants}
+
+sj_per_condition <- data.frame(
+  "cell_type" = rep(c(
+    "Astrocytes", "Excitatory Neurons",
+    "Inhibitory Neurons", "Microglia", "OPCs",
+    "Oligodendrocytes", "Vascular Cells"
+  ), 2),
+  
+  "condition" = c(rep("Mutant", 7), rep("Wildtype", 7)),
+  
+  "sj_number" = c(
+    nrow(astrocytes_mutants$Mutant[[2]]),
+    nrow(excitatory_mutants$Mutant[[2]]),
+    nrow(inhibitory_mutants$Mutant[[2]]),
+    nrow(microglia_mutants$Mutant[[2]]),
+    nrow(oligodendrocyte_mutants$Mutant[[2]]),
+    nrow(opcs_mutants$Mutant[[2]]),
+    nrow(vascular_mutants$Mutant[[2]]),
+    nrow(astrocytes_mutants$Wildtype[[2]]),
+    nrow(excitatory_mutants$Wildtype[[2]]),
+    nrow(inhibitory_mutants$Wildtype[[2]]),
+    nrow(microglia_mutants$Wildtype[[2]]),
+    nrow(oligodendrocyte_mutants$Wildtype[[2]]),
+    nrow(opcs_mutants$Wildtype[[2]]),
+    nrow(vascular_mutants$Wildtype[[2]])
+  ),
+  
+  "sjs_per_gene" = c(
+    nrow(astrocytes_mutants$Mutant[[2]]) /
+      nrow(astrocytes_mutants$Mutant[[1]]),
+    nrow(excitatory_mutants$Mutant[[2]]) /
+      nrow(excitatory_mutants$Mutant[[1]]),
+    nrow(inhibitory_mutants$Mutant[[2]]) /
+      nrow(inhibitory_mutants$Mutant[[1]]),
+    nrow(microglia_mutants$Mutant[[2]]) /
+      nrow(microglia_mutants$Mutant[[1]]),
+    nrow(oligodendrocyte_mutants$Mutant[[2]]) /
+      nrow(oligodendrocyte_mutants$Mutant[[1]]),
+    nrow(opcs_mutants$Mutant[[2]]) /
+      nrow(opcs_mutants$Mutant[[1]]),
+    nrow(vascular_mutants$Mutant[[2]]) /
+      nrow(vascular_mutants$Mutant[[1]]),
+    nrow(astrocytes_mutants$Wildtype[[2]]) /
+      nrow(astrocytes_mutants$Wildtype[[1]]),
+    nrow(excitatory_mutants$Wildtype[[2]]) /
+      nrow(excitatory_mutants$Wildtype[[1]]),
+    nrow(inhibitory_mutants$Wildtype[[2]]) /
+      nrow(inhibitory_mutants$Wildtype[[1]]),
+    nrow(microglia_mutants$Wildtype[[2]]) /
+      nrow(microglia_mutants$Wildtype[[1]]),
+    nrow(oligodendrocyte_mutants$Wildtype[[2]]) /
+      nrow(oligodendrocyte_mutants$Wildtype[[1]]),
+    nrow(opcs_mutants$Wildtype[[2]]) /
+      nrow(opcs_mutants$Wildtype[[1]]),
+    nrow(vascular_mutants$Wildtype[[2]]) /
+      nrow(vascular_mutants$Wildtype[[1]])
+  ),
+  
+  "cell_count" = c(
+  ncol(astrocytes_mutants$Mutant[[2]]),
+  ncol(excitatory_mutants$Mutant[[2]]),
+  ncol(inhibitory_mutants$Mutant[[2]]),
+  ncol(microglia_mutants$Mutant[[2]]),
+  ncol(oligodendrocyte_mutants$Mutant[[2]]),
+  ncol(opcs_mutants$Mutant[[2]]),
+  ncol(vascular_mutants$Mutant[[2]]),
+  ncol(astrocytes_mutants$Wildtype[[2]]),
+  ncol(excitatory_mutants$Wildtype[[2]]),
+  ncol(inhibitory_mutants$Wildtype[[2]]),
+  ncol(microglia_mutants$Wildtype[[2]]),
+  ncol(oligodendrocyte_mutants$Wildtype[[2]]),
+  ncol(opcs_mutants$Wildtype[[2]]),
+  ncol(vascular_mutants$Wildtype[[2]])
+)
+)
+
+```
+
+
+```{r visualize splice junctions per cell type}
+# plot
+ggplot(sj_per_condition, aes(x = cell_type, y = sjs_per_gene, fill = condition)) +
+  geom_bar(stat = "identity", position = position_dodge())
+
+```
+
+I notice there are more sjs per gene for all wts compared to controls, is this true for all cell counts?
+
+```{r look at cell counts}
+ggplot(sj_per_condition, aes(x = cell_type, y = cell_count, fill = condition)) +
+  geom_bar(stat = "identity", position = position_dodge())
+```
+
+Yes, there are more cells so this score is imperfect and not something I want to draw major conclusions from.
+
+
+
+#### Style
+
+```{r tidy script}
+style_file("05_join_psi_matrix.Rmd")
+
+lint("05_join_psi_matrix.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
+```
+
