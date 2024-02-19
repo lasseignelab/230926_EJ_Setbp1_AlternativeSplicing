@@ -1,12 +1,14 @@
 ### MARVEL functions for Setbp1 Alternative Splicing Project
 # Emma F. Jones (EJ)
+
 ## split_sj_info - Emma Jones
 # This function gets the splice junction information for each sample
 split_sj_info <- function(sample_id, condition) {
   # split the sample ID string into individual characters
   char_vector <- strsplit(sample_id, "")[[1]]
   # add an underscore after the first character
-  sample_id_mod <- paste0(char_vector[1], "_", paste0(char_vector[-1], collapse = ""))
+  sample_id_mod <- paste0(char_vector[1], "_",
+                          paste0(char_vector[-1], collapse = ""))
   # get cell barcodes
   sj_barcodes <- read.table(
     here::here(
@@ -146,7 +148,8 @@ run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5,
 
 ## run_marvel_cell_type - Emma Jones
 # This function is a wrapper function for comparing mutant and wildtype splicing
-# within a given cell type. The thresholds may need adjusting, but have defaults.
+# within a given cell type.
+# The thresholds may need adjusting, but have defaults.
 run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5, 
                        min_pct_cells_gene = 5, min_pct_cells_sj = 5,
                        min_gene_norm = 1) {
@@ -305,7 +308,8 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
   return(marvel_object)
 }
 
-### EJ EDIT OF PLOTTING FUNCTION TO SHUFFLE POINTS
+### EJ EDIT OF MARVEL PLOTTING FUNCTION TO SHUFFLE POINTS
+# Most code is copied directly from PlotValues_PCA_CellGroup
 PlotValues_PCA_CellGroup_EJ <-
 function (MarvelObject, cell.group.list, legendtitle = "Cell group", 
           alpha = 0.75, point.size = 1, point.stroke = 0.1, point.colors = NULL, 
@@ -323,7 +327,8 @@ function (MarvelObject, cell.group.list, legendtitle = "Cell group",
   type <- type
   .list <- list()
   for (i in 1:length(cell.group.list)) {
-    . <- data.frame(cell.id = cell.group.list[[i]], group = names(cell.group.list)[i])
+    . <- data.frame(cell.id = cell.group.list[[i]],
+                    group = names(cell.group.list)[i])
     .list[[i]] <- .
   }
   ref <- do.call(rbind.data.frame, .list)
@@ -338,6 +343,7 @@ function (MarvelObject, cell.group.list, legendtitle = "Cell group",
                   sep = ""))
   }
   data <- df
+  # EJ ADDITION TO FUNCTION HERE
   if (isTRUE(x = shuffle)) {
     data <- data[sample(x = 1:nrow(x = data)), ]
   }
@@ -369,18 +375,124 @@ function (MarvelObject, cell.group.list, legendtitle = "Cell group",
   else if (length(unique(z)) <= 10) {
     ncol.legend <- 1
   }
-  plot <- ggplot() + geom_point(data, mapping = aes(x = x, 
-                                                    y = y, fill = z), color = "black", pch = 21, size = point.size, 
-                                alpha = alpha, stroke = point.stroke) + scale_fill_manual(values = point.colors) + 
+  plot <- ggplot() + 
+    geom_point(data, mapping = aes(x = x, y = y, fill = z),
+               color = "black", pch = 21, size = point.size, 
+                                alpha = alpha, stroke = point.stroke) + 
+    scale_fill_manual(values = point.colors) + 
     labs(title = NULL, x = xtitle, y = ytitle, fill = legendtitle) + 
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-          panel.background = element_blank(), plot.title = element_text(size = 12, 
-                                                                        hjust = 0.5), axis.line = element_line(colour = "black"), 
-          axis.title = element_text(size = 12), axis.text.x = element_text(size = 10, 
-                                                                           colour = "black"), axis.text.y = element_text(size = 10, 
-                                                                                                                         colour = "black"), legend.title = element_text(size = 8), 
-          legend.text = element_text(size = 8)) + guides(fill = guide_legend(override.aes = list(size = point.size.legend, 
-                                                                                                 alpha = alpha, stroke = point.stroke), ncol = ncol.legend))
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), 
+          panel.background = element_blank(),
+          plot.title = element_text(size = 12, hjust = 0.5),
+          axis.line = element_line(colour = "black"), 
+          axis.title = element_text(size = 12),
+          axis.text.x = element_text(size = 10, colour = "black"),
+          axis.text.y = element_text(size = 10, colour = "black"),
+          legend.title = element_text(size = 8),
+          legend.text = element_text(size = 8)) +
+    guides(fill = guide_legend(override.aes = 
+                                 list(size = point.size.legend, alpha = alpha,
+                                      stroke = point.stroke),
+                               ncol = ncol.legend))
   MarvelObject$adhocPlot$PCA$CellGroup <- plot
   return(MarvelObject)
+}
+## make_psi_matrix - Emma Jones
+# The purpose of this function is to calculate psi for a list of splice
+# junctions across all cells.
+make_psi_matrix <- function(splice_junctions) {
+  # subset sj_counts matrix
+  sj_counts_subset <- sj_counts[splice_junctions, ]
+  
+  # subset expanded_gene_counts matrix
+  expanded_gene_counts_subset <- expanded_gene_counts[splice_junctions, ]
+  
+  # make empty psi_matrix
+  psi_matrix <- emptySparse(nrow = length(splice_junctions),
+                            ncol = ncol(sj_counts))
+  
+  # add rownames
+  rownames(psi_matrix) <- splice_junctions
+  
+  # fill in psi matrix
+  for (i in splice_junctions) {
+    psi_matrix[i, ] <- (sj_counts_subset[i, ] /
+                          expanded_gene_counts_subset[i, ]) * 100
+    print(i)
+  }
+  
+  # return psi matrix
+  return(psi_matrix)
+}
+
+## subset_psi_matrix - Emma Jones
+# The purpose of this function is to subset a sparse matrix by cell type.
+# It also drop rows that are all zeroes.
+subset_sparse_matrix <- function(matrix, cell_type){
+  # subset matrix based on cell type
+  subset_matrix <- matrix[, colnames(matrix) %in% cell_group_list[[cell_type]]]
+  # drop rows with all zeroes
+  subset_matrix <- subset_matrix[rowSums(subset_matrix) > 0, ]
+  # return matrix subset
+  return(subset_matrix)
+}
+
+## subset_cell_type - Emma Jones
+# This function uses subset_psi_matrix 3 times for gene, splice junction,
+# and psi matrices for a given cell type. The default args are already in the
+# environment and are the full sized versions of the counts matrices.
+subset_cell_type_matrices <- function(gene_matrix = gene_counts,
+                                      sj_matrix = sj_counts,
+                                      psi_matrix = full_psi_matrix, cell_type) {
+  # run function
+  gene_subset <- subset_sparse_matrix(gene_matrix, cell_type)
+  sj_subset <- subset_sparse_matrix(sj_matrix, cell_type)
+  psi_subset <- subset_sparse_matrix(psi_matrix, cell_type)
+  # make into single list
+  list <- list(gene_subset, sj_subset, psi_subset)
+  # name list
+  names(list) <- c("Gene Counts", "Splice Junction Counts", "PSI")
+  # return object
+  return(list)
+}
+
+## subset_mutant_matrices - Emma Jones
+# The purpose of this function is to subset a list of sparse matrices by
+# condition. It also drop rows that are all zeroes.
+subset_mutant_matrices <- function(cell_type_subset_list){
+  ## start with mutant
+  # initialize empty list
+  subset_matrices_list_1 <- list()
+  # loop through each list
+  for(i in 1:length(cell_type_subset_list)){
+    # set matrix
+    matrix <- cell_type_subset_list[[i]]
+    # subset matrix based on cell type
+    subset_matrix <- matrix[, colnames(matrix) %in% mutant_list[["Mutant"]]]
+    # drop rows with all zeroes
+    subset_matrices_list_1[[i]] <- subset_matrix[rowSums(subset_matrix) > 0, ]
+  }
+  # rename list elements
+  names(subset_matrices_list_1) <- c("Gene Counts", "Splice Junction Counts", "PSI")
+  ## now for wildtype
+  # initialize empty list
+  subset_matrices_list_2 <- list()
+  # loop through each list
+  for(i in 1:length(cell_type_subset_list)){
+    # set matrix
+    matrix <- cell_type_subset_list[[i]]
+    # subset matrix based on cell type
+    subset_matrix <- matrix[, colnames(matrix) %in% mutant_list[["Wildtype"]]]
+    # drop rows with all zeroes
+    subset_matrices_list_2[[i]] <- subset_matrix[rowSums(subset_matrix) > 0, ]
+  }
+  # rename list elements
+  names(subset_matrices_list_2) <- c("Gene Counts", "Splice Junction Counts", "PSI")
+  ## combine lists
+  subset_matrices_lists <- list(subset_matrices_list_1, subset_matrices_list_2)
+  # rename list elements
+  names(subset_matrices_lists) <- c("Mutant", "Wildtype")
+  # return matrix subset
+  return(subset_matrices_lists)
 }
