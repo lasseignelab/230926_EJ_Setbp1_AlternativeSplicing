@@ -25,6 +25,7 @@ suppressPackageStartupMessages({
   library(patchwork)
   library(ComplexHeatmap)
   library(viridis)
+  library(factoextra)
 
   # Load MARVEL package
   library(MARVEL)
@@ -71,6 +72,9 @@ setbp1_marvel <- read_rds(here::here(
 
 # Retrieve sample metadata
 sample_metadata <- setbp1_marvel$sample.metadata
+
+# Retrieve sj metadata
+sj_metadata <- setbp1_marvel$sj.metadata
 
 # Save counts objects for easy accessibility
 sj_counts <- setbp1_marvel[["sj.count.matrix"]]
@@ -202,7 +206,7 @@ vascular_mutants <- subset_mutant_matrices(vascular_matrices)
 
 ```
 
-Beep boop
+Now, I can amke a similar dataframe and plot from that.
 
 ```{r make aggregated df for mutants}
 
@@ -300,6 +304,138 @@ ggplot(sj_per_condition, aes(x = cell_type, y = cell_count, fill = condition)) +
 
 Yes, there are more cells so this score is imperfect and not something I want to draw major conclusions from.
 
+Now, what if we calculate this "splicing complexity score" for every single cell? Also, we can count how many splice junctions are detected per gene without averaging. Let's do that first.
+
+## Count splice junctions for each gene
+
+```{r count splice junctions}
+# Get all expressed gene names
+all_expressed_genes <- unique(c(names(get_sjs_per_gene(astrocytes_matrices)),
+                     names(get_sjs_per_gene(excitatory_matrices)),
+                     names(get_sjs_per_gene(inhibitory_matrices)),
+                     names(get_sjs_per_gene(microglia_matrices)),
+                     names(get_sjs_per_gene(oligodendrocyte_matrices)),
+                     names(get_sjs_per_gene(opcs_matrices)),
+                     names(get_sjs_per_gene(vascular_matrices))))
+
+# Make NA matrix, with 7 columns for cell types
+sj_per_gene <- matrix(NA, nrow = length(all_expressed_genes), ncol = 7)
+# Add rownames
+rownames(sj_per_gene) <- sort(all_expressed_genes)
+
+# Make a list of all matrices
+matrices_list <- ls(pattern = "_matrices")
+
+# Initialize column
+column <- 0
+
+# Add in each table - these numbers are to exclude the functions I called into
+# the list. You could procedurally remove things of the class function but I am lazy
+for(i in matrices_list[c(1:6, 9)]) {
+  column <- column + 1
+  table <- get_sjs_per_gene(get(i))
+  indices <- match(rownames(sj_per_gene), names(table))
+  sj_per_gene[, column] <- ifelse(!is.na(indices), table[indices], 0)
+}
+
+# Add colnames
+colnames(sj_per_gene) <- substr(matrices_list[c(1:6, 9)], 1, nchar(matrices_list[c(1:6, 9)]) - 9)
+
+```
+
+I think it would be neat to show this as a pca.
+
+```{r do pca on sj counts}
+# Transform matrix
+sj_per_gene_t <- t(sj_per_gene)
+
+sj_per_gene_t <- remove_0_variance(as.data.frame(sj_per_gene_t))
+
+pca <- prcomp(sj_per_gene_t, scale = TRUE)
+
+fviz_eig(pca)
+
+fviz_pca_ind(pca,
+             col.ind = "cos2", # Color by the quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE, # Avoid text overlapping
+             )
+
+fviz_pca_var(pca,
+             col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE,
+             select.var = list(contrib = 10)
+             )
+
+
+```
+
+I think this is a good direction, but I need to do for each sample and for each cell type (mutant and wt). I'm unsure the best way to do this, I could split out 7 by 6 samples into 42 groups, or just do in aggregate first?
+
+```{r do same thing for mutant and wildtypes}
+# Make NA matrix, with 14 columns (one for each aggregation)
+sj_per_gene_mut <- matrix(NA, nrow = length(all_expressed_genes), ncol = 14)
+# Add rownames
+rownames(sj_per_gene_mut) <- sort(all_expressed_genes)
+
+# Make a list of all mutant matrices
+mutants_list <- ls(pattern = "_mutants")
+
+# Initialize column
+column1 <- 0
+
+# Add in each table with for loop
+for(i in (mutants_list)) {
+  # get object
+  object <- get(i)
+  # mutants
+  column1 <- column1 + 1
+  table <- get_sjs_per_gene(object[["Mutant"]])
+  indices <- match(rownames(sj_per_gene_mut), names(table))
+  sj_per_gene_mut[, column1] <- ifelse(!is.na(indices), table[indices], 0)
+  
+  # wildtypes
+  column2 <- column1 + 7
+  table <- get_sjs_per_gene(object[["Wildtype"]])
+  indices <- match(rownames(sj_per_gene_mut), names(table))
+  sj_per_gene_mut[, column2] <- ifelse(!is.na(indices), table[indices], 0)
+}
+
+# Add colnames
+colnames(sj_per_gene_mut) <- c(paste0(substr(mutants_list, 1, nchar(mutants_list) - 8), "_mutants"), paste0(substr(mutants_list, 1, nchar(mutants_list) - 8), "_wildtype"))
+
+```
+
+Now we can do a pca on these groups
+
+```{r now do pca!!!}
+# Transform matrix
+sj_per_gene_mut_t <- t(sj_per_gene_mut)
+
+sj_per_gene_mut_t <- remove_0_variance(as.data.frame(sj_per_gene_mut_t))
+
+pca_mut <- prcomp(sj_per_gene_mut_t, scale = TRUE)
+
+fviz_eig(pca_mut)
+
+fviz_pca_ind(pca_mut,
+             col.ind = "cos2", # Color by the quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE, # Avoid text overlapping
+             )
+
+fviz_pca_var(pca_mut,
+             col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE,
+             select.var = list(contrib = 10)
+             )
+
+
+```
+
+Not sure how to interpret that very much, but now I can do back to doing what I was aiming to do this morning and got sidetracked from.
 
 
 #### Style
