@@ -1,0 +1,205 @@
+---
+title: "Create Figure 1"
+output: html_document
+date: "2024-02-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The purpose of this script is to create a finalized version of figure 1. It is dependent on Seurat scripts 01 and 02. Run in docker 1.0.6.
+
+## Load Packages
+
+```{r load packages}
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
+
+  # Load Seurat and other single-cell packages
+  library(tidyverse)
+  library(Seurat)
+  library(patchwork)
+  library(harmony)
+  library(presto)
+  library(cowplot)
+})
+```
+
+
+
+```{r load data}
+# load in data
+annotated_brain_samples <-
+  read_rds(file = here("data", "seurat", "annotated_brain_samples.rds"))
+```
+
+Set color palette for paper
+
+```{r set colors}
+cell_type_colors <- c(
+  `Astrocytes` = "#6CA9E2",
+  `Excitatory Neurons` = "#98D070",
+  `Inhibitory Neurons` = "#DEE971",
+  `Microglia` = "#E28C67",
+  `Oligodendrocytes` = "#4AD8E6",
+  `OPCs` = "#0A9A8D",
+  `Vascular Cells` = "#B898E4"
+)
+
+condition_colors <- c(
+  `mutant` = "#D8D8D8",
+  `wildtype` = "#9E9E9E"
+)
+```
+
+
+
+```{r plot UMAP of cell types}
+umap_1 <- DimPlot(annotated_brain_samples,
+  cols = cell_type_colors,
+  label = TRUE,
+  label.box = TRUE,
+  label.color = "white",
+  label.size = 3.75,
+  repel = TRUE,
+  seed = 123
+) +
+  labs(color = "Cell Type") +
+  theme(
+    axis.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold")
+  ) +
+  xlab("UMAP 1") +
+  ylab("UMAP 2") +
+  NoLegend()
+
+umap_1
+```
+
+```{r plot dotplot of cell types}
+dotplot <- DotPlot(annotated_brain_samples,
+  cols = c("lightgray", "turquoise4"),
+  features = c(
+    "Vtn", "Cx3cr1", "Pdgfra", "Gad2", "Mbp",
+    "Slc1a3", "Slc17a7"
+  )
+) +
+  theme(
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(face = "bold"),
+    axis.text = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, vjust = 0.6)
+  )
+
+dotplot
+```
+
+```{r plot UMAP of conditions}
+umap_2 <- DimPlot(annotated_brain_samples,
+  group.by = "seq_folder",
+  shuffle = TRUE,
+  seed = 123
+) +
+  theme(
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(face = "bold"),
+    axis.text = element_text(face = "bold"),
+    axis.title = element_text(face = "bold")
+  ) +
+  scale_color_manual(
+    labels = c("Mutant", "Wildtype"),
+    values = condition_colors
+  ) +
+  labs(color = "Condition", title = NULL) +
+  xlab("UMAP 1") +
+  ylab("UMAP 2")
+
+umap_2
+```
+
+```{r show cell type proportions}
+# pull out cell type information
+df <- table(
+  Idents(annotated_brain_samples),
+  annotated_brain_samples$seq_folder
+) %>% as.data.frame()
+
+# change classes for plotting purposes
+df$Var1 <- as.character(df$Var1)
+
+# rename columns
+colnames(df) <- c("Cell_Type", "Condition", "Freq")
+
+# make silly data for legend
+df3 <- data.frame("Cell_Type" = as.numeric(c(NA, NA)),
+                 "Condition" = c("Mutant", "Wildtype"),
+                 "Freq" = as.numeric(c(NA, NA)))
+
+barplot <- ggplot(data = df, aes(x = fct_rev(Cell_Type), y = Freq, fill = Condition)) +
+  theme_minimal(base_size = 15) +
+  geom_col(position = "fill", width = 0.75, show.legend = FALSE) +
+  scale_fill_manual(
+    labels = c("Mutant", "Wildtype"),
+    values = condition_colors
+  ) +
+  theme(
+    legend.title = element_text(face = "bold", size = 14),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    axis.text.x = element_text()
+  ) +
+  coord_flip() +
+  xlab("Cell Type") +
+   ylab("Proportion") +
+  geom_point(data = df3, aes(x = Cell_Type, y = Freq, color = Condition), size = 4) +
+  scale_color_manual(
+     labels = c("Mutant", "Wildtype"),
+     values = c("#D8D8D8","#9E9E9E")
+   ) +
+   theme(legend.key = element_blank())
+
+barplot
+```
+
+## Save final figure
+
+```{r plot everything together and save}
+
+figure_1 <- plot_grid(umap_1, dotplot, umap_2, barplot,
+                      labels = c("A", "B", "C", "D"))
+
+png(here("results", "final_outputs", "figure1.png"),
+    width = 12, height = 8, units = "in", res = 300)
+figure_1
+dev.off()
+
+```
+
+#### Style
+
+```{r tidy script}
+style_file("figure_1.Rmd")
+
+lint("figure_1.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
+```
