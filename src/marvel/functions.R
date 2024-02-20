@@ -159,12 +159,12 @@ run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5,
   
   # Group 1 (reference)
   index_1 <- which(sample_metadata$cell_type == cell_type & 
-                     sample_metadata$seq_folder == "mutant")
+                     sample_metadata$seq_folder == "wildtype")
   cell_ids_1 <- sample_metadata[index_1, "cell.id"]
   
   # Group 2
   index_2 <- which(sample_metadata$cell_type == cell_type & 
-                     sample_metadata$seq_folder == "wildtype")
+                     sample_metadata$seq_folder == "mutant")
   cell_ids_2 <- sample_metadata[index_2, "cell.id"]
   
   # Explore % of cells expressing genes
@@ -246,11 +246,11 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
                              color_grad_psi = c("grey", "cyan", "green",
                                                  "yellow", "red")) {
   # Group 1 (reference)
-  index_1 <- which(sample_metadata$seq_folder == "mutant")
+  index_1 <- which(sample_metadata$seq_folder == "wildtype")
   cell_ids_1 <- sample_metadata[index_1, "cell.id"]
   
   # Group 2
-  index_2 <- which(sample_metadata$seq_folder == "wildtype")
+  index_2 <- which(sample_metadata$seq_folder == "mutant")
   cell_ids_2 <- sample_metadata[index_2, "cell.id"]
   
   # Save into list
