@@ -84,7 +84,7 @@ gene_features <- as.data.frame(gene_features)
 colnames(gene_features) <- "gene_short_name"
 
 gene_counts <- annotated_brain_samples@assays[["RNA"]]@layers[["counts"]]
-gene_counts <- as(gene_counts, "dgTMatrix")
+gene_counts <- as(gene_counts, "TsparseMatrix")
 gene_counts[gene_counts[, 1] != 0, ][1:5, 1:5]
 ```
 
@@ -208,7 +208,16 @@ colnames(umap_coords) <- c("cell.id", "x", "y")
 ### Get GTF
 
 ```{r get gtf in r env}
-m31_gtf <- as.data.frame(fread("/data/project/lasseigne_lab/GENOME_dir/GENCODE_mm39/release_M31/GTF/gencode.vM31.primary_assembly.annotation.gtf"), sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+# genome directory
+genome_dir <- "/data/project/lasseigne_lab/GENOME_dir/GENCODE_mm39/release_M31/"
+
+# load GTF
+m31_gtf <- as.data.frame(
+  fread(paste0(genome_dir, "GTF/gencode.vM31.primary_assembly.annotation.gtf")),
+  sep = "\t",
+  header = FALSE,
+  stringsAsFactors = FALSE)
+
 # rename columns
 colnames(m31_gtf) <- c("V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9")
 # drop chr from chromosome numbers in gtf column 1
