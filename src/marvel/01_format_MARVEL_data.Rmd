@@ -84,7 +84,7 @@ gene_features <- as.data.frame(gene_features)
 colnames(gene_features) <- "gene_short_name"
 
 gene_counts <- annotated_brain_samples@assays[["RNA"]]@layers[["counts"]]
-gene_counts <- as(gene_counts, "dgTMatrix")
+gene_counts <- as(gene_counts, "TsparseMatrix")
 gene_counts[gene_counts[, 1] != 0, ][1:5, 1:5]
 ```
 
