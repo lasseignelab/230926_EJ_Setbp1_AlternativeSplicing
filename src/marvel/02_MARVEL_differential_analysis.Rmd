@@ -73,7 +73,7 @@ We do this in a pairwise fashion, and need to determine which expression thresho
 # Group 1 (reference)
 index <-
   which(sample_metadata$cell_type == "Excitatory Neurons" &
-          sample_metadata$seq_folder == "widtype")
+          sample_metadata$seq_folder == "wildtype")
 cell_ids_1 <- sample_metadata[index, "cell.id"]
 length(cell_ids_1)
 
