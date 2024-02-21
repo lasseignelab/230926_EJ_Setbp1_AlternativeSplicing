@@ -304,63 +304,99 @@ excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Kif21a",
-  sj_loc = "chr15:90881929:90882035"
+  sj_loc = "chr15:90881929:90882035",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Pnisr",
-  sj_loc = "chr4:21859308:21860819"
+  sj_loc = "chr4:21859308:21860819",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Igf1r",
-  sj_loc = "chr7:67602701:67653557"
+  sj_loc = "chr7:67602701:67653557",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Luc7l3",
-  sj_loc = "chr11:94200518:94212515"
+  sj_loc = "chr11:94200518:94212515",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Phf14",
-  sj_loc = "chr6:11926837:11933251"
+  sj_loc = "chr6:11926837:11933251",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Calm1",
-  sj_loc = "chr12:100172493:100172658"
+  sj_loc = "chr12:100172493:100172658",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Son",
-  sj_loc = "chr16:91448685:91451498"
+  sj_loc = "chr16:91448685:91451498",
+  results_path = here::here(
+    "results", 
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Afdn",
-  sj_loc = "chr17:14024397:14027538"
+  sj_loc = "chr17:14024397:14027538",
+  results_path = here::here(
+    "results", 
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Srrm2",
-  sj_loc = "chr17:24027148:24027327"
+  sj_loc = "chr17:24027148:24027327",
+  results_path = here::here(
+    "results", 
+    "marvel_outputs"
+  )
 )
 ```
 
