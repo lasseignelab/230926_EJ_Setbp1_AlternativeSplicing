@@ -1,5 +1,6 @@
 ---
 title: "Create Figure 1"
+author: "Emma Jones"
 output: html_document
 date: "2024-02-20"
 ---
@@ -107,8 +108,10 @@ dotplot <- DotPlot(annotated_brain_samples,
     legend.text = element_text(face = "bold"),
     axis.text = element_text(face = "bold"),
     axis.title = element_text(face = "bold"),
-    axis.text.x = element_text(angle = 45, vjust = 0.6)
-  )
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  ylab("Cell Type")
+
 
 # display dotplot
 dotplot
@@ -144,7 +147,7 @@ umap_2
 ```
 ### Panel D
 
-Make panel D, bar plots show cell type proportions.
+Make panel D, which will be bar plots taht show cell type proportions.
 
 ```{r show cell type proportions}
 # aggregate cell type information
