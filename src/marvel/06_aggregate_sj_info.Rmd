@@ -178,6 +178,13 @@ sj_per_cell_type <- data.frame(
 ```
 
 
+```{r save splice junction count table}
+
+write_csv(sj_per_cell_type, here::here("results", "tables", "sj_per_cell_type.csv"))
+
+```
+
+
 ```{r visualize splice junctions per cell type}
 ggplot(
   sj_per_cell_type,
@@ -282,6 +289,11 @@ sj_per_condition <- data.frame(
 )
 ```
 
+```{r save splice junction count table}
+
+write_csv(sj_per_condition, here::here("results", "tables", "sj_per_condition.csv"))
+
+```
 
 ```{r visualize splice junctions per cell type}
 # plot
@@ -341,12 +353,19 @@ colnames(sj_per_gene) <-
   substr(matrices_list[c(1:6, 9)], 1, nchar(matrices_list[c(1:6, 9)]) - 9)
 ```
 
+```{r save sjs per gene}
+
+write.csv(sj_per_gene, here::here("results", "tables", "sj_per_gene.csv"))
+
+```
+
 I think it would be neat to show this as a pca.
 
 ```{r do pca on sj counts}
 # Transform matrix
 sj_per_gene_t <- t(sj_per_gene)
 
+# remove 0 variance
 sj_per_gene_t <- remove_0_variance(as.data.frame(sj_per_gene_t))
 
 pca <- prcomp(sj_per_gene_t, scale = TRUE)
@@ -436,7 +455,78 @@ Not sure how to interpret that very much, but now I can do back to doing what I 
 
 ## Calculate splicing complexity from overall splice junctions detected divided by overall gene counts
 
-The next splicing complexity function was taking a long time so I made it an r script to submit as a job. Run script 07 next to achieve this calculation.
+You can use diff to quickly count nonzero values for each column (cell id).
+
+```{r use diff}
+
+sample_metadata$num_sjs <- diff(sj_counts@p)
+sample_metadata$num_genes <- diff(gene_counts@p)
+sample_metadata$splicing_complexity <- diff(sj_counts@p)/diff(gene_counts@p)
+
+```
+
+
+```{r plot num sjs}
+
+num_sjs_violin <- ggplot(sample_metadata, aes(x = cell_type, y = num_sjs, fill = cell_type)) +
+  geom_violin(show.legend = FALSE) +
+  geom_boxplot(width = 0.1, show.legend = FALSE)
+
+num_sjs_violin
+
+```
+```{r plot num genes}
+
+num_genes_violin <- ggplot(sample_metadata, aes(x = cell_type, y = num_genes, fill = cell_type)) +
+  geom_violin(show.legend = FALSE) +
+  geom_boxplot(width = 0.1, show.legend = FALSE)
+
+num_genes_violin
+
+```
+
+```{r plot splicing complexity by cell type}
+
+complexity_violin <- ggplot(sample_metadata, aes(x = cell_type, y = splicing_complexity, fill = cell_type)) +
+  geom_violin(show.legend = FALSE) +
+  geom_boxplot(width = 0.1, show.legend = FALSE)
+
+complexity_violin
+```
+
+```{r plot splicing complexity by mutant vs wt}
+
+complexity_violin2 <- ggplot(sample_metadata, aes(x = cell_type, y = splicing_complexity, fill = cell_type, alpha = seq_folder))  +
+  geom_violin(show.legend = FALSE) + scale_alpha_manual(values = c(0.2, 0.9)) + theme_minimal()
+
+complexity_violin2
+```
+
+```{r plot only mutant vs wt}
+complexity_violin3 <- ggplot(sample_metadata, aes(x = seq_folder, y = splicing_complexity, fill = seq_folder)) +
+  geom_violin() +
+  geom_boxplot(width = 0.1)
+
+complexity_violin3
+
+```
+Can I put a statistic on if complexity is significantly different between these groups?
+
+```{r try statistical test}
+# data is approx. normal, try parametric test
+t_res <- t.test(sample_metadata$splicing_complexity[sample_metadata$seq_folder == "mutant"], 
+       sample_metadata$splicing_complexity[sample_metadata$seq_folder == "wildtype"])
+
+t_res[["p.value"]]
+
+# try non-parametric test
+wilcoxon_res <- wilcox.test(sample_metadata$splicing_complexity[sample_metadata$seq_folder == "mutant"], sample_metadata$splicing_complexity[sample_metadata$seq_folder == "wildtype"])
+
+wilcoxon_res[["p.value"]]
+
+```
+
+Yes, with both parametric and non-parametric tests, this is significantly different.
 
 #### Style
 

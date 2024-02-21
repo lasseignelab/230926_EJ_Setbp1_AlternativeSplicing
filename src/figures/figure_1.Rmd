@@ -59,6 +59,8 @@ condition_colors <- c(
   `mutant` = "#D8D8D8",
   `wildtype` = "#9E9E9E"
 )
+
+other_colors <- c("#0346a3", "#076466", "#2a6607")
 ```
 
 ### Panel A
@@ -97,7 +99,7 @@ Panel B will be a dot plot of cell type markers.
 ```{r plot dotplot of cell types}
 # create dotplot
 dotplot <- DotPlot(annotated_brain_samples,
-  cols = c("lightgray", "turquoise4"),
+  cols = c("lightgray", other_colors[3]),
   features = c(
     "Vtn", "Cx3cr1", "Pdgfra", "Gad2", "Mbp",
     "Slc1a3", "Slc17a7"
@@ -213,7 +215,7 @@ figure_1 <- plot_grid(umap_1, dotplot, umap_2, barplot,
   labels = c("A", "B", "C", "D")
 )
 
-png(here("results", "final_outputs", "figure1.png"),
+png(here::here("results", "final_outputs", "figure1.png"),
   width = 12, height = 8, units = "in", res = 300
 )
 figure_1
