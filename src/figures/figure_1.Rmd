@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 The purpose of this script is to create a finalized version of figure 1. It is dependent on Seurat scripts 01 and 02. Run in docker 1.0.6.
 
-## Load Packages
+### Load Packages
 
 ```{r load packages}
 suppressPackageStartupMessages({
@@ -29,7 +29,9 @@ suppressPackageStartupMessages({
 })
 ```
 
+### Load data
 
+We need to load in the annotated Seurat object.
 
 ```{r load data}
 # load in data
@@ -37,17 +39,19 @@ annotated_brain_samples <-
   read_rds(file = here("data", "seurat", "annotated_brain_samples.rds"))
 ```
 
-Set color palette for paper
+### Set colors
+
+Set color palette for paper. These colors are colorblind-friendly and will be used throughout the paper.
 
 ```{r set colors}
 cell_type_colors <- c(
   `Astrocytes` = "#6CA9E2",
   `Excitatory Neurons` = "#98D070",
   `Inhibitory Neurons` = "#DEE971",
-  `Microglia` = "#E28C67",
+  `Microglia` = "#B898E4",
   `Oligodendrocytes` = "#4AD8E6",
   `OPCs` = "#0A9A8D",
-  `Vascular Cells` = "#B898E4"
+  `Vascular Cells` = "#E28C67"
 )
 
 condition_colors <- c(
@@ -56,9 +60,12 @@ condition_colors <- c(
 )
 ```
 
+### Panel A
 
+I am first going to create a UMAP showing cell types.
 
 ```{r plot UMAP of cell types}
+# make umap to show cell types
 umap_1 <- DimPlot(annotated_brain_samples,
   cols = cell_type_colors,
   label = TRUE,
@@ -78,10 +85,16 @@ umap_1 <- DimPlot(annotated_brain_samples,
   ylab("UMAP 2") +
   NoLegend()
 
+# show umap
 umap_1
 ```
 
+### Panel B
+
+Panel B will be a dot plot of cell type markers.
+
 ```{r plot dotplot of cell types}
+# create dotplot
 dotplot <- DotPlot(annotated_brain_samples,
   cols = c("lightgray", "turquoise4"),
   features = c(
@@ -97,10 +110,16 @@ dotplot <- DotPlot(annotated_brain_samples,
     axis.text.x = element_text(angle = 45, vjust = 0.6)
   )
 
+# display dotplot
 dotplot
 ```
 
+### Panel C
+
+Panel C will be a UMAP showing condition integration.
+
 ```{r plot UMAP of conditions}
+# make umap for mutants and wildtype
 umap_2 <- DimPlot(annotated_brain_samples,
   group.by = "seq_folder",
   shuffle = TRUE,
@@ -120,28 +139,38 @@ umap_2 <- DimPlot(annotated_brain_samples,
   xlab("UMAP 1") +
   ylab("UMAP 2")
 
+# show umap
 umap_2
 ```
+### Panel D
+
+Make panel D, bar plots show cell type proportions.
 
 ```{r show cell type proportions}
-# pull out cell type information
+# aggregate cell type information
 df <- table(
   Idents(annotated_brain_samples),
   annotated_brain_samples$seq_folder
 ) %>% as.data.frame()
 
-# change classes for plotting purposes
+# change classes for plotting
 df$Var1 <- as.character(df$Var1)
 
 # rename columns
 colnames(df) <- c("Cell_Type", "Condition", "Freq")
 
 # make silly data for legend
-df3 <- data.frame("Cell_Type" = as.numeric(c(NA, NA)),
-                 "Condition" = c("Mutant", "Wildtype"),
-                 "Freq" = as.numeric(c(NA, NA)))
+df3 <- data.frame(
+  "Cell_Type" = as.numeric(c(NA, NA)),
+  "Condition" = c("Mutant", "Wildtype"),
+  "Freq" = as.numeric(c(NA, NA))
+)
 
-barplot <- ggplot(data = df, aes(x = fct_rev(Cell_Type), y = Freq, fill = Condition)) +
+# make actual barplot
+barplot <- ggplot(data = df, aes(
+  x = fct_rev(Cell_Type),
+  y = Freq, fill = Condition
+)) +
   theme_minimal(base_size = 15) +
   geom_col(position = "fill", width = 0.75, show.legend = FALSE) +
   scale_fill_manual(
@@ -157,29 +186,35 @@ barplot <- ggplot(data = df, aes(x = fct_rev(Cell_Type), y = Freq, fill = Condit
   ) +
   coord_flip() +
   xlab("Cell Type") +
-   ylab("Proportion") +
-  geom_point(data = df3, aes(x = Cell_Type, y = Freq, color = Condition), size = 4) +
+  ylab("Proportion") +
+  geom_point(data = df3, aes(
+    x = Cell_Type,
+    y = Freq, color = Condition
+  ), size = 4) +
   scale_color_manual(
-     labels = c("Mutant", "Wildtype"),
-     values = c("#D8D8D8","#9E9E9E")
-   ) +
-   theme(legend.key = element_blank())
+    labels = c("Mutant", "Wildtype"),
+    values = c("#D8D8D8", "#9E9E9E")
+  ) +
+  theme(legend.key = element_blank())
 
+# display barplot
 barplot
 ```
 
 ## Save final figure
 
-```{r plot everything together and save}
+Now, we can pull everything together.
 
+```{r plot everything together and save}
 figure_1 <- plot_grid(umap_1, dotplot, umap_2, barplot,
-                      labels = c("A", "B", "C", "D"))
+  labels = c("A", "B", "C", "D")
+)
 
 png(here("results", "final_outputs", "figure1.png"),
-    width = 12, height = 8, units = "in", res = 300)
+  width = 12, height = 8, units = "in", res = 300
+)
 figure_1
 dev.off()
-
 ```
 
 #### Style
@@ -203,3 +238,72 @@ My software versions will be commented below.
 ```{r versions}
 sessionInfo()
 ```
+R version 4.3.1 (2023-06-16)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 22.04.3 LTS
+
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+ [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: Etc/UTC
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] cowplot_1.1.1      presto_1.0.0       data.table_1.14.8  harmony_1.1.0     
+ [5] Rcpp_1.0.11        patchwork_1.1.3    Seurat_5.0.0       SeuratObject_5.0.0
+ [9] sp_2.1-1           lubridate_1.9.3    forcats_1.0.0      stringr_1.5.1     
+[13] dplyr_1.1.3        purrr_1.0.2        readr_2.1.4        tidyr_1.3.0       
+[17] tibble_3.2.1       ggplot2_3.4.4      tidyverse_2.0.0    lintr_3.1.0       
+[21] styler_1.10.2      here_1.0.1        
+
+loaded via a namespace (and not attached):
+  [1] RColorBrewer_1.1-3     rstudioapi_0.15.0      jsonlite_1.8.7        
+  [4] magrittr_2.0.3         spatstat.utils_3.0-4   rmarkdown_2.25        
+  [7] vctrs_0.6.4            ROCR_1.0-11            spatstat.explore_3.2-5
+ [10] htmltools_0.5.6.1      sctransform_0.4.1      parallelly_1.36.0     
+ [13] KernSmooth_2.23-22     htmlwidgets_1.6.2      desc_1.4.2            
+ [16] ica_1.0-3              plyr_1.8.9             plotly_4.10.3         
+ [19] zoo_1.8-12             igraph_1.5.1           mime_0.12             
+ [22] lifecycle_1.0.4        pkgconfig_2.0.3        Matrix_1.6-1.1        
+ [25] R6_2.5.1               fastmap_1.1.1          fitdistrplus_1.1-11   
+ [28] future_1.33.0          shiny_1.7.5.1          digest_0.6.33         
+ [31] colorspace_2.1-0       ps_1.7.5               tensor_1.5            
+ [34] rprojroot_2.0.3        RSpectra_0.16-1        irlba_2.3.5.1         
+ [37] progressr_0.14.0       fansi_1.0.5            spatstat.sparse_3.0-3 
+ [40] timechange_0.2.0       polyclip_1.10-6        abind_1.4-5           
+ [43] httr_1.4.7             compiler_4.3.1         remotes_2.4.2.1       
+ [46] withr_2.5.2            backports_1.4.1        fastDummies_1.7.3     
+ [49] R.utils_2.12.2         MASS_7.3-60            tools_4.3.1           
+ [52] lmtest_0.9-40          httpuv_1.6.12          future.apply_1.11.0   
+ [55] goftest_1.2-3          R.oo_1.25.0            glue_1.6.2            
+ [58] callr_3.7.3            nlme_3.1-163           R.cache_0.16.0        
+ [61] promises_1.2.1         grid_4.3.1             Rtsne_0.16            
+ [64] cluster_2.1.4          reshape2_1.4.4         generics_0.1.3        
+ [67] gtable_0.3.4           spatstat.data_3.0-3    tzdb_0.4.0            
+ [70] R.methodsS3_1.8.2      hms_1.1.3              xml2_1.3.5            
+ [73] utf8_1.2.4             spatstat.geom_3.2-7    RcppAnnoy_0.0.21      
+ [76] ggrepel_0.9.4          RANN_2.6.1             pillar_1.9.0          
+ [79] spam_2.10-0            RcppHNSW_0.5.0         later_1.3.1           
+ [82] splines_4.3.1          lattice_0.21-8         deldir_1.0-9          
+ [85] survival_3.5-7         tidyselect_1.2.0       miniUI_0.1.1.1        
+ [88] pbapply_1.7-2          knitr_1.44             gridExtra_2.3         
+ [91] scattermore_1.2        xfun_0.40              matrixStats_1.0.0     
+ [94] rex_1.2.1              stringi_1.8.1          lazyeval_0.2.2        
+ [97] yaml_2.3.7             evaluate_0.22          codetools_0.2-19      
+[100] cli_3.6.1              uwot_0.1.16            xtable_1.8-4          
+[103] reticulate_1.34.0      munsell_0.5.0          processx_3.8.2        
+[106] xmlparsedata_1.0.5     spatstat.random_3.2-1  globals_0.16.2        
+[109] png_0.1-8              parallel_4.3.1         ellipsis_0.3.2        
+[112] dotCall64_1.1-0        listenv_0.9.0          viridisLite_0.4.2     
+[115] cyclocomp_1.1.1        scales_1.2.1           ggridges_0.5.4        
+[118] leiden_0.4.3           crayon_1.5.2           rlang_1.1.2      
