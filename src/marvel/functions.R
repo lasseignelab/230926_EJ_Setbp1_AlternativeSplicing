@@ -244,7 +244,8 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
                              color_grad_gene = c("grey", "cyan", "green",
                                                  "yellow", "red"),
                              color_grad_psi = c("grey", "cyan", "green",
-                                                 "yellow", "red")) {
+                                                 "yellow", "red"),
+                             results_path) {
   # Group 1 (reference)
   index_1 <- which(sample_metadata$seq_folder == "wildtype")
   cell_ids_1 <- sample_metadata[index_1, "cell.id"]
@@ -255,8 +256,8 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
   
   # Save into list
   cell_group_list <- list(
-    "Mutant" = cell_ids_1,
-    "Wildtype" = cell_ids_2
+    "Wildtype" = cell_ids_1,
+    "Mutant" = cell_ids_2
   )
   
   # Print generation message
@@ -298,8 +299,7 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
   message("Saving Plot...")
   
   # Save UMAP
-  png(here::here("results", "marvel_outputs",
-                 paste0(prefix, "_", gene, ".png")),
+  png(paste0(results_path, "/", prefix, "_", gene, ".png"),
       width = 1200, height = 600)
   grid.arrange(plot_group, plot_gene, plot_sj, nrow = 1)
   dev.off()
