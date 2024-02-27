@@ -16,7 +16,6 @@ The purpose of this script is to create a finalized version of figure 1. It is d
 ## Load in packages
 
 ```{r load in packages}
-
 suppressPackageStartupMessages({
   # Load Lasseigne Lab standard packages
   library(here)
@@ -59,16 +58,20 @@ set.seed(123)
 
 # source functions
 source(here::here("src", "figures", "geom_split_violin.R"))
-
 ```
 
 ## Load in data
 
 ```{r load in data}
-# load in PSI matrix from script 05
+# load in PSI matrix and normalized sj expression from script 05
 full_psi_matrix <- read_rds(here::here(
   "data", "marvel",
   "full_psi_matrix.Rds"
+))
+# normalized sj expression
+normalized_sj_expression <- read_rds(here::here(
+  "data", "marvel",
+  "normalized_sj_expression.Rds"
 ))
 
 # Load MARVEL object
@@ -95,10 +98,9 @@ gene_counts <- as(gene_counts, "CsparseMatrix")
 ## Format new metadata columns
 
 ```{r format metadata columns}
-
 sample_metadata$num_sjs <- diff(sj_counts@p)
 sample_metadata$num_genes <- diff(gene_counts@p)
-sample_metadata$num_sjs_genes <- diff(sj_counts@p)/diff(gene_counts@p)
+sample_metadata$num_sjs_genes <- diff(sj_counts@p) / diff(gene_counts@p)
 
 mutant_ids <- sample_metadata$cell.id[sample_metadata$seq_folder == "mutant"]
 wildtype_ids <- sample_metadata$cell.id[!sample_metadata$seq_folder == "mutant"]
@@ -109,13 +111,65 @@ wildtype_ids <- sample_metadata$cell.id[!sample_metadata$seq_folder == "mutant"]
 To use ggridges, I need to make a dataframe with a row for each value and a condition column that has mutant or wildtype.
 
 ```{r pull out mutants and wildtype normalized expression}
+# mutant
+mutant_sj <-
+  normalized_sj_expression[, colnames(normalized_sj_expression) == mutant_ids]
 
-mutant_sj <- normalized_sj_expression[,colnames(normalized_sj_expression) == mutant_ids]
+mutant_psi <- full_psi_matrix[, colnames(full_psi_matrix) == mutant_ids]
 
-mutant_psi <- full_psi_matrix[,colnames(full_psi_matrix) == mutant_ids]
+mutant_gene <-
+  setbp1_marvel$gene.norm.matrix[
+    , colnames(setbp1_marvel$gene.norm.matrix)
+    == mutant_ids
+  ]
 
-mutant_gene <- setbp1_marvel$gene.norm.matrix[,colnames(setbp1_marvel$gene.norm.matrix) == mutant_ids]
+# wildtype
+wildtype_sj <-
+  normalized_sj_expression[, !colnames(normalized_sj_expression) == mutant_ids]
 
+wildtype_psi <- full_psi_matrix[, !colnames(full_psi_matrix) == mutant_ids]
+
+wildtype_gene <-
+  setbp1_marvel$gene.norm.matrix[
+    , !colnames(setbp1_marvel$gene.norm.matrix)
+    == mutant_ids
+  ]
+```
+
+Need to now make dataframes which include each one of these.
+
+Splice Junction Expression
+
+```{r pull out nonzero values and make a dataframe - splice junction exp}
+
+mutant_sj_vals <- data.frame("sj_expr" = mutant_sj@x, "Condition" = "Mutant")
+
+wildtype_sj_vals <- data.frame("sj_expr" = wildtype_sj@x, "Condition" = "Wildtype")
+
+sj_vals <- rbind(mutant_sj_vals, wildtype_sj_vals)
+```
+
+PSI
+
+```{r pull out nonzero values and make a dataframe - psi}
+
+mutant_psi_vals <- data.frame("psi" = mutant_psi@x, "Condition" = "Mutant")
+
+wildtype_psi_vals <- data.frame("psi" = wildtype_psi@x, "Condition" = "Wildtype")
+
+psi_vals <- rbind(mutant_psi_vals, wildtype_psi_vals)
+
+```
+
+Gene expression
+
+```{r pull out nonzero values and make a dataframe - gene expression}
+
+mutant_gene_vals <- data.frame("gene_expr" = mutant_gene@x, "Condition" = "Mutant")
+
+wildtype_gene_vals <- data.frame("gene_expr" = wildtype_gene@x, "Condition" = "Wildtype")
+
+gene_vals <- rbind(mutant_gene_vals, wildtype_gene_vals)
 
 ```
 
@@ -140,244 +194,242 @@ condition_colors <- c(
 other_colors <- c("#0346a3", "#076466", "#2a6607")
 ```
 
+First, I want to show the expression and PSI distributions across mutants and wildtypes.
 
+## Make density plots
 
-## Make histogram panels
-
-```{r make histrogram panels - psi}
-# plot nonzero psi values
-nonzero_psi <- full_psi_matrix@x
-
-# make histogram with ggplot
-nonzero_psi_histogram <- ggplot() + aes(nonzero_psi) +
-  geom_histogram(fill = other_colors[2])  +
-  theme_minimal(base_size = 15) +
-  theme(
-    axis.title = element_text(face = "bold"),
-    axis.text = element_text(face = "bold", color = "black"),
-    legend.text = element_text(face = "bold", size = 12),
-    axis.text.x = element_text()
-  )  +
-  xlab("PSI") +
-  ylab("Count") 
-
-nonzero_psi_histogram
-
-```
+### PSI
 
 ```{r make psi density plot}
-
-nonzero_psi_density <- ggplot() + aes(nonzero_psi) +
-  geom_density(fill = other_colors[2], color = other_colors[2], alpha = 0.6)  +
+nonzero_psi_density <- ggplot() +
+  aes(psi_vals$psi) +
+  geom_density(fill = other_colors[2], color = other_colors[2], alpha = 0.6) +
   theme_minimal(base_size = 15) +
   theme(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(face = "bold", color = "black"),
     legend.text = element_text(face = "bold", size = 12),
     axis.text.x = element_text()
-  )  +
+  ) +
   xlab("PSI") +
   ylab("Density")
 
 nonzero_psi_density
-
 ```
 
-```{r make histrogram panels - sj counts}
-# plot nonzero log of sj counts
-log_nonzero_sj_counts <- (log(setbp1_marvel$sj.count.matrix@x))
+Ridge plot
 
-# make histogram with ggplot
-log_nonzero_sj_counts_histogram <- ggplot() + aes(log_nonzero_sj_counts) +
-  geom_histogram(fill = other_colors[1])  +
+```{r make ridge plot}
+
+nonzero_psi_ridge <- ggplot(psi_vals, aes(x = psi, y = Condition, alpha = Condition)) + 
+  geom_density_ridges(fill = other_colors[2], color = other_colors[2],
+                      show.legend = FALSE)  +
+  theme_minimal(base_size = 15) +
+  scale_alpha_manual(values = c(0.7, 0.3)) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    axis.text.x = element_text()
+  ) +
+  xlab("PSI") +
+  ylab("Condition")
+
+nonzero_psi_ridge
+```
+
+### Splice junction expression
+
+```{r make sj density plot}
+nonzero_norm_sj_exp_density <- ggplot() +
+  aes(normalized_sj_expression@x) +
+  geom_density(fill = other_colors[1], color = other_colors[1], alpha = 0.6) +
   theme_minimal(base_size = 15) +
   theme(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(face = "bold", color = "black"),
     legend.text = element_text(face = "bold", size = 12),
     axis.text.x = element_text()
-  )  +
-  xlab("log(Splice Junction Counts)") +
-  ylab("Count") 
-
-log_nonzero_sj_counts_histogram
-
-```
-
-So, Seurat by default normalizes gene expression data by dividing by total counts for that cell, multiplied by a scale factor (typically 10,000), and natural-log transformed using log1p.
-
-I wonder what it would look like to do that same scaling on the splice junction counts.
-
-I'm guessing we may want to adjust the scale factor, since the row sums are in the hundreds, not thousands and tens of thousands. Therefore, I chose a scale factor of 1000.
-
-```{r scale splice junction counts}
-# copy sparse matrix
-normalized_sj_expression <- sj_counts
-
-# divide by column sums
-normalized_sj_expression@x <- normalized_sj_expression@x / rep.int(colSums(normalized_sj_expression), diff(normalized_sj_expression@p))
-
-# scale by 100
-normalized_sj_expression@x <- normalized_sj_expression@x * 1000
-
-# natural-log transform
-normalized_sj_expression@x <- log1p(normalized_sj_expression@x)
-```
-
-Now that we normalized, we can try plotting again. There is also no need to log normalize since it is already normalized.
-
-```{r plot normalized sj counts}
-# plot quick histogram
-hist(normalized_sj_expression@x)
-
-# plot nice histograms
-
-# make histogram with ggplot
-nonzero_norm_sj_exp_histogram <- ggplot() + aes(normalized_sj_expression@x) +
-  geom_histogram(fill = other_colors[1])  +
-  theme_minimal(base_size = 15) +
-  theme(
-    axis.title = element_text(face = "bold"),
-    axis.text = element_text(face = "bold", color = "black"),
-    legend.text = element_text(face = "bold", size = 12),
-    axis.text.x = element_text()
-  )  +
-  xlab("Splice Junction Expression") +
-  ylab("Count") 
-
-nonzero_norm_sj_exp_histogram
-
-```
-
-```{r make density plot}
-
-nonzero_norm_sj_exp_density <- ggplot() + aes(normalized_sj_expression@x) +
-  geom_density(fill = other_colors[1], color = other_colors[1], alpha = 0.6)  +
-  theme_minimal(base_size = 15) +
-  theme(
-    axis.title = element_text(face = "bold"),
-    axis.text = element_text(face = "bold", color = "black"),
-    legend.text = element_text(face = "bold", size = 12),
-    axis.text.x = element_text()
-  )  +
+  ) +
   xlab("Splice Junction Expression") +
   ylab("Density")
 
 nonzero_norm_sj_exp_density
-
 ```
 
-```{r make histrogram panels}
-# plot nonzero normalized gene expression
 
-# make quick histogram
-hist(setbp1_marvel$gene.norm.matrix@x)
+```{r make sj ridge plot}
 
-# make histogram with ggplot
-nonzero_norm_gene_exp_histogram <- ggplot() + aes(setbp1_marvel$gene.norm.matrix@x) +
-  geom_histogram(fill = other_colors[3])  +
+nonzero_norm_sj_exp_ridge <- 
+  ggplot(sj_vals, aes(x = sj_expr, y = Condition, alpha = Condition)) + 
+  geom_density_ridges(fill = other_colors[1], color = other_colors[1],
+                      show.legend = FALSE)  +
+  xlim(0, 6) +
+  theme_minimal(base_size = 15) +
+  scale_alpha_manual(values = c(0.7, 0.3)) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    axis.text.x = element_text()
+  ) +
+  xlab("Normalized Splice Junction Expression") +
+  ylab("Condition")
+
+nonzero_norm_sj_exp_ridge
+```
+### Gene expression
+
+```{r make gene expression density plot version}
+nonzero_norm_gene_exp_density <- ggplot() +
+  aes(setbp1_marvel$gene.norm.matrix@x) +
+  geom_density(fill = other_colors[3], color = other_colors[3], alpha = 0.6) +
   theme_minimal(base_size = 15) +
   theme(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(face = "bold", color = "black"),
     legend.text = element_text(face = "bold", size = 12),
     axis.text.x = element_text()
-  )  +
-  xlab("Gene Expression") +
-  ylab("Count") 
-
-nonzero_norm_gene_exp_histogram
-
-```
-
-
-```{r make density plot version}
-
-nonzero_norm_gene_exp_density <- ggplot() + aes(setbp1_marvel$gene.norm.matrix@x) +
-  geom_density(fill = other_colors[3], color = other_colors[3], alpha = 0.6)  +
-  theme_minimal(base_size = 15) +
-  theme(
-    axis.title = element_text(face = "bold"),
-    axis.text = element_text(face = "bold", color = "black"),
-    legend.text = element_text(face = "bold", size = 12),
-    axis.text.x = element_text()
-  )  +
+  ) +
   xlab("Gene Expression") +
   ylab("Density")
 
 nonzero_norm_gene_exp_density
-
 ```
+
+
+```{r make sj ridge plot}
+
+nonzero_norm_gene_exp_ridge <- 
+  ggplot(gene_vals, aes(x = gene_expr, y = Condition, alpha = Condition)) + 
+  geom_density_ridges(fill = other_colors[3], color = other_colors[3],
+                      show.legend = FALSE)  +
+  xlim(0, 6) +
+  theme_minimal(base_size = 15) +
+  scale_alpha_manual(values = c(0.7, 0.3)) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    axis.text.x = element_text()
+  ) +
+  xlab("Normalized Gene Expression") +
+  ylab("Condition")
+
+nonzero_norm_gene_exp_ridge
+```
+## Make violin plots
+
+### Splice junctions detected per cell
 
 ```{r plot splice junctions detected}
-
-sj_num_split_violin <- ggplot(sample_metadata, aes(x = cell_type, y = num_sjs, fill = cell_type, alpha = seq_folder))  +
-  geom_split_violin(show.legend = FALSE) + scale_alpha_manual(values = c(0.4, 1)) +
+sj_num_split_violin <- ggplot(
+  sample_metadata,
+  aes(
+    x = cell_type, y = num_sjs,
+    fill = cell_type, alpha = seq_folder
+  )
+) +
+  geom_split_violin(show.legend = FALSE) +
+  scale_alpha_manual(values = c(1, 0.4)) +
   theme_minimal(base_size = 15) +
   theme(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(face = "bold", color = "black"),
     legend.text = element_text(face = "bold", size = 12),
     axis.text.x = element_text(angle = 45, hjust = 1)
-  )  +
+  ) +
   scale_fill_manual(
     labels = names(cell_type_colors),
     values = cell_type_colors
   ) +
   xlab("Cell Type") +
-  ylab("Splice Junctions") 
+  ylab("Splice Junctions")
 
 sj_num_split_violin
-
 ```
 
-```{r plot splice junctions normalized by number of genes expressed}
+## Average splice junctions / genes detected per cell
 
-num_sj_gene_split_violin <- ggplot(sample_metadata, aes(x = cell_type, y = num_sjs_genes, fill = cell_type, alpha = seq_folder))  +
-  geom_split_violin(show.legend = FALSE) + scale_alpha_manual(values = c(0.4, 1)) +
+```{r plot splice junctions normalized by number of genes expressed}
+num_sj_gene_split_violin <- ggplot(
+  sample_metadata,
+  aes(
+    x = cell_type, y = num_sjs_genes,
+    fill = cell_type, alpha = seq_folder
+  )
+) +
+  geom_split_violin(show.legend = FALSE) +
+  scale_alpha_manual(values = c(1, 0.4)) +
   theme_minimal(base_size = 15) +
   theme(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(face = "bold", color = "black"),
     legend.text = element_text(face = "bold", size = 12),
     axis.text.x = element_text(angle = 45, hjust = 1)
-  )  +
+  ) +
   scale_fill_manual(
     labels = names(cell_type_colors),
     values = cell_type_colors
   ) +
   xlab("Cell Type") +
-  ylab("Splice Junctions / Genes") 
+  ylab("Splice Junctions / Genes")
 
 num_sj_gene_split_violin
-
 ```
+
 ## Assemble final figure
 
 ```{r make top row of histograms}
-
-figure_2_top <- plot_grid(nonzero_norm_gene_exp_density, nonzero_norm_sj_exp_density, nonzero_psi_density, labels = c("A", "B", "C"), nrow = 1)
+figure_2_top <- plot_grid(nonzero_norm_gene_exp_ridge,
+  nonzero_norm_sj_exp_ridge, nonzero_psi_ridge,
+  labels = c("A", "B", "C"), nrow = 1
+)
 
 figure_2_top
 
-figure_2_bottom <- plot_grid(sj_num_split_violin, num_sj_gene_split_violin, labels = c("D", "E"), nrow = 1)
+figure_2_bottom <- plot_grid(sj_num_split_violin, num_sj_gene_split_violin,
+  labels = c("D", "E"), nrow = 1
+)
 
 figure_2_bottom
 
-final_figure_2 <- plot_grid(figure_2_top, figure_2_bottom, ncol = 1, rel_heights = c(0.5,1))
+final_figure_2 <- plot_grid(figure_2_top, figure_2_bottom,
+  ncol = 1,
+  rel_heights = c(0.5, 1)
+)
 
 final_figure_2
-
 ```
 
 Now, we can save figure 2
 
 ```{r save figure 2}
-
 png(here::here("results", "final_outputs", "figure2.png"),
   width = 12, height = 8, units = "in", res = 300
 )
 final_figure_2
 dev.off()
+```
 
+#### Style
+
+```{r tidy script}
+style_file("figure_2.Rmd")
+
+lint("figure_2.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
 ```
