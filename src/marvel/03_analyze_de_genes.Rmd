@@ -130,7 +130,7 @@ dev.off()
 gene_lists_upset_plot
 ```
 
-There is one gene that has signfificant PSI in all non-vascular cell types. This is the Son gene.
+There is one gene that has significant PSI in all non-vascular cell types. This is the Son gene.
 
 ## Son gene analysis
 
@@ -205,6 +205,9 @@ dev.off()
 The current MARVEL setup doesn't have PSI values for every cell for every splice junction. we can remedy this ourselves.
 
 Remember, PSI is the count of splice junctions divided by the counts for that gene multiplied by 100.
+
+It is faster to do this only for non-zero values, but I could not find a solution that worked easily.
+
 
 I also want to run this function on all splice junctions. Therefore we will create the required list of chromosome names.
 
