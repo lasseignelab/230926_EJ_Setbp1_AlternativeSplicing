@@ -1,0 +1,15 @@
+cell_type,condition,sj_number,sjs_per_gene,cell_count
+Astrocytes,Mutant,48148,3.2695911992394406,1840
+Excitatory Neurons,Mutant,130201,8.430523180523181,15225
+Inhibitory Neurons,Mutant,85932,5.644879458713788,2891
+Microglia,Mutant,20527,1.4898388735665553,508
+OPCs,Mutant,54445,3.661645033290739,2049
+Oligodendrocytes,Mutant,25424,1.839918946301925,607
+Vascular Cells,Mutant,16271,1.1735304724125495,306
+Astrocytes,Wildtype,55333,3.736696380334954,2091
+Excitatory Neurons,Wildtype,139267,8.994833042691985,17870
+Inhibitory Neurons,Wildtype,96401,6.308140295772804,3653
+Microglia,Wildtype,24513,1.74930421751231,632
+OPCs,Wildtype,66430,4.432212436615959,2689
+Oligodendrocytes,Wildtype,29597,2.120584652862363,689
+Vascular Cells,Wildtype,20816,1.494221520350298,415
