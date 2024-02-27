@@ -86,7 +86,7 @@ files <- list.files(here::here("data", "marvel"),
   full.names = TRUE
 )
 
-# Loop through each file and load it into the R environment
+# Loop through each file and load it into the environment
 for (file in files) {
   # Extract the file name without extension
   file_name <- tools::file_path_sans_ext(basename(file))
@@ -142,7 +142,9 @@ Finally, we can save!
 write_rds(full_psi_matrix, here::here("data", "marvel", "full_psi_matrix.Rds"))
 ```
 
-## Plot PSI distribution
+## Plot distributions
+
+These will be made more pretty in the figure 2 scripts.
 
 ```{r try plotting all nonzero values in x}
 # save and plot nonzero psi values
@@ -151,12 +153,64 @@ png(here::here("results", "distributions", "psi_nonzero_hist.png"),
 )
 hist(full_psi_matrix@x)
 dev.off()
+```
+
+What abut splice junction expression?
+
+We can do counts.
+
+```{r plot nonzero splice junction counts}
 # save and plot nonzero log of sj counts
 png(here::here("results", "distributions", "log_sj_counts_hist.png"),
   width = 8, height = 6, units = "in", res = 300
 )
 hist(log(setbp1_marvel$sj.count.matrix@x))
 dev.off()
+```
+
+What about normalizing?
+
+So, Seurat by default normalizes gene expression data by dividing by total counts for that cell, multiplied by a scale factor (typically 10,000), and natural-log transformed using log1p.
+
+I wonder what it would look like to do that same scaling on the splice junction counts.
+
+I'm guessing we may want to adjust the scale factor, since the row sums are in the hundreds, not thousands and tens of thousands. Therefore, I chose a scale factor of 1000.
+
+```{r scale splice junction counts}
+# copy sparse matrix
+normalized_sj_expression <- sj_counts
+
+# divide by column sums
+normalized_sj_expression@x <- normalized_sj_expression@x /
+  rep.int(colSums(normalized_sj_expression), diff(normalized_sj_expression@p))
+
+# scale by 100
+normalized_sj_expression@x <- normalized_sj_expression@x * 1000
+
+# natural-log transform
+normalized_sj_expression@x <- log1p(normalized_sj_expression@x)
+
+# save this normalized sj_expression
+write_rds(
+  normalized_sj_expression,
+  here::here("data", "marvel", "normalized_sj_expression.Rds")
+)
+```
+
+Now that this has been generated, you can plot it.
+
+```{r plot nonzero splice junction expression}
+# save and plot nonzero log of sj expression
+png(here::here("results", "distributions", "sj_norm_hist.png"),
+  width = 8, height = 6, units = "in", res = 300
+)
+hist(log(normalized_sj_expression@x))
+dev.off()
+```
+
+Also do the same for gene expression!
+
+```{r plot nonzero values for gene expression}
 # save and plot nonzero normalized gene expression
 png(here::here("results", "distributions", "gene_norm_hist.png"),
   width = 8, height = 6, units = "in", res = 300
