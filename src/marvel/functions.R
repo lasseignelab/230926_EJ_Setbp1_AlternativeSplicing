@@ -64,95 +64,11 @@ align_matrix <- function(mat, all_features) {
 
 ## run_marvel_cell_type - Emma Jones
 # This function is a wrapper function for comparing mutant and wildtype splicing
-# within a given cell type. The thresholds may need adjusting, but have defaults.
-run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5, 
-                       min_pct_cells_gene = 5, min_pct_cells_sj = 5,
-                       min_gene_norm = 1) {
-  
-  # Assign MARVEL object to start from
-  marvel_object <- setbp1_marvel
-  
-  # Group 1 (reference)
-  index_1 <- which(sample_metadata$cell_type == cell_type & 
-                     sample_metadata$seq_folder == "mutant")
-  cell_ids_1 <- sample_metadata[index_1, "cell.id"]
-  
-  # Group 2
-  index_2 <- which(sample_metadata$cell_type == cell_type & 
-                     sample_metadata$seq_folder == "wildtype")
-  cell_ids_2 <- sample_metadata[index_2, "cell.id"]
-  
-  # Explore % of cells expressing genes
-  marvel_object <- PlotPctExprCells.Genes.10x(
-    MarvelObject = marvel_object,
-    cell.group.g1 = cell_ids_1,
-    cell.group.g2 = cell_ids_2,
-    min.pct.cells = min_pct_cells
-  )
-  
-  # Explore % of cells expressing junctions
-  marvel_object <- PlotPctExprCells.SJ.10x(
-    MarvelObject = marvel_object,
-    cell.group.g1 = cell_ids_1,
-    cell.group.g2 = cell_ids_2,
-    min.pct.cells.genes = min_pct_cells_gene,
-    min.pct.cells.sj = min_pct_cells_sj,
-    downsample = TRUE,
-    downsample.pct.sj = 10
-  )
-  
-  # Differential Splicing Analysis
-  marvel_object <- CompareValues.SJ.10x(
-    MarvelObject = marvel_object,
-    cell.group.g1 = cell_ids_1,
-    cell.group.g2 = cell_ids_2,
-    min.pct.cells.genes = min_pct_cells_gene,
-    min.pct.cells.sj = min_pct_cells_sj,
-    min.gene.norm = min_gene_norm,
-    seed = 1,
-    n.iterations = 100,
-    downsample = TRUE,
-    show.progress = TRUE
-  )
-  
-  # Differential Gene Analysis
-  marvel_object <- CompareValues.Genes.10x(
-    MarvelObject = marvel_object,
-    show.progress = TRUE
-  )
-  
-  # Make volcano plot
-  marvel_object <- PlotDEValues.SJ.10x(
-    MarvelObject = marvel_object,
-    pval = 0.05,
-    delta = 1,
-    min.gene.norm = min_gene_norm,
-    anno = FALSE
-  )
-  # Assign kinds of iso-switching
-  marvel_object <- IsoSwitch.10x(
-    MarvelObject = marvel_object,
-    pval.sj = 0.05,
-    delta.sj = 1,
-    min.gene.norm = min_gene_norm,
-    pval.adj.gene = 0.05,
-    log2fc.gene = 0.5
-  )
-  
-  # Pull significant genes
-  significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]
-  
-  # Return list
-  return(list(marvel_object, significant_genes))
-}
-
-## run_marvel_cell_type - Emma Jones
-# This function is a wrapper function for comparing mutant and wildtype splicing
 # within a given cell type.
 # The thresholds may need adjusting, but have defaults.
 run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5, 
                        min_pct_cells_gene = 5, min_pct_cells_sj = 5,
-                       min_gene_norm = 1) {
+                       min_gene_norm = 1, results_path) {
   
   # Assign MARVEL object to start from
   marvel_object <- setbp1_marvel
@@ -228,9 +144,8 @@ run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5,
   significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
   
   # Save MARVEL object
-  write_rds(marvel_object,
-          file = here::here("data", "marvel",
-                            paste0(cell_type, "_marvel_object.rds"))
+  write_rds(marvel_object, file = paste0(results_path, cell_type,
+                                         "_marvel_object.rds")
   )
   
   # Return list
@@ -495,4 +410,25 @@ subset_mutant_matrices <- function(cell_type_subset_list){
   names(subset_matrices_lists) <- c("Mutant", "Wildtype")
   # return matrix subset
   return(subset_matrices_lists)
+}
+
+## get_sjs_per_gene - Emma Jones
+# The purpose of this function is to get the number of splice junctions
+# detected for each gene for a certain cell type
+get_sjs_per_gene <- function(cell_type_matrices) {
+  # pull names of splice junctions
+  detected_sjs <- rownames(cell_type_matrices[["Splice Junction Counts"]])
+  # get gene names
+  detected_genes <- sj_metadata$gene_short_name.start[sj_metadata$coord.intron %in% detected_sjs]
+  # make a table of gene name values
+  sjs_per_gene <- table(detected_genes)
+  # return
+  return(sjs_per_gene)
+}
+
+
+## remove_0_variance - quick method for remove zero variance 
+# pulled from https://www.ttested.com/removing-zero-variance-columns/
+remove_0_variance <- function(df){
+  df[, !sapply(df, function(x) min(x) == max(x))]
 }

@@ -149,7 +149,7 @@ write_rds(full_psi_matrix, here::here("data", "marvel", "full_psi_matrix.Rds"))
 png(here::here("results", "distributions", "psi_nonzero_hist.png"),
   width = 8, height = 6, units = "in", res = 300
 )
-hist(psi_matrix@x)
+hist(full_psi_matrix@x)
 dev.off()
 # save and plot nonzero log of sj counts
 png(here::here("results", "distributions", "log_sj_counts_hist.png"),
