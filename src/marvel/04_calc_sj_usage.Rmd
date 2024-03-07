@@ -1,0 +1,284 @@
+---
+title: "Calculate Splice Junction Usage"
+author: "Emma Jones"
+date: "2024-03-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The purpose of this script is to calculate splice junction usage for each cell type for each splice junction. The data is too sparse to calculate splice junction usage for single cells.
+
+## Load Packages
+
+```{r load packages}
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
+  library(tidyverse)
+  library(patchwork)
+  library(ComplexHeatmap)
+  library(viridis)
+
+  # Load MARVEL package
+  library(MARVEL)
+
+  # Load adjunct MARVEL packages
+  library(ggnewscale)
+  library(ggrepel)
+  library(reshape2)
+  library(plyr)
+  library(stringr)
+  library(textclean)
+  library(AnnotationDbi)
+  library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(org.Mm.eg.db)
+  library(gtools)
+  library(GenomicRanges)
+  library(IRanges)
+  library(S4Vectors)
+  library(wiggleplotr)
+  library(Matrix)
+  library(data.table)
+  library(gridExtra)
+})
+
+# set seed
+set.seed(123)
+
+# source functions
+source(here::here("src", "marvel", "functions.R"))
+```
+
+```{r load in data}
+# Load MARVEL object
+setbp1_marvel <- read_rds(here::here(
+  "data", "marvel",
+  "setbp1_marvel_aligned.rds"
+))
+
+# Retrieve sample metadata
+sample_metadata <- setbp1_marvel$sample.metadata
+
+# Retrieve sj metadata
+sj_metadata <- setbp1_marvel$sj.metadata
+
+# Save counts objects for easy accessibility
+sj_counts <- setbp1_marvel[["sj.count.matrix"]]
+gene_counts <- setbp1_marvel[["gene.count.matrix"]]
+
+# Convert data type
+sj_counts <- as(sj_counts, "CsparseMatrix")
+gene_counts <- as(gene_counts, "CsparseMatrix")
+```
+
+```{r get cell groups}
+# Pull cell types and matching ids
+cell_group_list <- sample_metadata %>%
+  group_split(cell_type, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$cell_type[1]))
+
+# Rename
+cell_group_list <- set_names(cell_group_list, c(
+  "Astrocytes", "Excitatory Neurons",
+  "Inhibitory Neurons", "Microglia", "OPCs",
+  "Oligodendrocytes", "Vascular Cells"
+))
+
+# Pull mutant vs wildtype and matching ids
+mutant_list <- sample_metadata %>%
+  group_split(seq_folder, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$seq_folder[[1]]))
+
+# Rename
+mutant_list <- set_names(mutant_list, c(
+  "Mutant", "Wildtype"
+))
+```
+
+Now that we have lists of cell ids, we can split out the splice junction and gene count matrices for each cell type
+
+```{r split matrices by cell type}
+astrocytes_matrices <- subset_cell_type_matrices(cell_type = "Astrocytes")
+
+excitatory_matrices <- subset_cell_type_matrices(
+  cell_type = "Excitatory Neurons"
+)
+
+inhibitory_matrices <- subset_cell_type_matrices(
+  cell_type = "Inhibitory Neurons"
+)
+
+microglia_matrices <- subset_cell_type_matrices(cell_type = "Microglia")
+
+opcs_matrices <- subset_cell_type_matrices(cell_type = "OPCs")
+
+oligodendrocyte_matrices <- subset_cell_type_matrices(
+  cell_type = "Oligodendrocytes"
+)
+
+vascular_matrices <- subset_cell_type_matrices(cell_type = "Vascular Cells")
+```
+
+Further, we can split these each into wildtypes and mutants
+
+```{r split into mutant and wildtype}
+astrocytes_mutants <- subset_mutant_matrices(astrocytes_matrices)
+
+excitatory_mutants <- subset_mutant_matrices(excitatory_matrices)
+
+inhibitory_mutants <- subset_mutant_matrices(inhibitory_matrices)
+
+microglia_mutants <- subset_mutant_matrices(microglia_matrices)
+
+oligodendrocyte_mutants <- subset_mutant_matrices(oligodendrocyte_matrices)
+
+opcs_mutants <- subset_mutant_matrices(opcs_matrices)
+
+vascular_mutants <- subset_mutant_matrices(vascular_matrices)
+```
+
+
+!!! This step takes 1 hour to run !!!
+
+```{r get totals for each splice junction for each cell type}
+matrix_list <- ls(pattern = "_matrices")
+
+matrix_list <- mget(matrix_list[c(1:6, 9)])
+
+sj_usage_cell_type_list <- lapply(matrix_list, get_sj_usage_cell_type)
+
+sj_usage_cell_type_df <- do.call(rbind, sj_usage_cell_type_list)
+
+sj_usage_cell_type_df <- t(sj_usage_cell_type_df)
+
+write_rds(
+  sj_usage_cell_type_df,
+  here::here("data", "marvel", "sj_usage_cell_type.rds")
+)
+```
+
+Now do the same for cell types split by mutants vs wildtypes.
+
+!!! This step takes 2 hours to run !!!
+
+```{r get totals for each splice junction for each cell type and condition}
+mutant_list <- ls(pattern = "_mutants")
+
+mutant_list <- mget(mutant_list)
+
+sj_usage_condition_list <- lapply(mutant_list, get_sj_usage_condition)
+
+sj_usage_condition_df <- do.call(rbind, sj_usage_condition_list)
+
+sj_usage_condition_df <- t(sj_usage_condition_df)
+
+write_rds(
+  sj_usage_condition_df,
+  here::here("data", "marvel", "sj_usage_condition.rds")
+)
+```
+
+#### Style
+
+```{r tidy script}
+style_file("04_calc_sj_usage.Rmd")
+
+lint("04_calc_sj_usage.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
+```
+R version 4.3.1 (2023-06-16)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 22.04.3 LTS
+
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+ [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: Etc/UTC
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats4    grid      stats     graphics  grDevices utils     datasets  methods  
+[9] base     
+
+other attached packages:
+ [1] gridExtra_2.3         data.table_1.14.8     Matrix_1.6-1.1       
+ [4] wiggleplotr_1.24.0    GenomicRanges_1.52.1  GenomeInfoDb_1.36.4  
+ [7] gtools_3.9.4          org.Mm.eg.db_3.17.0   org.Hs.eg.db_3.17.0  
+[10] clusterProfiler_4.8.3 AnnotationDbi_1.62.2  IRanges_2.34.1       
+[13] S4Vectors_0.38.2      Biobase_2.60.0        BiocGenerics_0.46.0  
+[16] textclean_0.9.3       plyr_1.8.9            reshape2_1.4.4       
+[19] ggrepel_0.9.4         ggnewscale_0.4.9      MARVEL_2.0.5         
+[22] viridis_0.6.4         viridisLite_0.4.2     ComplexHeatmap_2.16.0
+[25] patchwork_1.1.3       lubridate_1.9.3       forcats_1.0.0        
+[28] stringr_1.5.1         dplyr_1.1.3           purrr_1.0.2          
+[31] readr_2.1.4           tidyr_1.3.0           tibble_3.2.1         
+[34] ggplot2_3.4.4         tidyverse_2.0.0       lintr_3.1.0          
+[37] styler_1.10.2         here_1.0.1           
+
+loaded via a namespace (and not attached):
+  [1] RColorBrewer_1.1-3      jsonlite_1.8.7          rstudioapi_0.15.0      
+  [4] shape_1.4.6             magrittr_2.0.3          farver_2.1.1           
+  [7] rmarkdown_2.25          fs_1.6.3                GlobalOptions_0.1.2    
+ [10] zlibbioc_1.46.0         vctrs_0.6.4             memoise_2.0.1          
+ [13] RCurl_1.98-1.12         ggtree_3.8.2            htmltools_0.5.6.1      
+ [16] qdapRegex_0.7.8         gridGraphics_0.5-1      desc_1.4.2             
+ [19] cachem_1.0.8            igraph_1.5.1            lifecycle_1.0.4        
+ [22] iterators_1.0.14        pkgconfig_2.0.3         gson_0.1.0             
+ [25] R6_2.5.1                fastmap_1.1.1           GenomeInfoDbData_1.2.10
+ [28] clue_0.3-65             aplot_0.2.2             digest_0.6.33          
+ [31] enrichplot_1.20.3       colorspace_2.1-0        ps_1.7.5               
+ [34] rprojroot_2.0.3         RSQLite_2.3.1           fansi_1.0.5            
+ [37] timechange_0.2.0        polyclip_1.10-6         httr_1.4.7             
+ [40] compiler_4.3.1          remotes_2.4.2.1         bit64_4.0.5            
+ [43] withr_2.5.2             doParallel_1.0.17       downloader_0.4         
+ [46] backports_1.4.1         BiocParallel_1.34.2     DBI_1.1.3              
+ [49] ggforce_0.4.1           R.utils_2.12.2          MASS_7.3-60            
+ [52] rjson_0.2.21            HDO.db_0.99.1           tools_4.3.1            
+ [55] scatterpie_0.2.1        ape_5.7-1               R.oo_1.25.0            
+ [58] glue_1.6.2              callr_3.7.3             nlme_3.1-163           
+ [61] R.cache_0.16.0          GOSemSim_2.26.1         shadowtext_0.1.2       
+ [64] cluster_2.1.4           fgsea_1.26.0            generics_0.1.3         
+ [67] gtable_0.3.4            tzdb_0.4.0              R.methodsS3_1.8.2      
+ [70] hms_1.1.3               tidygraph_1.2.3         xml2_1.3.5             
+ [73] utf8_1.2.4              XVector_0.40.0          foreach_1.5.2          
+ [76] pillar_1.9.0            yulab.utils_0.1.0       circlize_0.4.15        
+ [79] splines_4.3.1           tweenr_2.0.2            treeio_1.24.3          
+ [82] lattice_0.21-8          bit_4.0.5               tidyselect_1.2.0       
+ [85] GO.db_3.17.0            Biostrings_2.68.1       knitr_1.44             
+ [88] xfun_0.40               graphlayouts_1.0.1      matrixStats_1.0.0      
+ [91] rex_1.2.1               stringi_1.8.1           ggfun_0.1.3            
+ [94] lazyeval_0.2.2          yaml_2.3.7              evaluate_0.22          
+ [97] codetools_0.2-19        ggraph_2.1.0            qvalue_2.32.0          
+[100] ggplotify_0.1.2         cli_3.6.1               munsell_0.5.0          
+[103] processx_3.8.2          xmlparsedata_1.0.5      Rcpp_1.0.11            
+[106] png_0.1-8               parallel_4.3.1          blob_1.2.4             
+[109] DOSE_3.26.2             bitops_1.0-7            tidytree_0.4.5         
+[112] cyclocomp_1.1.1         scales_1.2.1            crayon_1.5.2           
+[115] GetoptLong_1.0.5        rlang_1.1.2             cowplot_1.1.1          
+[118] fastmatch_1.1-4         KEGGREST_1.40.1 

@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Aggregate Splice Junction Information
 
-The purpose of this script is to aggregate sj and expression information by cell type in a meaningful way. It is dependent on all seurat and marvel scripts 01-05. Please run in docker 1.0.6.
+The purpose of this script is to aggregate sj and expression information by cell type in a meaningful way. It is dependent on all seurat and marvel scripts 01-04. Please run in docker 1.0.6.
 
 ## Load Packages
 
@@ -61,12 +61,6 @@ source(here::here("src", "marvel", "functions.R"))
 And load in data
 
 ```{r load in data}
-# load in PSI matrix from script 05
-full_psi_matrix <- read_rds(here::here(
-  "data", "marvel",
-  "full_psi_matrix.Rds"
-))
-
 # Load MARVEL object
 setbp1_marvel <- read_rds(here::here(
   "data", "marvel",
@@ -214,7 +208,7 @@ opcs_mutants <- subset_mutant_matrices(opcs_matrices)
 vascular_mutants <- subset_mutant_matrices(vascular_matrices)
 ```
 
-Now, I can amke a similar dataframe and plot from that.
+Now, I can make a similar dataframe and plot from that.
 
 ```{r make aggregated df for mutants}
 sj_per_condition <- data.frame(
