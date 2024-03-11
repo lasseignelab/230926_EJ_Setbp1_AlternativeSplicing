@@ -73,14 +73,14 @@ We do this in a pairwise fashion, and need to determine which expression thresho
 # Group 1 (reference)
 index <-
   which(sample_metadata$cell_type == "Excitatory Neurons" &
-          sample_metadata$seq_folder == "mutant")
+          sample_metadata$seq_folder == "wildtype")
 cell_ids_1 <- sample_metadata[index, "cell.id"]
 length(cell_ids_1)
 
 # Group 2
 index <-
   which(sample_metadata$cell_type == "Excitatory Neurons" &
-          sample_metadata$seq_folder == "wildtype")
+          sample_metadata$seq_folder == "mutant")
 cell_ids_2 <- sample_metadata[index, "cell.id"]
 length(cell_ids_2)
 ```
@@ -123,59 +123,89 @@ For, now I will use the default expression cutoffs for all differential analysis
 
 ### Use in-house function for running marvel on a single cell type
 
+PLEASE READ: THIS CHUNK TAKES ABOUT 2 HOURS TO RUN! MAKE SURE YOU HAVE ADEQUATE TIME.
+
 ```{r run marvel differential analysis on all cell types}
 excitatory_marvel <- run_marvel_cell_type(
   marvel_object = setbp1_marvel,
-  cell_type = "Excitatory Neurons"
+  cell_type = "Excitatory Neurons",
+  results_path = here::here(
+    "data",
+    "marvel"
+  )
 )
 
 
 inhibitory_marvel <- run_marvel_cell_type(
   marvel_object = setbp1_marvel,
-  cell_type = "Inhibitory Neurons"
+  cell_type = "Inhibitory Neurons",
+  results_path = here::here(
+    "data",
+    "marvel"
+  )
 )
 
 
 astrocytes_marvel <- run_marvel_cell_type(
   marvel_object = setbp1_marvel,
-  cell_type = "Astrocytes"
+  cell_type = "Astrocytes",
+  results_path = here::here(
+    "data",
+    "marvel"
+  )
 )
 
 
 oligodendrocytes_marvel <- run_marvel_cell_type(
   marvel_object = setbp1_marvel,
-  cell_type = "Oligodendrocytes"
+  cell_type = "Oligodendrocytes",
+  results_path = here::here(
+    "data",
+    "marvel"
+  )
 )
 
 
 opcs_marvel <- run_marvel_cell_type(
   marvel_object = setbp1_marvel,
-  cell_type = "OPCs"
+  cell_type = "OPCs",
+  results_path = here::here(
+    "data",
+    "marvel"
+  )
 )
 
 microglia_marvel <- run_marvel_cell_type(
   marvel_object = setbp1_marvel,
-  cell_type = "Microglia"
+  cell_type = "Microglia",
+  results_path = here::here(
+    "data",
+    "marvel"
+  )
 )
 
 
 vascular_marvel <- run_marvel_cell_type(
   marvel_object = setbp1_marvel,
-  cell_type = "Vascular Cells"
+  cell_type = "Vascular Cells",
+  results_path = here::here(
+    "data",
+    "marvel"
+  )
 )
 ```
 
-This next chunk of code is basically replicating what the function did, but with different filtering for the cell IDs Here, we are doing differential gene expression and splicing across all cell types, instead of within a single cell type.
+This next chunk of code is basically replicating what the function did, but with different filtering for the cell IDs. Here, we are doing differential gene expression and splicing across all cell types, instead of within a single cell type.
 
 ```{r do for all cell types}
 all_types_marvel <- setbp1_marvel
 
 # Group 1 (reference)
-index_1 <- which(sample_metadata$seq_folder == "mutant")
+index_1 <- which(sample_metadata$seq_folder == "wildtype")
 cell_ids_1 <- sample_metadata[index_1, "cell.id"]
 
 # Group 2
-index_2 <- which(sample_metadata$seq_folder == "wildtype")
+index_2 <- which(sample_metadata$seq_folder == "mutant")
 cell_ids_2 <- sample_metadata[index_2, "cell.id"]
 
 # Explore % of cells expressing genes
@@ -249,7 +279,7 @@ saveRDS(all_types_marvel,
 
 ## Extract and save significant gene lists
 
-Saving and loading the objects takes tons of extra time, and for looking at specific aspects it is more convenient to just pull the significant gene and SJ info into an easily readable table, instead of 266 GB of objects.
+Saving and loading the objects takes tons of extra time, and for looking at specific pvals and results it is more convenient to just pull the significant gene and SJ info into an easily readable table, instead of 266 GB of objects.
 
 ```{r what are the significant genes for this analysis}
 # Pull significant genes - excitatory
@@ -297,82 +327,121 @@ save(
 
 ### Plot UMAPs
 
-Plot UMAPS for excitatory genes with custom function. Note: Might remove this code later?
+Plot UMAPS for excitatory genes with custom function. Note: Might remove this code later? We don't use it in the manuscript currently.
 
 ```{r run umap plotting function on all excitatory genes}
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Kif21a",
-  sj_loc = "chr15:90881929:90882035"
+  sj_loc = "chr15:90881929:90882035",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Pnisr",
-  sj_loc = "chr4:21859308:21860819"
+  sj_loc = "chr4:21859308:21860819",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Igf1r",
-  sj_loc = "chr7:67602701:67653557"
+  sj_loc = "chr7:67602701:67653557",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Luc7l3",
-  sj_loc = "chr11:94200518:94212515"
+  sj_loc = "chr11:94200518:94212515",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Phf14",
-  sj_loc = "chr6:11926837:11933251"
+  sj_loc = "chr6:11926837:11933251",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Calm1",
-  sj_loc = "chr12:100172493:100172658"
+  sj_loc = "chr12:100172493:100172658",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Son",
-  sj_loc = "chr16:91448685:91451498"
+  sj_loc = "chr16:91448685:91451498",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Afdn",
-  sj_loc = "chr17:14024397:14027538"
+  sj_loc = "chr17:14024397:14027538",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 
 excitatory_marvel <- plot_marvel_umap(
   marvel_object = excitatory_marvel,
   prefix = "excitatory",
   gene = "Srrm2",
-  sj_loc = "chr17:24027148:24027327"
+  sj_loc = "chr17:24027148:24027327",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 ```
 
-Also can do for other cell types.
+Also can do for other cell types, like vascular cells. Please note, there is a single slot for plots in a marvel object, each new plot will be overwritten. Additionally, these do not need to be run on the specific object that you ran your test on, can be any marvel object with gene and sj expression values.
 
 ```{r plot umaps}
-
 setbp1_marvel <- plot_marvel_umap(
   marvel_object = setbp1_marvel,
   prefix = "vascular",
   gene = "Tcf4",
-  sj_loc = "chr18:69815895:69816147"
+  sj_loc = "chr18:69815895:69816147",
+  results_path = here::here(
+    "results",
+    "marvel_outputs"
+  )
 )
 ```
 

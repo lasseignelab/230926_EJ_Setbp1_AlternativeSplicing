@@ -9,9 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Aggregate Splice Junction Information
+# Aggregate Splice Junction Information
 
-The purpose of this script is to aggregate sj and expression information by cell type in a meaningful way. It is dependent on all seurat and marvel scripts 01-05. Please run in docker 1.0.6.
+The purpose of this script is to aggregate sj and expression information by cell type in a meaningful way. It is dependent on all seurat and marvel scripts 01-04. Please run in docker 1.0.6.
 
 ## Load Packages
 
@@ -25,6 +25,7 @@ suppressPackageStartupMessages({
   library(patchwork)
   library(ComplexHeatmap)
   library(viridis)
+  library(factoextra)
 
   # Load MARVEL package
   library(MARVEL)
@@ -60,9 +61,6 @@ source(here::here("src", "marvel", "functions.R"))
 And load in data
 
 ```{r load in data}
-# load in PSI matrix from script 05
-full_psi_matrix <- readRDS("/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/data/marvel/full_psi_matrix.Rds")
-
 # Load MARVEL object
 setbp1_marvel <- read_rds(here::here(
   "data", "marvel",
@@ -71,6 +69,9 @@ setbp1_marvel <- read_rds(here::here(
 
 # Retrieve sample metadata
 sample_metadata <- setbp1_marvel$sample.metadata
+
+# Retrieve sj metadata
+sj_metadata <- setbp1_marvel$sj.metadata
 
 # Save counts objects for easy accessibility
 sj_counts <- setbp1_marvel[["sj.count.matrix"]]
@@ -133,7 +134,6 @@ oligodendrocyte_matrices <- subset_cell_type_matrices(
 vascular_matrices <- subset_cell_type_matrices(cell_type = "Vascular Cells")
 ```
 
-
 Now, we can make a dataframe with the total number of rows divided by number of cells
 
 ```{r get how many sjs per cell type}
@@ -154,30 +154,38 @@ sj_per_cell_type <- data.frame(
   ),
   "sjs_per_gene" = c(
     nrow(astrocytes_matrices[[2]]) /
-  nrow(astrocytes_matrices[[1]]),
-nrow(excitatory_matrices[[2]]) /
-  nrow(excitatory_matrices[[1]]),
-nrow(inhibitory_matrices[[2]]) /
-  nrow(inhibitory_matrices[[1]]),
-nrow(microglia_matrices[[2]]) /
-  nrow(microglia_matrices[[1]]),
-nrow(oligodendrocyte_matrices[[2]]) /
-  nrow(oligodendrocyte_matrices[[1]]),
-nrow(opcs_matrices[[2]]) /
-  nrow(opcs_matrices[[1]]),
-nrow(vascular_matrices[[2]]) /
-  nrow(vascular_matrices[[1]])
+      nrow(astrocytes_matrices[[1]]),
+    nrow(excitatory_matrices[[2]]) /
+      nrow(excitatory_matrices[[1]]),
+    nrow(inhibitory_matrices[[2]]) /
+      nrow(inhibitory_matrices[[1]]),
+    nrow(microglia_matrices[[2]]) /
+      nrow(microglia_matrices[[1]]),
+    nrow(oligodendrocyte_matrices[[2]]) /
+      nrow(oligodendrocyte_matrices[[1]]),
+    nrow(opcs_matrices[[2]]) /
+      nrow(opcs_matrices[[1]]),
+    nrow(vascular_matrices[[2]]) /
+      nrow(vascular_matrices[[1]])
   )
 )
 ```
 
 
-```{r visualize splice junctions per cell type}
+```{r save splice junction count table}
 
-ggplot(sj_per_cell_type, aes(x = cell_type, y = sjs_per_gene, fill = cell_type)) +
+write_csv(sj_per_cell_type, here::here("results", "tables", "sj_per_cell_type.csv"))
+
+```
+
+
+```{r visualize splice junctions per cell type}
+ggplot(
+  sj_per_cell_type,
+  aes(x = cell_type, y = sjs_per_gene, fill = cell_type)
+) +
   geom_bar(stat = "identity") +
   theme(legend.position = "none")
-
 ```
 
 ## Aggregate metrics by mutant and wildtype
@@ -185,7 +193,6 @@ ggplot(sj_per_cell_type, aes(x = cell_type, y = sjs_per_gene, fill = cell_type))
 I made a function called subset_mutant_matrices. I can use this to split the sj and gene count matrices
 
 ```{r split into mutant and wildtype}
-
 astrocytes_mutants <- subset_mutant_matrices(astrocytes_matrices)
 
 excitatory_mutants <- subset_mutant_matrices(excitatory_matrices)
@@ -199,22 +206,18 @@ oligodendrocyte_mutants <- subset_mutant_matrices(oligodendrocyte_matrices)
 opcs_mutants <- subset_mutant_matrices(opcs_matrices)
 
 vascular_mutants <- subset_mutant_matrices(vascular_matrices)
-
 ```
 
-Beep boop
+Now, I can make a similar dataframe and plot from that.
 
 ```{r make aggregated df for mutants}
-
 sj_per_condition <- data.frame(
   "cell_type" = rep(c(
     "Astrocytes", "Excitatory Neurons",
     "Inhibitory Neurons", "Microglia", "OPCs",
     "Oligodendrocytes", "Vascular Cells"
   ), 2),
-  
   "condition" = c(rep("Mutant", 7), rep("Wildtype", 7)),
-  
   "sj_number" = c(
     nrow(astrocytes_mutants$Mutant[[2]]),
     nrow(excitatory_mutants$Mutant[[2]]),
@@ -231,7 +234,6 @@ sj_per_condition <- data.frame(
     nrow(opcs_mutants$Wildtype[[2]]),
     nrow(vascular_mutants$Wildtype[[2]])
   ),
-  
   "sjs_per_gene" = c(
     nrow(astrocytes_mutants$Mutant[[2]]) /
       nrow(astrocytes_mutants$Mutant[[1]]),
@@ -262,33 +264,38 @@ sj_per_condition <- data.frame(
     nrow(vascular_mutants$Wildtype[[2]]) /
       nrow(vascular_mutants$Wildtype[[1]])
   ),
-  
   "cell_count" = c(
-  ncol(astrocytes_mutants$Mutant[[2]]),
-  ncol(excitatory_mutants$Mutant[[2]]),
-  ncol(inhibitory_mutants$Mutant[[2]]),
-  ncol(microglia_mutants$Mutant[[2]]),
-  ncol(oligodendrocyte_mutants$Mutant[[2]]),
-  ncol(opcs_mutants$Mutant[[2]]),
-  ncol(vascular_mutants$Mutant[[2]]),
-  ncol(astrocytes_mutants$Wildtype[[2]]),
-  ncol(excitatory_mutants$Wildtype[[2]]),
-  ncol(inhibitory_mutants$Wildtype[[2]]),
-  ncol(microglia_mutants$Wildtype[[2]]),
-  ncol(oligodendrocyte_mutants$Wildtype[[2]]),
-  ncol(opcs_mutants$Wildtype[[2]]),
-  ncol(vascular_mutants$Wildtype[[2]])
+    ncol(astrocytes_mutants$Mutant[[2]]),
+    ncol(excitatory_mutants$Mutant[[2]]),
+    ncol(inhibitory_mutants$Mutant[[2]]),
+    ncol(microglia_mutants$Mutant[[2]]),
+    ncol(oligodendrocyte_mutants$Mutant[[2]]),
+    ncol(opcs_mutants$Mutant[[2]]),
+    ncol(vascular_mutants$Mutant[[2]]),
+    ncol(astrocytes_mutants$Wildtype[[2]]),
+    ncol(excitatory_mutants$Wildtype[[2]]),
+    ncol(inhibitory_mutants$Wildtype[[2]]),
+    ncol(microglia_mutants$Wildtype[[2]]),
+    ncol(oligodendrocyte_mutants$Wildtype[[2]]),
+    ncol(opcs_mutants$Wildtype[[2]]),
+    ncol(vascular_mutants$Wildtype[[2]])
+  )
 )
-)
+```
+
+```{r save splice junction count table}
+
+write_csv(sj_per_condition, here::here("results", "tables", "sj_per_condition.csv"))
 
 ```
 
-
 ```{r visualize splice junctions per cell type}
 # plot
-ggplot(sj_per_condition, aes(x = cell_type, y = sjs_per_gene, fill = condition)) +
+ggplot(
+  sj_per_condition,
+  aes(x = cell_type, y = sjs_per_gene, fill = condition)
+) +
   geom_bar(stat = "identity", position = position_dodge())
-
 ```
 
 I notice there are more sjs per gene for all wts compared to controls, is this true for all cell counts?
@@ -300,14 +307,227 @@ ggplot(sj_per_condition, aes(x = cell_type, y = cell_count, fill = condition)) +
 
 Yes, there are more cells so this score is imperfect and not something I want to draw major conclusions from.
 
+Now, what if we calculate this "splicing complexity score" for every single cell? Also, we can count how many splice junctions are detected per gene without averaging. Let's do that first.
 
+## Count splice junctions for each gene
+
+```{r count splice junctions}
+# Get all expressed gene names
+all_expressed_genes <- unique(c(
+  names(get_sjs_per_gene(astrocytes_matrices)),
+  names(get_sjs_per_gene(excitatory_matrices)),
+  names(get_sjs_per_gene(inhibitory_matrices)),
+  names(get_sjs_per_gene(microglia_matrices)),
+  names(get_sjs_per_gene(oligodendrocyte_matrices)),
+  names(get_sjs_per_gene(opcs_matrices)),
+  names(get_sjs_per_gene(vascular_matrices))
+))
+
+# Make NA matrix, with 7 columns for cell types
+sj_per_gene <- matrix(NA, nrow = length(all_expressed_genes), ncol = 7)
+# Add rownames
+rownames(sj_per_gene) <- sort(all_expressed_genes)
+
+# Make a list of all matrices
+matrices_list <- ls(pattern = "_matrices")
+
+# Initialize column
+column <- 0
+
+# Add in each table - these numbers are to exclude the functions
+for (i in matrices_list[c(1:6, 9)]) {
+  column <- column + 1
+  table <- get_sjs_per_gene(get(i))
+  indices <- match(rownames(sj_per_gene), names(table))
+  sj_per_gene[, column] <- ifelse(!is.na(indices), table[indices], 0)
+}
+
+# Add colnames
+colnames(sj_per_gene) <-
+  substr(matrices_list[c(1:6, 9)], 1, nchar(matrices_list[c(1:6, 9)]) - 9)
+```
+
+```{r save sjs per gene}
+
+write.csv(sj_per_gene, here::here("results", "tables", "sj_per_gene.csv"))
+
+```
+
+I think it would be neat to show this as a pca.
+
+```{r do pca on sj counts}
+# Transform matrix
+sj_per_gene_t <- t(sj_per_gene)
+
+# remove 0 variance
+sj_per_gene_t <- remove_0_variance(as.data.frame(sj_per_gene_t))
+
+pca <- prcomp(sj_per_gene_t, scale = TRUE)
+
+fviz_eig(pca)
+
+fviz_pca_ind(pca,
+  col.ind = "cos2", # Color by the quality of representation
+  gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  repel = TRUE, # Avoid text overlapping
+)
+
+fviz_pca_var(pca,
+  col.var = "contrib",
+  gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  repel = TRUE,
+  select.var = list(contrib = 10)
+)
+```
+
+I think this is a good direction, but I need to do for each sample and for each cell type (mutant and wt). I'm unsure the best way to do this, I could split out 7 by 6 samples into 42 groups, or just do in aggregate first?
+
+```{r do same thing for mutant and wildtypes}
+# Make NA matrix, with 14 columns (one for each aggregation)
+sj_per_gene_mut <- matrix(NA, nrow = length(all_expressed_genes), ncol = 14)
+# Add rownames
+rownames(sj_per_gene_mut) <- sort(all_expressed_genes)
+
+# Make a list of all mutant matrices
+mutants_list <- ls(pattern = "_mutants")
+
+# Initialize column
+column1 <- 0
+
+# Add in each table with for loop
+for (i in (mutants_list)) {
+  # get object
+  object <- get(i)
+  # mutants
+  column1 <- column1 + 1
+  table <- get_sjs_per_gene(object[["Mutant"]])
+  indices <- match(rownames(sj_per_gene_mut), names(table))
+  sj_per_gene_mut[, column1] <- ifelse(!is.na(indices), table[indices], 0)
+
+  # wildtypes
+  column2 <- column1 + 7
+  table <- get_sjs_per_gene(object[["Wildtype"]])
+  indices <- match(rownames(sj_per_gene_mut), names(table))
+  sj_per_gene_mut[, column2] <- ifelse(!is.na(indices), table[indices], 0)
+}
+
+# Add colnames
+colnames(sj_per_gene_mut) <-
+  c(
+    paste0(substr(mutants_list, 1, nchar(mutants_list) - 8), "_mutants"),
+    paste0(substr(mutants_list, 1, nchar(mutants_list) - 8), "_wildtype")
+  )
+```
+
+Now we can do a pca on these groups
+
+```{r now do pca!!!}
+# Transform matrix
+sj_per_gene_mut_t <- t(sj_per_gene_mut)
+
+sj_per_gene_mut_t <- remove_0_variance(as.data.frame(sj_per_gene_mut_t))
+
+pca_mut <- prcomp(sj_per_gene_mut_t, scale = TRUE)
+
+fviz_eig(pca_mut)
+
+fviz_pca_ind(pca_mut,
+  col.ind = "cos2", # Color by the quality of representation
+  gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  repel = TRUE, # Avoid text overlapping
+)
+
+fviz_pca_var(pca_mut,
+  col.var = "contrib",
+  gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+  repel = TRUE,
+  select.var = list(contrib = 10)
+)
+```
+
+Not sure how to interpret that very much, but now I can do back to doing what I was aiming to do this morning and got sidetracked from.
+
+## Calculate splicing complexity from overall splice junctions detected divided by overall gene counts
+
+You can use diff to quickly count nonzero values for each column (cell id).
+
+```{r use diff}
+
+sample_metadata$num_sjs <- diff(sj_counts@p)
+sample_metadata$num_genes <- diff(gene_counts@p)
+sample_metadata$splicing_complexity <- diff(sj_counts@p)/diff(gene_counts@p)
+
+```
+
+
+```{r plot num sjs}
+
+num_sjs_violin <- ggplot(sample_metadata, aes(x = cell_type, y = num_sjs, fill = cell_type)) +
+  geom_violin(show.legend = FALSE) +
+  geom_boxplot(width = 0.1, show.legend = FALSE)
+
+num_sjs_violin
+
+```
+```{r plot num genes}
+
+num_genes_violin <- ggplot(sample_metadata, aes(x = cell_type, y = num_genes, fill = cell_type)) +
+  geom_violin(show.legend = FALSE) +
+  geom_boxplot(width = 0.1, show.legend = FALSE)
+
+num_genes_violin
+
+```
+
+```{r plot splicing complexity by cell type}
+
+complexity_violin <- ggplot(sample_metadata, aes(x = cell_type, y = splicing_complexity, fill = cell_type)) +
+  geom_violin(show.legend = FALSE) +
+  geom_boxplot(width = 0.1, show.legend = FALSE)
+
+complexity_violin
+```
+
+```{r plot splicing complexity by mutant vs wt}
+
+complexity_violin2 <- ggplot(sample_metadata, aes(x = cell_type, y = splicing_complexity, fill = cell_type, alpha = seq_folder))  +
+  geom_violin(show.legend = FALSE) + scale_alpha_manual(values = c(0.2, 0.9)) + theme_minimal()
+
+complexity_violin2
+```
+
+```{r plot only mutant vs wt}
+complexity_violin3 <- ggplot(sample_metadata, aes(x = seq_folder, y = splicing_complexity, fill = seq_folder)) +
+  geom_violin() +
+  geom_boxplot(width = 0.1)
+
+complexity_violin3
+
+```
+Can I put a statistic on if complexity is significantly different between these groups?
+
+```{r try statistical test}
+# data is approx. normal, try parametric test
+t_res <- t.test(sample_metadata$splicing_complexity[sample_metadata$seq_folder == "mutant"], 
+       sample_metadata$splicing_complexity[sample_metadata$seq_folder == "wildtype"])
+
+t_res[["p.value"]]
+
+# try non-parametric test
+wilcoxon_res <- wilcox.test(sample_metadata$splicing_complexity[sample_metadata$seq_folder == "mutant"], sample_metadata$splicing_complexity[sample_metadata$seq_folder == "wildtype"])
+
+wilcoxon_res[["p.value"]]
+
+```
+
+Yes, with both parametric and non-parametric tests, this is significantly different.
 
 #### Style
 
 ```{r tidy script}
-style_file("05_join_psi_matrix.Rmd")
+style_file("06_aggregate_sj_info.Rmd")
 
-lint("05_join_psi_matrix.Rmd",
+lint("06_aggregate_sj_info.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,
@@ -323,4 +543,80 @@ My software versions will be commented below.
 ```{r versions}
 sessionInfo()
 ```
+R version 4.3.1 (2023-06-16)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 22.04.3 LTS
 
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+ [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: Etc/UTC
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats4    grid      stats     graphics  grDevices utils     datasets  methods  
+[9] base     
+
+other attached packages:
+ [1] gridExtra_2.3         data.table_1.14.8     Matrix_1.6-1.1       
+ [4] wiggleplotr_1.24.0    GenomicRanges_1.52.1  GenomeInfoDb_1.36.4  
+ [7] gtools_3.9.4          org.Mm.eg.db_3.17.0   org.Hs.eg.db_3.17.0  
+[10] clusterProfiler_4.8.3 AnnotationDbi_1.62.2  IRanges_2.34.1       
+[13] S4Vectors_0.38.2      Biobase_2.60.0        BiocGenerics_0.46.0  
+[16] textclean_0.9.3       plyr_1.8.9            reshape2_1.4.4       
+[19] ggrepel_0.9.4         ggnewscale_0.4.9      MARVEL_2.0.5         
+[22] factoextra_1.0.7      viridis_0.6.4         viridisLite_0.4.2    
+[25] ComplexHeatmap_2.16.0 patchwork_1.1.3       lubridate_1.9.3      
+[28] forcats_1.0.0         stringr_1.5.1         dplyr_1.1.3          
+[31] purrr_1.0.2           readr_2.1.4           tidyr_1.3.0          
+[34] tibble_3.2.1          ggplot2_3.4.4         tidyverse_2.0.0      
+[37] lintr_3.1.0           styler_1.10.2         here_1.0.1           
+
+loaded via a namespace (and not attached):
+  [1] RColorBrewer_1.1-3      jsonlite_1.8.7          rstudioapi_0.15.0      
+  [4] shape_1.4.6             magrittr_2.0.3          farver_2.1.1           
+  [7] rmarkdown_2.25          fs_1.6.3                GlobalOptions_0.1.2    
+ [10] zlibbioc_1.46.0         vctrs_0.6.4             memoise_2.0.1          
+ [13] RCurl_1.98-1.12         ggtree_3.8.2            htmltools_0.5.6.1      
+ [16] qdapRegex_0.7.8         gridGraphics_0.5-1      desc_1.4.2             
+ [19] cachem_1.0.8            igraph_1.5.1            lifecycle_1.0.4        
+ [22] iterators_1.0.14        pkgconfig_2.0.3         gson_0.1.0             
+ [25] R6_2.5.1                fastmap_1.1.1           GenomeInfoDbData_1.2.10
+ [28] clue_0.3-65             aplot_0.2.2             digest_0.6.33          
+ [31] enrichplot_1.20.3       colorspace_2.1-0        ps_1.7.5               
+ [34] rprojroot_2.0.3         RSQLite_2.3.1           fansi_1.0.5            
+ [37] timechange_0.2.0        polyclip_1.10-6         httr_1.4.7             
+ [40] compiler_4.3.1          remotes_2.4.2.1         bit64_4.0.5            
+ [43] withr_2.5.2             doParallel_1.0.17       downloader_0.4         
+ [46] backports_1.4.1         BiocParallel_1.34.2     DBI_1.1.3              
+ [49] ggforce_0.4.1           R.utils_2.12.2          MASS_7.3-60            
+ [52] rjson_0.2.21            HDO.db_0.99.1           tools_4.3.1            
+ [55] scatterpie_0.2.1        ape_5.7-1               R.oo_1.25.0            
+ [58] glue_1.6.2              callr_3.7.3             nlme_3.1-163           
+ [61] R.cache_0.16.0          GOSemSim_2.26.1         shadowtext_0.1.2       
+ [64] cluster_2.1.4           fgsea_1.26.0            generics_0.1.3         
+ [67] gtable_0.3.4            tzdb_0.4.0              R.methodsS3_1.8.2      
+ [70] hms_1.1.3               tidygraph_1.2.3         xml2_1.3.5             
+ [73] utf8_1.2.4              XVector_0.40.0          foreach_1.5.2          
+ [76] pillar_1.9.0            yulab.utils_0.1.0       circlize_0.4.15        
+ [79] splines_4.3.1           tweenr_2.0.2            treeio_1.24.3          
+ [82] lattice_0.21-8          bit_4.0.5               tidyselect_1.2.0       
+ [85] GO.db_3.17.0            Biostrings_2.68.1       knitr_1.44             
+ [88] xfun_0.40               graphlayouts_1.0.1      matrixStats_1.0.0      
+ [91] rex_1.2.1               stringi_1.8.1           ggfun_0.1.3            
+ [94] lazyeval_0.2.2          yaml_2.3.7              evaluate_0.22          
+ [97] codetools_0.2-19        ggraph_2.1.0            qvalue_2.32.0          
+[100] ggplotify_0.1.2         cli_3.6.1               munsell_0.5.0          
+[103] processx_3.8.2          xmlparsedata_1.0.5      Rcpp_1.0.11            
+[106] png_0.1-8               parallel_4.3.1          blob_1.2.4             
+[109] DOSE_3.26.2             bitops_1.0-7            tidytree_0.4.5         
+[112] cyclocomp_1.1.1         scales_1.2.1            crayon_1.5.2           
+[115] GetoptLong_1.0.5        rlang_1.1.2             cowplot_1.1.1          
+[118] fastmatch_1.1-4         KEGGREST_1.40.1  

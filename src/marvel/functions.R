@@ -64,107 +64,23 @@ align_matrix <- function(mat, all_features) {
 
 ## run_marvel_cell_type - Emma Jones
 # This function is a wrapper function for comparing mutant and wildtype splicing
-# within a given cell type. The thresholds may need adjusting, but have defaults.
-run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5, 
-                       min_pct_cells_gene = 5, min_pct_cells_sj = 5,
-                       min_gene_norm = 1) {
-  
-  # Assign MARVEL object to start from
-  marvel_object <- setbp1_marvel
-  
-  # Group 1 (reference)
-  index_1 <- which(sample_metadata$cell_type == cell_type & 
-                     sample_metadata$seq_folder == "mutant")
-  cell_ids_1 <- sample_metadata[index_1, "cell.id"]
-  
-  # Group 2
-  index_2 <- which(sample_metadata$cell_type == cell_type & 
-                     sample_metadata$seq_folder == "wildtype")
-  cell_ids_2 <- sample_metadata[index_2, "cell.id"]
-  
-  # Explore % of cells expressing genes
-  marvel_object <- PlotPctExprCells.Genes.10x(
-    MarvelObject = marvel_object,
-    cell.group.g1 = cell_ids_1,
-    cell.group.g2 = cell_ids_2,
-    min.pct.cells = min_pct_cells
-  )
-  
-  # Explore % of cells expressing junctions
-  marvel_object <- PlotPctExprCells.SJ.10x(
-    MarvelObject = marvel_object,
-    cell.group.g1 = cell_ids_1,
-    cell.group.g2 = cell_ids_2,
-    min.pct.cells.genes = min_pct_cells_gene,
-    min.pct.cells.sj = min_pct_cells_sj,
-    downsample = TRUE,
-    downsample.pct.sj = 10
-  )
-  
-  # Differential Splicing Analysis
-  marvel_object <- CompareValues.SJ.10x(
-    MarvelObject = marvel_object,
-    cell.group.g1 = cell_ids_1,
-    cell.group.g2 = cell_ids_2,
-    min.pct.cells.genes = min_pct_cells_gene,
-    min.pct.cells.sj = min_pct_cells_sj,
-    min.gene.norm = min_gene_norm,
-    seed = 1,
-    n.iterations = 100,
-    downsample = TRUE,
-    show.progress = TRUE
-  )
-  
-  # Differential Gene Analysis
-  marvel_object <- CompareValues.Genes.10x(
-    MarvelObject = marvel_object,
-    show.progress = TRUE
-  )
-  
-  # Make volcano plot
-  marvel_object <- PlotDEValues.SJ.10x(
-    MarvelObject = marvel_object,
-    pval = 0.05,
-    delta = 1,
-    min.gene.norm = min_gene_norm,
-    anno = FALSE
-  )
-  # Assign kinds of iso-switching
-  marvel_object <- IsoSwitch.10x(
-    MarvelObject = marvel_object,
-    pval.sj = 0.05,
-    delta.sj = 1,
-    min.gene.norm = min_gene_norm,
-    pval.adj.gene = 0.05,
-    log2fc.gene = 0.5
-  )
-  
-  # Pull significant genes
-  significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]
-  
-  # Return list
-  return(list(marvel_object, significant_genes))
-}
-
-## run_marvel_cell_type - Emma Jones
-# This function is a wrapper function for comparing mutant and wildtype splicing
 # within a given cell type.
 # The thresholds may need adjusting, but have defaults.
 run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5, 
                        min_pct_cells_gene = 5, min_pct_cells_sj = 5,
-                       min_gene_norm = 1) {
+                       min_gene_norm = 1, results_path) {
   
   # Assign MARVEL object to start from
   marvel_object <- setbp1_marvel
   
   # Group 1 (reference)
   index_1 <- which(sample_metadata$cell_type == cell_type & 
-                     sample_metadata$seq_folder == "mutant")
+                     sample_metadata$seq_folder == "wildtype")
   cell_ids_1 <- sample_metadata[index_1, "cell.id"]
   
   # Group 2
   index_2 <- which(sample_metadata$cell_type == cell_type & 
-                     sample_metadata$seq_folder == "wildtype")
+                     sample_metadata$seq_folder == "mutant")
   cell_ids_2 <- sample_metadata[index_2, "cell.id"]
   
   # Explore % of cells expressing genes
@@ -228,9 +144,8 @@ run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5,
   significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
   
   # Save MARVEL object
-  write_rds(marvel_object,
-          file = here::here("data", "marvel",
-                            paste0(cell_type, "_marvel_object.rds"))
+  write_rds(marvel_object, file = paste0(results_path, cell_type,
+                                         "_marvel_object.rds")
   )
   
   # Return list
@@ -244,19 +159,20 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
                              color_grad_gene = c("grey", "cyan", "green",
                                                  "yellow", "red"),
                              color_grad_psi = c("grey", "cyan", "green",
-                                                 "yellow", "red")) {
+                                                 "yellow", "red"),
+                             results_path) {
   # Group 1 (reference)
-  index_1 <- which(sample_metadata$seq_folder == "mutant")
+  index_1 <- which(sample_metadata$seq_folder == "wildtype")
   cell_ids_1 <- sample_metadata[index_1, "cell.id"]
   
   # Group 2
-  index_2 <- which(sample_metadata$seq_folder == "wildtype")
+  index_2 <- which(sample_metadata$seq_folder == "mutant")
   cell_ids_2 <- sample_metadata[index_2, "cell.id"]
   
   # Save into list
   cell_group_list <- list(
-    "Mutant" = cell_ids_1,
-    "Wildtype" = cell_ids_2
+    "Wildtype" = cell_ids_1,
+    "Mutant" = cell_ids_2
   )
   
   # Print generation message
@@ -298,8 +214,7 @@ plot_marvel_umap <- function(marvel_object, prefix, gene, sj_loc,
   message("Saving Plot...")
   
   # Save UMAP
-  png(here::here("results", "marvel_outputs",
-                 paste0(prefix, "_", gene, ".png")),
+  png(paste0(results_path, "/", prefix, "_", gene, ".png"),
       width = 1200, height = 600)
   grid.arrange(plot_group, plot_gene, plot_sj, nrow = 1)
   dev.off()
@@ -398,61 +313,30 @@ function (MarvelObject, cell.group.list, legendtitle = "Cell group",
   MarvelObject$adhocPlot$PCA$CellGroup <- plot
   return(MarvelObject)
 }
-## make_psi_matrix - Emma Jones
-# The purpose of this function is to calculate psi for a list of splice
-# junctions across all cells.
-make_psi_matrix <- function(splice_junctions) {
-  # subset sj_counts matrix
-  sj_counts_subset <- sj_counts[splice_junctions, ]
-  
-  # subset expanded_gene_counts matrix
-  expanded_gene_counts_subset <- expanded_gene_counts[splice_junctions, ]
-  
-  # make empty psi_matrix
-  psi_matrix <- emptySparse(nrow = length(splice_junctions),
-                            ncol = ncol(sj_counts))
-  
-  # add rownames
-  rownames(psi_matrix) <- splice_junctions
-  
-  # fill in psi matrix
-  for (i in splice_junctions) {
-    psi_matrix[i, ] <- (sj_counts_subset[i, ] /
-                          expanded_gene_counts_subset[i, ]) * 100
-    print(i)
-  }
-  
-  # return psi matrix
-  return(psi_matrix)
-}
 
-## subset_psi_matrix - Emma Jones
+## subset_sparse_matrix - Emma Jones
 # The purpose of this function is to subset a sparse matrix by cell type.
 # It also drop rows that are all zeroes.
 subset_sparse_matrix <- function(matrix, cell_type){
   # subset matrix based on cell type
   subset_matrix <- matrix[, colnames(matrix) %in% cell_group_list[[cell_type]]]
-  # drop rows with all zeroes
-  subset_matrix <- subset_matrix[rowSums(subset_matrix) > 0, ]
   # return matrix subset
   return(subset_matrix)
 }
 
 ## subset_cell_type - Emma Jones
-# This function uses subset_psi_matrix 3 times for gene, splice junction,
+# This function uses subset_sparse_matrix 3 times for gene, splice junction,
 # and psi matrices for a given cell type. The default args are already in the
 # environment and are the full sized versions of the counts matrices.
 subset_cell_type_matrices <- function(gene_matrix = gene_counts,
-                                      sj_matrix = sj_counts,
-                                      psi_matrix = full_psi_matrix, cell_type) {
+                                      sj_matrix = sj_counts, cell_type) {
   # run function
   gene_subset <- subset_sparse_matrix(gene_matrix, cell_type)
   sj_subset <- subset_sparse_matrix(sj_matrix, cell_type)
-  psi_subset <- subset_sparse_matrix(psi_matrix, cell_type)
   # make into single list
-  list <- list(gene_subset, sj_subset, psi_subset)
+  list <- list(gene_subset, sj_subset)
   # name list
-  names(list) <- c("Gene Counts", "Splice Junction Counts", "PSI")
+  names(list) <- c("Gene Counts", "Splice Junction Counts")
   # return object
   return(list)
 }
@@ -470,11 +354,11 @@ subset_mutant_matrices <- function(cell_type_subset_list){
     matrix <- cell_type_subset_list[[i]]
     # subset matrix based on cell type
     subset_matrix <- matrix[, colnames(matrix) %in% mutant_list[["Mutant"]]]
-    # drop rows with all zeroes
-    subset_matrices_list_1[[i]] <- subset_matrix[rowSums(subset_matrix) > 0, ]
+    # assign element in list
+    subset_matrices_list_1[[i]] <- subset_matrix
   }
   # rename list elements
-  names(subset_matrices_list_1) <- c("Gene Counts", "Splice Junction Counts", "PSI")
+  names(subset_matrices_list_1) <- c("Gene Counts", "Splice Junction Counts")
   ## now for wildtype
   # initialize empty list
   subset_matrices_list_2 <- list()
@@ -484,15 +368,102 @@ subset_mutant_matrices <- function(cell_type_subset_list){
     matrix <- cell_type_subset_list[[i]]
     # subset matrix based on cell type
     subset_matrix <- matrix[, colnames(matrix) %in% mutant_list[["Wildtype"]]]
-    # drop rows with all zeroes
-    subset_matrices_list_2[[i]] <- subset_matrix[rowSums(subset_matrix) > 0, ]
+    # assign element in list
+    subset_matrices_list_2[[i]] <- subset_matrix
   }
   # rename list elements
-  names(subset_matrices_list_2) <- c("Gene Counts", "Splice Junction Counts", "PSI")
+  names(subset_matrices_list_2) <- c("Gene Counts", "Splice Junction Counts")
   ## combine lists
   subset_matrices_lists <- list(subset_matrices_list_1, subset_matrices_list_2)
   # rename list elements
   names(subset_matrices_lists) <- c("Mutant", "Wildtype")
   # return matrix subset
   return(subset_matrices_lists)
+}
+
+## get_sjs_per_gene - Emma Jones
+# The purpose of this function is to get the number of splice junctions
+# detected for each gene for a certain cell type
+get_sjs_per_gene <- function(cell_type_matrices) {
+  # pull names of splice junctions
+  detected_sjs <- rownames(cell_type_matrices[["Splice Junction Counts"]])
+  # get gene names
+  detected_genes <- sj_metadata$gene_short_name.start[sj_metadata$coord.intron %in% detected_sjs]
+  # make a table of gene name values
+  sjs_per_gene <- table(detected_genes)
+  # return
+  return(sjs_per_gene)
+}
+
+
+## remove_0_variance - quick method for remove zero variance 
+# pulled from https://www.ttested.com/removing-zero-variance-columns/
+remove_0_variance <- function(df){
+  df[, !sapply(df, function(x) min(x) == max(x))]
+}
+
+## get_sj_usage_cell_type - Emma Jones
+# The purpose of this function is to calculate splice junction usage for each
+# cell type.
+get_sj_usage_cell_type <- function(counts_matrix_list){
+  # get sums of all gene counts for a given cell type
+  gene_sums <- rowSums(counts_matrix_list[["Gene Counts"]])
+  # get sums of all splice junction counts for a given cell type
+  sj_sums <- rowSums(counts_matrix_list[["Splice Junction Counts"]])
+  # inititalize list
+  sj_usage_cell_type <- c()
+  # run for loop for calculating splice junction usage
+  for(sj in names(sj_sums)){
+    sj_count_sum <- sj_sums[sj]
+    gene_name <- sj_metadata$gene_short_name.start[sj == sj_metadata$coord.intron]
+    gene_count_sum <- gene_sums[gene_name]
+    sj_usage <- (sj_count_sum / gene_count_sum) * 100
+    sj_usage_cell_type[sj] <- sj_usage
+  }
+  # return value
+  return(sj_usage_cell_type)
+}
+
+## get_sj_usage_condition - Emma Jones
+# The purpose of this function is to calculate splice junction usage for each
+# condition, mutant or wildtype, for every cell type.
+get_sj_usage_condition <- function(counts_matrix_list){
+  ## mutants ##
+  counts_matrix_list_1 <- counts_matrix_list[["Mutant"]]
+  # get sums of all gene counts for a given cell type
+  gene_sums_1 <- rowSums(counts_matrix_list_1[["Gene Counts"]])
+  # get sums of all splice junction counts for a given cell type
+  sj_sums_1 <- rowSums(counts_matrix_list_1[["Splice Junction Counts"]])
+  # inititalize list
+  sj_usage_condition_1 <- c()
+  # run for loop for calculating splice junction usage
+  for(sj in names(sj_sums_1)){
+    sj_count_sum <- sj_sums_1[sj]
+    gene_name <- sj_metadata$gene_short_name.start[sj == sj_metadata$coord.intron]
+    gene_count_sum <- gene_sums_1[gene_name]
+    sj_usage <- (sj_count_sum / gene_count_sum) * 100
+    sj_usage_condition_1[sj] <- sj_usage
+  }
+  ## wildtypes ##
+  counts_matrix_list_2 <- counts_matrix_list[["Wildtype"]]
+  # get sums of all gene counts for a given cell type
+  gene_sums_2 <- rowSums(counts_matrix_list_2[["Gene Counts"]])
+  # get sums of all splice junction counts for a given cell type
+  sj_sums_2 <- rowSums(counts_matrix_list_2[["Splice Junction Counts"]])
+  # inititalize list
+  sj_usage_condition_2 <- c()
+  # run for loop for calculating splice junction usage
+  for(sj in names(sj_sums_2)){
+    sj_count_sum <- sj_sums_2[sj]
+    gene_name <- sj_metadata$gene_short_name.start[sj == sj_metadata$coord.intron]
+    gene_count_sum <- gene_sums_2[gene_name]
+    sj_usage <- (sj_count_sum / gene_count_sum) * 100
+    sj_usage_condition_2[sj] <- sj_usage
+  }
+  # final result
+  sj_usage_result <- list(sj_usage_condition_1, sj_usage_condition_2)
+  # name lists
+  names(sj_usage_result) <- c("Mutant", "Wildtype")
+  # return value
+  return(sj_usage_result)
 }
