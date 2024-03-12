@@ -1,14 +1,15 @@
 ---
-title: "Analyze DE Gene and SJ by Cell type"
+title: "Calculate Splice Junction Usage"
+author: "Emma Jones"
+date: "2024-03-04"
 output: html_document
-date: "2024-01-18"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to analyze differential analysis results MARVEL. It is dependent on running all seurat scripts, and marvel scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.6, since you need ComplexHeatmap so make the UpSet plots.
+The purpose of this script is to calculate splice junction usage for each cell type for each splice junction. The data is too sparse to calculate splice junction usage for single cells.
 
 ## Load Packages
 
@@ -52,12 +53,9 @@ set.seed(123)
 
 # source functions
 source(here::here("src", "marvel", "functions.R"))
-source(here::here("src", "marvel", "PlotSJPosition_modification.R"))
 ```
 
-## Load in Data 
-
-```{r load marvel object and significant gene tables}
+```{r load in data}
 # Load MARVEL object
 setbp1_marvel <- read_rds(here::here(
   "data", "marvel",
@@ -67,74 +65,17 @@ setbp1_marvel <- read_rds(here::here(
 # Retrieve sample metadata
 sample_metadata <- setbp1_marvel$sample.metadata
 
-# Load significant gene tables
-load(here::here("data", "marvel", "significant_tables.RData"))
+# Retrieve sj metadata
+sj_metadata <- setbp1_marvel$sj.metadata
+
+# Save counts objects for easy accessibility
+sj_counts <- setbp1_marvel[["sj.count.matrix"]]
+gene_counts <- setbp1_marvel[["gene.count.matrix"]]
+
+# Convert data type
+sj_counts <- as(sj_counts, "CsparseMatrix")
+gene_counts <- as(gene_counts, "CsparseMatrix")
 ```
-
-## Make UpSet Plot
-
-### Prep data for UpSet Plot with ComplexHeatmap
-
-```{r make upset plot}
-# make list of sig tables
-tables_list <- mget(ls(pattern = "_sig_table"))
-
-# remove all cell types from list
-tables_list <- tables_list[2:8]
-
-# pull out only genes
-gene_lists <- map(tables_list, ~ select(.x, gene_short_name))
-
-# make into character list
-gene_lists <- map(gene_lists, ~ flatten(.))
-
-# create matrix
-gene_lists_mat <- ComplexHeatmap::list_to_matrix(gene_lists)
-
-# rename columns
-colnames(gene_lists_mat) <- c(
-  "Astrocytes", "Excitatory Neurons",
-  "Inhibitory Neurons", "Microglia",
-  "Oligodendrocytes", "OPCs", "Vascular Cells"
-)
-
-# generate combination matrix
-gene_lists_comb_mat <- make_comb_mat(gene_lists_mat)
-```
-
-### Draw and save UpSet Plot
-
-```{r draw and save upsetplot}
-# draw UpSet plot (ComplexHeatmap)
-png(here::here("results", "upset_plots", "sig_gene_overlap.png"),
-  width = 8, height = 5, units = "in", res = 300
-)
-gene_lists_upset_plot <- UpSet(gene_lists_comb_mat,
-  comb_col = viridis(8)[2:7][comb_degree(gene_lists_comb_mat)],
-  top_annotation = upset_top_annotation(gene_lists_comb_mat,
-    add_numbers = TRUE, annotation_name_gp = gpar(fontface = "bold"),
-    axis_param = list(gp = gpar(fontface = "bold")),
-    numbers_gp = gpar(fontface = "bold")
-  ),
-  right_annotation = upset_right_annotation(gene_lists_comb_mat,
-    add_numbers = TRUE, annotation_name_gp = gpar(fontface = "bold"),
-    axis_param = list(gp = gpar(fontface = "bold")),
-    numbers_gp = gpar(fontface = "bold")
-  ),
-  row_names_gp = gpar(fontface = "bold")
-)
-draw(gene_lists_upset_plot)
-dev.off()
-
-# view upsetplot
-gene_lists_upset_plot
-```
-
-There is one gene that has significant PSI in all non-vascular cell types. This is the Son gene.
-
-## Son gene analysis
-
-#### Rename cell groups
 
 ```{r get cell groups}
 # Pull cell types and matching ids
@@ -148,84 +89,107 @@ cell_group_list <- set_names(cell_group_list, c(
   "Inhibitory Neurons", "Microglia", "OPCs",
   "Oligodendrocytes", "Vascular Cells"
 ))
+
+# Pull mutant vs wildtype and matching ids
+mutant_list <- sample_metadata %>%
+  group_split(seq_folder, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$seq_folder[[1]]))
+
+# Rename
+mutant_list <- set_names(mutant_list, c(
+  "Mutant", "Wildtype"
+))
 ```
 
-### Make MARVEL default plots for showing Son expression
+Now that we have lists of cell ids, we can split out the splice junction and gene count matrices for each cell type
 
-#### MARVEL gene expression plot
+```{r split matrices by cell type}
+astrocytes_matrices <- subset_cell_type_matrices(cell_type = "Astrocytes")
 
-```{r make marvel plot first}
-setbp1_marvel <- adhocGene.TabulateExpression.Gene.10x(
-  MarvelObject = setbp1_marvel,
-  cell.group.list = cell_group_list,
-  gene_short_name = "Son",
-  min.pct.cells = 5,
-  downsample = FALSE
+excitatory_matrices <- subset_cell_type_matrices(
+  cell_type = "Excitatory Neurons"
 )
 
-setbp1_marvel$adhocGene$Expression$Gene$Plot
-
-# save
-png(here::here("results", "marvel_outputs", "Son_Gene_Expr.png"),
-  width = 8, height = 6, units = "in", res = 300
+inhibitory_matrices <- subset_cell_type_matrices(
+  cell_type = "Inhibitory Neurons"
 )
-setbp1_marvel$adhocGene$Expression$Gene$Plot
-dev.off()
+
+microglia_matrices <- subset_cell_type_matrices(cell_type = "Microglia")
+
+opcs_matrices <- subset_cell_type_matrices(cell_type = "OPCs")
+
+oligodendrocyte_matrices <- subset_cell_type_matrices(
+  cell_type = "Oligodendrocytes"
+)
+
+vascular_matrices <- subset_cell_type_matrices(cell_type = "Vascular Cells")
 ```
 
-#### MARVEL SJ Expression Plot
+Further, we can split these each into wildtypes and mutants
 
-Each of the columns here represents the splice junction usage for the two separate splice junctions found in the Son gene.
+```{r split into mutant and wildtype}
+astrocytes_mutants <- subset_mutant_matrices(astrocytes_matrices)
 
-```{r look at SJ usage}
-setbp1_marvel <- adhocGene.TabulateExpression.PSI.10x(
-  MarvelObject = setbp1_marvel,
-  min.pct.cells = 5
-)
+excitatory_mutants <- subset_mutant_matrices(excitatory_matrices)
 
-setbp1_marvel$adhocGene$Expression$PSI$Plot +
-  labs(color = "SJ Usage") +
-  xlab("Splice Junctions")
+inhibitory_mutants <- subset_mutant_matrices(inhibitory_matrices)
 
-# save
-png(here::here("results", "marvel_outputs", "Son_SJ_Usage.png"),
-  width = 8, height = 6, units = "in", res = 300
-)
-setbp1_marvel$adhocGene$Expression$PSI$Plot +
-  labs(color = "SJ Usage") +
-  xlab("Splice Junctions")
-dev.off()
+microglia_mutants <- subset_mutant_matrices(microglia_matrices)
+
+oligodendrocyte_mutants <- subset_mutant_matrices(oligodendrocyte_matrices)
+
+opcs_mutants <- subset_mutant_matrices(opcs_matrices)
+
+vascular_mutants <- subset_mutant_matrices(vascular_matrices)
 ```
 
-#### Plot gene and splice junction positions on genome track
 
-This MARVEL function had errors, so I manually fixed its problems. It only shows one splice junction at a time. It also exports at a very low resolution, so I think it would be a better use of time to plot using some other package if we need it for publication.
+!!! This step takes 1 hour to run !!!
 
-```{r plot son gene plot}
-setbp1_marvel <- adhocGene_PlotSJPosition_EJ(
-  MarvelObject = setbp1_marvel,
-  coord.intron = "chr16:91444873:91448517",
-  rescale_introns = FALSE,
-  show.protein.coding.only = TRUE,
-  anno.label.size = 1.5
+```{r get totals for each splice junction for each cell type}
+matrix_list <- ls(pattern = "_matrices")
+
+matrix_list <- mget(matrix_list[c(1:6, 9)])
+
+sj_usage_cell_type_list <- lapply(matrix_list, get_sj_usage_cell_type)
+
+sj_usage_cell_type_df <- do.call(rbind, sj_usage_cell_type_list)
+
+sj_usage_cell_type_df <- t(sj_usage_cell_type_df)
+
+write_rds(
+  sj_usage_cell_type_df,
+  here::here("data", "marvel", "sj_usage_cell_type.rds")
 )
+```
 
-setbp1_marvel$adhocGene$SJPosition$Plot
+Now do the same for cell types split by mutants vs wildtypes.
 
-# save
-png(here::here("results", "marvel_outputs", "Son_SJ_1_location.png"),
-  width = 12, height = 2, units = "in", res = 300
+!!! This step takes 2 hours to run !!!
+
+```{r get totals for each splice junction for each cell type and condition}
+mutant_list <- ls(pattern = "_mutants")
+
+mutant_list <- mget(mutant_list)
+
+sj_usage_condition_list <- lapply(mutant_list, get_sj_usage_condition)
+
+sj_usage_condition_df <- do.call(rbind, sj_usage_condition_list)
+
+sj_usage_condition_df <- t(sj_usage_condition_df)
+
+write_rds(
+  sj_usage_condition_df,
+  here::here("data", "marvel", "sj_usage_condition.rds")
 )
-setbp1_marvel$adhocGene$SJPosition$Plot
-dev.off()
 ```
 
 #### Style
 
 ```{r tidy script}
-style_file("03_analyze_de_genes.Rmd")
+style_file("04_calc_sj_usage.Rmd")
 
-lint("03_analyze_de_genes.Rmd",
+lint("04_calc_sj_usage.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,
@@ -233,7 +197,6 @@ lint("03_analyze_de_genes.Rmd",
   )
 )
 ```
-
 
 #### Software versions
 
@@ -318,4 +281,4 @@ loaded via a namespace (and not attached):
 [109] DOSE_3.26.2             bitops_1.0-7            tidytree_0.4.5         
 [112] cyclocomp_1.1.1         scales_1.2.1            crayon_1.5.2           
 [115] GetoptLong_1.0.5        rlang_1.1.2             cowplot_1.1.1          
-[118] fastmatch_1.1-4         KEGGREST_1.40.1  
+[118] fastmatch_1.1-4         KEGGREST_1.40.1 
