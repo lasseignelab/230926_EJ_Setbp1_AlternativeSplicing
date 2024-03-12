@@ -144,7 +144,7 @@ run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5,
   significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
   
   # Save MARVEL object
-  write_rds(marvel_object, file = paste0(results_path, cell_type,
+  write_rds(marvel_object, file = paste0(results_path, "/", cell_type,
                                          "_marvel_object.rds")
   )
   
