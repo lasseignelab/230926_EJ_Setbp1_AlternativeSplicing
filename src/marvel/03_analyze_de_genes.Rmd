@@ -164,9 +164,18 @@ setbp1_marvel <- adhocGene.TabulateExpression.Gene.10x(
 )
 
 setbp1_marvel$adhocGene$Expression$Gene$Plot
+
+# save
+png(here::here("results", "marvel_outputs", "Son_Gene_Expr.png"),
+  width = 8, height = 6, units = "in", res = 300
+)
+setbp1_marvel$adhocGene$Expression$Gene$Plot
+dev.off()
 ```
 
 #### MARVEL SJ Expression Plot
+
+Each of the columns here represents the splice junction usage for the two separate splice junctions found in the Son gene.
 
 ```{r look at SJ usage}
 setbp1_marvel <- adhocGene.TabulateExpression.PSI.10x(
@@ -174,7 +183,18 @@ setbp1_marvel <- adhocGene.TabulateExpression.PSI.10x(
   min.pct.cells = 5
 )
 
-setbp1_marvel$adhocGene$Expression$PSI$Plot
+setbp1_marvel$adhocGene$Expression$PSI$Plot +
+  labs(color = "SJ Usage") +
+  xlab("Splice Junctions")
+
+# save
+png(here::here("results", "marvel_outputs", "Son_SJ_Usage.png"),
+  width = 8, height = 6, units = "in", res = 300
+)
+setbp1_marvel$adhocGene$Expression$PSI$Plot +
+  labs(color = "SJ Usage") +
+  xlab("Splice Junctions")
+dev.off()
 ```
 
 #### Plot gene and splice junction positions on genome track
@@ -199,26 +219,6 @@ png(here::here("results", "marvel_outputs", "Son_SJ_1_location.png"),
 setbp1_marvel$adhocGene$SJPosition$Plot
 dev.off()
 ```
-
-## Calculate PSI Values
-
-The current MARVEL setup doesn't have PSI values for every cell for every splice junction. we can remedy this ourselves.
-
-Remember, PSI is the count of splice junctions divided by the counts for that gene multiplied by 100.
-
-It is faster to do this only for non-zero values, but I could not find a solution that worked easily.
-
-
-I also want to run this function on all splice junctions. Therefore we will create the required list of chromosome names.
-
-```{r make list of chr names}
-chr_prefixes <- paste0("chr", 1:19, ":")
-chr_prefixes <- c(chr_prefixes, "chrX:", "chrY:")
-
-writeLines(chr_prefixes, here::here("bin", "slurm", "chromosome_prefixes.txt"))
-```
-
-Now that the chromosome prefixes list has been saved, you may calculate psi for all chromosomes using script 04 (sbatch 04_submit_calc_psi.sh in terminal). For continuing Rmd analyses, move on to script 05 when that has finished running.
 
 #### Style
 
