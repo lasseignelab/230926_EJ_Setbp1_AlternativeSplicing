@@ -162,7 +162,7 @@ Now do the same for cell types split by mutants vs wildtypes.
 
 ```{r get totals for each splice junction for each cell type and condition}
 # apply function
-sj_usage_condition_list <- lapply(mutant_list, get_sj_usage_condition)
+sj_usage_condition_list <- lapply(split_mutants_list, get_sj_usage_condition)
 
 sj_usage_condition_df <- do.call(rbind, sj_usage_condition_list)
 
