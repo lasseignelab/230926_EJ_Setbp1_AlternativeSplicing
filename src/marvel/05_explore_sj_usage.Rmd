@@ -1,0 +1,201 @@
+---
+title: "Explore SJ usage by cell type"
+author: "Emma Jones"
+date: "2024-03-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The purpose of this script is to visualize the splice junction usage across cell types.
+
+```{r load packages}
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
+  library(tidyverse)
+  library(patchwork)
+  library(ComplexHeatmap)
+  library(viridis)
+
+  # Load MARVEL package
+  library(MARVEL)
+
+  # Load adjunct MARVEL packages
+  library(ggnewscale)
+  library(ggrepel)
+  library(reshape2)
+  library(plyr)
+  library(stringr)
+  library(textclean)
+  library(AnnotationDbi)
+  library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(org.Mm.eg.db)
+  library(gtools)
+  library(GenomicRanges)
+  library(IRanges)
+  library(S4Vectors)
+  library(wiggleplotr)
+  library(Matrix)
+  library(data.table)
+  library(gridExtra)
+  library(ggridges)
+})
+
+# set seed
+set.seed(123)
+
+# source functions
+source(here::here("src", "marvel", "functions.R"))
+```
+
+
+```{r set colors}
+cell_type_colors <- c(
+  `Astrocytes` = "#6CA9E2",
+  `Excitatory Neurons` = "#98D070",
+  `Inhibitory Neurons` = "#DEE971",
+  `Microglia` = "#B898E4",
+  `Oligodendrocytes` = "#4AD8E6",
+  `OPCs` = "#0A9A8D",
+  `Vascular Cells` = "#E28C67"
+)
+
+condition_colors <- c(
+  `mutant` = "#D8D8D8",
+  `wildtype` = "#9E9E9E"
+)
+
+other_colors <- c("#0346a3", "#076466", "#2a6607")
+```
+
+First, we need to load in the splice junction usage data
+
+```{r load in data}
+sj_usage_condition <- readRDS(here::here(
+  "data", "marvel",
+  "sj_usage_condition.rds"
+))
+
+sj_usage_cell_type <- readRDS(here::here(
+  "data", "marvel",
+  "sj_usage_cell_type.rds"
+))
+```
+
+
+```{r visualize data}
+colnames(sj_usage_cell_type) <- names(cell_type_colors)
+
+sj_usage_cell_type <- as.data.frame(sj_usage_cell_type)
+sj_usage_cell_type$sj_position <- rownames(sj_usage_cell_type)
+rownames(sj_usage_cell_type) <- NULL
+
+sj_usage_cell_type <- pivot_longer(sj_usage_cell_type,
+  cols = colnames(sj_usage_cell_type)[1:7], names_to = "cell_type",
+  values_to = "sj_usage"
+)
+
+sj_usage_cell_type$sj_usage[is.infinite(sj_usage_cell_type$sj_usage)] <- NaN
+sj_usage_cell_type$sj_usage[sj_usage_cell_type$sj_usage > 100] <- 100
+
+# make df with dropped zeroes
+sj_usage_cell_type_drop0 <- sj_usage_cell_type
+
+sj_usage_cell_type_drop0$sj_usage[sj_usage_cell_type_drop0$sj_usage == 0] <- NaN
+
+sj_usage_cell_type_ridge <-
+  ggplot(sj_usage_cell_type_drop0, aes(
+    x = log(sj_usage), y = cell_type,
+    fill = cell_type, color = cell_type,
+    alpha = 0.5
+  )) +
+  geom_density_ridges(show.legend = FALSE) +
+  theme_minimal(base_size = 15) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    axis.text.x = element_text()
+  ) +
+  scale_fill_manual(values = cell_type_colors) +
+  scale_color_manual(values = cell_type_colors) +
+  xlab("Log (Splice Junction Usage)") +
+  ylab("Cell Type")
+
+sj_usage_cell_type_ridge
+
+# save
+png(here::here("results", "marvel_outputs", "nonzero_SJ_usage_cell_types.png"),
+  width = 8, height = 6, units = "in", res = 300
+)
+sj_usage_cell_type_ridge
+dev.off()
+```
+
+
+## Count splice junctions for each gene
+
+```{r count splice junctions}
+# Get all expressed gene names
+all_expressed_genes <- rownames(gene_counts)[rowSums(gene_counts) > 0]
+```
+
+```{r count sjs per cell type}
+# Make NA matrix, with 7 columns for cell types
+sj_per_gene <- matrix(NA, nrow = length(all_expressed_genes), ncol = 7)
+# Add rownames
+rownames(sj_per_gene) <- sort(all_expressed_genes)
+
+# Make a list of all matrices
+matrices_list <- ls(pattern = "_matrices")
+
+# Initialize column
+column <- 0
+
+# Add in each table - these numbers are to exclude the functions
+for (i in matrices_list[c(1:6, 9)]) {
+  column <- column + 1
+  table <- get_sjs_per_gene(get(i))
+  indices <- match(rownames(sj_per_gene), names(table))
+  sj_per_gene[, column] <- ifelse(!is.na(indices), table[indices], 0)
+}
+
+# Add colnames
+colnames(sj_per_gene) <-
+  substr(matrices_list[c(1:6, 9)], 1, nchar(matrices_list[c(1:6, 9)]) - 9)
+```
+
+Now save!
+
+```{r save sjs per gene}
+write.csv(sj_per_gene, here::here("results", "tables", "sj_per_gene.csv"))
+```
+
+
+#### Style
+
+```{r tidy script}
+style_file("05_explore_sj_usage.Rmd")
+
+lint("05_explore_sj_usage.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
+```

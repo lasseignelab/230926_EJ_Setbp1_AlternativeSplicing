@@ -104,54 +104,26 @@ mutant_list <- set_names(mutant_list, c(
 Now that we have lists of cell ids, we can split out the splice junction and gene count matrices for each cell type
 
 ```{r split matrices by cell type}
-astrocytes_matrices <- subset_cell_type_matrices(cell_type = "Astrocytes")
 
-excitatory_matrices <- subset_cell_type_matrices(
-  cell_type = "Excitatory Neurons"
-)
+split_matrices_list <- lapply(names(cell_group_list), function(x) subset_cell_type_matrices(cell_type = x))
 
-inhibitory_matrices <- subset_cell_type_matrices(
-  cell_type = "Inhibitory Neurons"
-)
-
-microglia_matrices <- subset_cell_type_matrices(cell_type = "Microglia")
-
-opcs_matrices <- subset_cell_type_matrices(cell_type = "OPCs")
-
-oligodendrocyte_matrices <- subset_cell_type_matrices(
-  cell_type = "Oligodendrocytes"
-)
-
-vascular_matrices <- subset_cell_type_matrices(cell_type = "Vascular Cells")
+names(split_matrices_list) <- names(cell_group_list)
 ```
 
 Further, we can split these each into wildtypes and mutants
 
 ```{r split into mutant and wildtype}
-astrocytes_mutants <- subset_mutant_matrices(astrocytes_matrices)
 
-excitatory_mutants <- subset_mutant_matrices(excitatory_matrices)
+split_mutants_list <- lapply(split_matrices_list, 
+                             function(x) subset_mutant_matrices(cell_type = x))
 
-inhibitory_mutants <- subset_mutant_matrices(inhibitory_matrices)
-
-microglia_mutants <- subset_mutant_matrices(microglia_matrices)
-
-oligodendrocyte_mutants <- subset_mutant_matrices(oligodendrocyte_matrices)
-
-opcs_mutants <- subset_mutant_matrices(opcs_matrices)
-
-vascular_mutants <- subset_mutant_matrices(vascular_matrices)
 ```
-
 
 !!! This step takes 1 hour to run !!!
 
 ```{r get totals for each splice junction for each cell type}
-matrix_list <- ls(pattern = "_matrices")
 
-matrix_list <- mget(matrix_list[c(1:6, 9)])
-
-sj_usage_cell_type_list <- lapply(matrix_list, get_sj_usage_cell_type)
+sj_usage_cell_type_list <- lapply(split_matrices_list, get_sj_usage_cell_type)
 
 sj_usage_cell_type_df <- do.call(rbind, sj_usage_cell_type_list)
 

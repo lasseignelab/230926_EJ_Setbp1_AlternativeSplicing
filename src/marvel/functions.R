@@ -385,8 +385,12 @@ subset_mutant_matrices <- function(cell_type_subset_list){
 # The purpose of this function is to get the number of splice junctions
 # detected for each gene for a certain cell type
 get_sjs_per_gene <- function(cell_type_matrices) {
+  # assign matrix
+  sj_matrix <- cell_type_matrices[["Splice Junction Counts"]]
+  # drop rows with zero
+  sj_matrix_drop0 <- sj_matrix[rowSums(sj_matrix) > 0, ]
   # pull names of splice junctions
-  detected_sjs <- rownames(cell_type_matrices[["Splice Junction Counts"]])
+  detected_sjs <- rownames(sj_matrix_drop0)
   # get gene names
   detected_genes <- sj_metadata$gene_short_name.start[sj_metadata$coord.intron %in% detected_sjs]
   # make a table of gene name values
