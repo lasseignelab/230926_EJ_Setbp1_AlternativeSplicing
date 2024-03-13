@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to visualize the splice junction usage across cell types.
+The purpose of this script is to visualize the splice junction usage across cell types. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Please use docker image setbp1_alternative_splicing:1.0.6.
 
 ```{r load packages}
 suppressPackageStartupMessages({
@@ -88,8 +88,21 @@ sj_usage_cell_type <- readRDS(here::here(
 ))
 ```
 
+```{r fix sj_usage_condition}
 
-```{r visualize data}
+mutant_sju <- sj_usage_condition[1,]
+mutant_sju <- do.call(cbind, mutant_sju)
+colnames(mutant_sju) <- names(cell_group_list)
+
+wt_sju <- sj_usage_condition[2,]
+wt_sju <- do.call(cbind, wt_sju)
+colnames(wt_sju) <- names(cell_group_list)
+
+```
+
+reformat cell type level data for visualization
+
+```{r reformat cell type level data for visualization}
 colnames(sj_usage_cell_type) <- names(cell_type_colors)
 
 sj_usage_cell_type <- as.data.frame(sj_usage_cell_type)
@@ -103,7 +116,11 @@ sj_usage_cell_type <- pivot_longer(sj_usage_cell_type,
 
 sj_usage_cell_type$sj_usage[is.infinite(sj_usage_cell_type$sj_usage)] <- NaN
 sj_usage_cell_type$sj_usage[sj_usage_cell_type$sj_usage > 100] <- 100
+```
 
+visualize sj usage
+
+```{r visualize sj usage}
 # make df with dropped zeroes
 sj_usage_cell_type_drop0 <- sj_usage_cell_type
 
@@ -138,6 +155,82 @@ sj_usage_cell_type_ridge
 dev.off()
 ```
 
+## Condition reformatting
+
+
+```{r reformat mutant level data for visualization}
+mutant_sju <- as.data.frame(mutant_sju)
+mutant_sju$sj_position <- rownames(mutant_sju)
+rownames(mutant_sju) <- NULL
+mutant_sju$condition <- "Mutant"
+
+mutant_sju <- pivot_longer(mutant_sju,
+  cols = colnames(mutant_sju)[1:7], names_to = "cell_type",
+  values_to = "sj_usage"
+)
+
+mutant_sju$sj_usage[is.infinite(mutant_sju$sj_usage)] <- NaN
+mutant_sju$sj_usage[mutant_sju$sj_usage > 100] <- 100
+```
+
+
+```{r reformat mutant level data for visualization}
+wt_sju <- as.data.frame(wt_sju)
+wt_sju$sj_position <- rownames(wt_sju)
+rownames(wt_sju) <- NULL
+wt_sju$condition <- "Wildtype"
+
+wt_sju <- pivot_longer(wt_sju,
+  cols = colnames(wt_sju)[1:7], names_to = "cell_type",
+  values_to = "sj_usage"
+)
+
+wt_sju$sj_usage[is.infinite(wt_sju$sj_usage)] <- NaN
+wt_sju$sj_usage[wt_sju$sj_usage > 100] <- 100
+```
+
+```{r bind together both conditions}
+
+conditions_sju <- rbind(mutant_sju, wt_sju)
+
+```
+
+
+```{r visualize sj usage}
+# make df with dropped zeroes
+conditions_sju_drop0 <- conditions_sju
+
+conditions_sju_drop0$sj_usage[conditions_sju_drop0$sj_usage == 0] <- NaN
+
+sj_usage_condition_ridge <-
+  ggplot(conditions_sju_drop0, aes(
+    x = log(sj_usage), y = cell_type,
+    fill = cell_type, color = cell_type,
+    alpha = condition
+  )) +
+  geom_density_ridges() +
+  theme_minimal(base_size = 15) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    axis.text.x = element_text()
+  ) +
+  scale_fill_manual(values = cell_type_colors) +
+  scale_alpha_manual(values = c(0.2, 0.6)) +
+  scale_color_manual(values = cell_type_colors) +
+  xlab("Log (Splice Junction Usage)") +
+  ylab("Cell Type")
+
+sj_usage_condition_ridge
+
+# save
+png(here::here("results", "marvel_outputs", "nonzero_SJ_usage_conditions.png"),
+  width = 8, height = 6, units = "in", res = 300
+)
+sj_usage_condition_ridge
+dev.off()
+```
 
 ## Count splice junctions for each gene
 
@@ -152,23 +245,20 @@ sj_per_gene <- matrix(NA, nrow = length(all_expressed_genes), ncol = 7)
 # Add rownames
 rownames(sj_per_gene) <- sort(all_expressed_genes)
 
-# Make a list of all matrices
-matrices_list <- ls(pattern = "_matrices")
-
 # Initialize column
 column <- 0
 
 # Add in each table - these numbers are to exclude the functions
-for (i in matrices_list[c(1:6, 9)]) {
+for (i in split_matrices_list) {
   column <- column + 1
-  table <- get_sjs_per_gene(get(i))
+  table <- get_sjs_per_gene(i)
   indices <- match(rownames(sj_per_gene), names(table))
   sj_per_gene[, column] <- ifelse(!is.na(indices), table[indices], 0)
 }
 
 # Add colnames
 colnames(sj_per_gene) <-
-  substr(matrices_list[c(1:6, 9)], 1, nchar(matrices_list[c(1:6, 9)]) - 9)
+  names(split_matrices_list)
 ```
 
 Now save!
@@ -177,6 +267,124 @@ Now save!
 write.csv(sj_per_gene, here::here("results", "tables", "sj_per_gene.csv"))
 ```
 
+I want to visualize a dot plot and color by cell type, I think I need to pivot longer and make a column called cell type.
+
+```{r pivot dataframe}
+
+sj_per_gene <- as.data.frame(sj_per_gene)
+sj_per_gene$gene_name <- rownames(sj_per_gene)
+rownames(sj_per_gene) <- NULL
+
+sj_per_gene <- pivot_longer(sj_per_gene,
+  cols = colnames(sj_per_gene)[1:7], names_to = "cell_type",
+  values_to = "num_sjs"
+)
+```
+
+To plot with median expression in a cell type, we need to get the median expression of each gene for each cell type.
+
+```{r make df for median expression}
+
+median_gene_expr <- data.frame(matrix(ncol = 7, nrow = nrow(gene_counts)))
+colnames(median_gene_expr) <- names(cell_group_list)
+rownames(median_gene_expr) <- rownames(gene_counts)
+
+```
+
+```{r get normalized data split by cell type}
+split_norm_list <- lapply(names(cell_group_list), function(x) {
+  subset_cell_type_matrices(gene_matrix = setbp1_marvel[["gene.norm.matrix"]],
+                            cell_type = x)
+})
+
+names(split_norm_list) <- names(cell_group_list)
+
+# use the normalized gene expression data
+for(type in names(cell_group_list)) {
+  median_gene_expr[,type] <- rowMedians(as.matrix(split_norm_list[[type]][["Gene Counts"]]))
+}
+
+# move rownames
+median_gene_expr$gene_name <- rownames(median_gene_expr)
+rownames(median_gene_expr) <- NULL
+
+# pivot longer
+median_gene_expr <- pivot_longer(median_gene_expr,
+  cols = colnames(median_gene_expr)[1:7], names_to = "cell_type",
+  values_to = "median_expr"
+)
+
+# combine with number of sjs
+sj_per_gene <- left_join(sj_per_gene, median_gene_expr, by = c('gene_name' = 'gene_name', 'cell_type' = 'cell_type'))
+
+```
+
+## Plot!!!
+
+```{r make scatterplot}
+
+smooth_sj_per_gene <- ggplot(sj_per_gene, aes(x = median_expr, y = num_sjs,
+                                              color = cell_type)) +
+  geom_smooth(method = lm, aes(fill = cell_type)) +
+  scale_fill_manual(values = cell_type_colors) +
+  scale_color_manual(values = cell_type_colors) +
+  theme_minimal(base_size = 15) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    legend.title = element_text(face = "bold"),
+    axis.text.x = element_text()
+  ) +
+  guides(color = guide_legend(title = "Cell Type"),
+         fill = guide_legend(title = "Cell Type")) +
+  xlab("Median Gene Expression") +
+  ylab("Number of Splice Junctions")
+
+smooth_sj_per_gene
+
+# save
+png(here::here("results", "marvel_outputs", "smooth_sj_per_gene.png"),
+  width = 8, height = 6, units = "in", res = 300
+)
+smooth_sj_per_gene
+dev.off()
+
+# use facet wrap and geom_scatter to split out each cell type
+supps_sj_per_gene <- ggplot(sj_per_gene, aes(x = median_expr, y = num_sjs,
+                                             color = cell_type)) +
+  geom_point(alpha = 0.5) +
+  facet_wrap(~cell_type) +
+  geom_smooth(method = lm, aes(fill = cell_type)) +
+  scale_fill_manual(values = cell_type_colors) +
+  scale_color_manual(values = cell_type_colors) +
+  theme_minimal(base_size = 15) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    legend.title = element_text(face = "bold"),
+    axis.text.x = element_text()
+  ) +
+  guides(color = guide_legend(title = "Cell Type"),
+         fill = guide_legend(title = "Cell Type")) +
+  xlab("Median Gene Expression") +
+  ylab("Number of Splice Junctions")
+
+supps_sj_per_gene
+
+# save
+png(here::here("results", "marvel_outputs", "supps_sj_per_gene.png"),
+  width = 12, height = 10, units = "in", res = 300
+)
+supps_sj_per_gene
+dev.off()
+```
+
+
+
+```{r get gene length}
+```
 
 #### Style
 

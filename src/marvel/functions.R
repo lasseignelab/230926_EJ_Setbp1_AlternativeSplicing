@@ -325,8 +325,8 @@ subset_sparse_matrix <- function(matrix, cell_type){
 }
 
 ## subset_cell_type - Emma Jones
-# This function uses subset_sparse_matrix 3 times for gene, splice junction,
-# and psi matrices for a given cell type. The default args are already in the
+# This function uses subset_sparse_matrix 2 times for gene, splice junction,
+# for a given cell type. The default args are already in the
 # environment and are the full sized versions of the counts matrices.
 subset_cell_type_matrices <- function(gene_matrix = gene_counts,
                                       sj_matrix = sj_counts, cell_type) {
