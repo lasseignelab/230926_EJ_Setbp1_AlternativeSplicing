@@ -144,7 +144,7 @@ run_marvel_cell_type <- function(marvel_object, cell_type, min_pct_cells = 5,
   significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
   
   # Save MARVEL object
-  write_rds(marvel_object, file = paste0(results_path, cell_type,
+  write_rds(marvel_object, file = paste0(results_path, "/", cell_type,
                                          "_marvel_object.rds")
   )
   
@@ -325,8 +325,8 @@ subset_sparse_matrix <- function(matrix, cell_type){
 }
 
 ## subset_cell_type - Emma Jones
-# This function uses subset_sparse_matrix 3 times for gene, splice junction,
-# and psi matrices for a given cell type. The default args are already in the
+# This function uses subset_sparse_matrix 2 times for gene, splice junction,
+# for a given cell type. The default args are already in the
 # environment and are the full sized versions of the counts matrices.
 subset_cell_type_matrices <- function(gene_matrix = gene_counts,
                                       sj_matrix = sj_counts, cell_type) {
@@ -385,8 +385,12 @@ subset_mutant_matrices <- function(cell_type_subset_list){
 # The purpose of this function is to get the number of splice junctions
 # detected for each gene for a certain cell type
 get_sjs_per_gene <- function(cell_type_matrices) {
+  # assign matrix
+  sj_matrix <- cell_type_matrices[["Splice Junction Counts"]]
+  # drop rows with zero
+  sj_matrix_drop0 <- sj_matrix[rowSums(sj_matrix) > 0, ]
   # pull names of splice junctions
-  detected_sjs <- rownames(cell_type_matrices[["Splice Junction Counts"]])
+  detected_sjs <- rownames(sj_matrix_drop0)
   # get gene names
   detected_genes <- sj_metadata$gene_short_name.start[sj_metadata$coord.intron %in% detected_sjs]
   # make a table of gene name values
