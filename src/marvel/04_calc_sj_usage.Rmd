@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to calculate splice junction usage for each cell type for each splice junction. The data is too sparse to calculate splice junction usage for single cells.
+The purpose of this script is to calculate splice junction usage for each cell type for each splice junction. The data is too sparse to calculate splice junction usage for single cells. It is dependent on running all seurat scripts, and marvel scripts 01 through 03. Please use docker image setbp1_alternative_splicing:1.0.6.
 
 ## Load Packages
 
@@ -55,6 +55,8 @@ set.seed(123)
 source(here::here("src", "marvel", "functions.R"))
 ```
 
+## Load in data
+
 ```{r load in data}
 # Load MARVEL object
 setbp1_marvel <- read_rds(here::here(
@@ -76,6 +78,8 @@ gene_counts <- setbp1_marvel[["gene.count.matrix"]]
 sj_counts <- as(sj_counts, "CsparseMatrix")
 gene_counts <- as(gene_counts, "CsparseMatrix")
 ```
+
+#### Define cell groups
 
 ```{r get cell groups}
 # Pull cell types and matching ids
@@ -101,83 +105,70 @@ mutant_list <- set_names(mutant_list, c(
 ))
 ```
 
-Now that we have lists of cell ids, we can split out the splice junction and gene count matrices for each cell type
+
+## Split out counts matrices
+
+Now that we have lists of cell ids, we can split out the splice junction and gene count matrices for each cell type and condition
+
+#### Cell type
+
+First, we start by splitting out by cell type
 
 ```{r split matrices by cell type}
-astrocytes_matrices <- subset_cell_type_matrices(cell_type = "Astrocytes")
+split_matrices_list <- lapply(names(cell_group_list), function(x) {
+  subset_cell_type_matrices(cell_type = x)
+})
 
-excitatory_matrices <- subset_cell_type_matrices(
-  cell_type = "Excitatory Neurons"
-)
-
-inhibitory_matrices <- subset_cell_type_matrices(
-  cell_type = "Inhibitory Neurons"
-)
-
-microglia_matrices <- subset_cell_type_matrices(cell_type = "Microglia")
-
-opcs_matrices <- subset_cell_type_matrices(cell_type = "OPCs")
-
-oligodendrocyte_matrices <- subset_cell_type_matrices(
-  cell_type = "Oligodendrocytes"
-)
-
-vascular_matrices <- subset_cell_type_matrices(cell_type = "Vascular Cells")
+names(split_matrices_list) <- names(cell_group_list)
 ```
+
+#### Condition
 
 Further, we can split these each into wildtypes and mutants
 
 ```{r split into mutant and wildtype}
-astrocytes_mutants <- subset_mutant_matrices(astrocytes_matrices)
-
-excitatory_mutants <- subset_mutant_matrices(excitatory_matrices)
-
-inhibitory_mutants <- subset_mutant_matrices(inhibitory_matrices)
-
-microglia_mutants <- subset_mutant_matrices(microglia_matrices)
-
-oligodendrocyte_mutants <- subset_mutant_matrices(oligodendrocyte_matrices)
-
-opcs_mutants <- subset_mutant_matrices(opcs_matrices)
-
-vascular_mutants <- subset_mutant_matrices(vascular_matrices)
+split_mutants_list <- lapply(
+  split_matrices_list,
+  function(x) subset_mutant_matrices(cell_type = x)
+)
 ```
 
+## Calculate Splice Junction Usage
+
+#### Aggregated by cell type
 
 !!! This step takes 1 hour to run !!!
 
 ```{r get totals for each splice junction for each cell type}
-matrix_list <- ls(pattern = "_matrices")
-
-matrix_list <- mget(matrix_list[c(1:6, 9)])
-
-sj_usage_cell_type_list <- lapply(matrix_list, get_sj_usage_cell_type)
+# apply function
+sj_usage_cell_type_list <- lapply(split_matrices_list, get_sj_usage_cell_type)
 
 sj_usage_cell_type_df <- do.call(rbind, sj_usage_cell_type_list)
 
 sj_usage_cell_type_df <- t(sj_usage_cell_type_df)
 
+# save rds
 write_rds(
   sj_usage_cell_type_df,
   here::here("data", "marvel", "sj_usage_cell_type.rds")
 )
 ```
 
+#### Aggregated by condition and cell type
+
 Now do the same for cell types split by mutants vs wildtypes.
 
 !!! This step takes 2 hours to run !!!
 
 ```{r get totals for each splice junction for each cell type and condition}
-mutant_list <- ls(pattern = "_mutants")
-
-mutant_list <- mget(mutant_list)
-
-sj_usage_condition_list <- lapply(mutant_list, get_sj_usage_condition)
+# apply function
+sj_usage_condition_list <- lapply(split_mutants_list, get_sj_usage_condition)
 
 sj_usage_condition_df <- do.call(rbind, sj_usage_condition_list)
 
 sj_usage_condition_df <- t(sj_usage_condition_df)
 
+# save rds
 write_rds(
   sj_usage_condition_df,
   here::here("data", "marvel", "sj_usage_condition.rds")
