@@ -71,18 +71,18 @@ We do this in a pairwise fashion, and need to determine which expression thresho
 
 ```{r define cell groups for excitatory neurons}
 # Group 1 (reference)
-index <-
+index_1 <-
   which(sample_metadata$cell_type == "Excitatory Neurons" &
           sample_metadata$seq_folder == "wildtype")
-cell_ids_1 <- sample_metadata[index, "cell.id"]
-length(cell_ids_1)
+cell_ids_1 <- sample_metadata[index_1, "cell.id"]
+length(cell_ids_1) # 17870
 
 # Group 2
-index <-
+index_2 <-
   which(sample_metadata$cell_type == "Excitatory Neurons" &
           sample_metadata$seq_folder == "mutant")
-cell_ids_2 <- sample_metadata[index, "cell.id"]
-length(cell_ids_2)
+cell_ids_2 <- sample_metadata[index_2, "cell.id"]
+length(cell_ids_2) #15225
 ```
 
 Now, we know that on average, neurons express more genes than glia, so only using neurons for expression cutoffs means that the cutoffs should only be used for neuron-specific analyses.
@@ -96,9 +96,15 @@ setbp1_marvel <- PlotPctExprCells.Genes.10x(
   min.pct.cells = 5
 )
 
+# look at plot
 setbp1_marvel$pct.cells.expr$Gene$Plot
 
-head(setbp1_marvel$pct.cells.expr$Gene$Data)
+# save plot
+png(here::here("results", "marvel_outputs", "excitatory_gene_expr.png"),
+  width = 8, height = 6, units = "in", res = 300
+)
+setbp1_marvel$pct.cells.expr$Gene$Plot
+dev.off()
 ```
 
 We can also look at this at the splice junction level.
@@ -114,9 +120,15 @@ setbp1_marvel <- PlotPctExprCells.SJ.10x(
   downsample.pct.sj = 10
 )
 
+# look at plot
 setbp1_marvel$pct.cells.expr$SJ$Plot
 
-head(setbp1_marvel$pct.cells.expr$SJ$Data)
+# save plot
+png(here::here("results", "marvel_outputs", "excitatory_sj_expr.png"),
+  width = 8, height = 6, units = "in", res = 300
+)
+setbp1_marvel$pct.cells.expr$SJ$Plot
+dev.off()
 ```
 
 For, now I will use the default expression cutoffs for all differential analysis.
