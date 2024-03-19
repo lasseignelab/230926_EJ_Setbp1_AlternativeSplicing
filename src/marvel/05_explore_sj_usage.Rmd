@@ -9,7 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to visualize the splice junction usage across cell types. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Please use docker image setbp1_alternative_splicing:1.0.6.
+The purpose of this script is to visualize the splice junction usage across cell types. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Please use docker image setbp1_alternative_splicing:1.0.7.
+
+## Load packages
 
 ```{r load packages}
 suppressPackageStartupMessages({
@@ -47,6 +49,7 @@ suppressPackageStartupMessages({
   library(ggridges)
   library(GenomicFeatures)
   library(rtracklayer)
+  library(ggpmisc)
 })
 
 # set seed
@@ -56,6 +59,7 @@ set.seed(123)
 source(here::here("src", "marvel", "functions.R"))
 ```
 
+## Set colors
 
 ```{r set colors}
 cell_type_colors <- c(
@@ -72,21 +76,15 @@ condition_colors <- c(
   `mutant` = "#D8D8D8",
   `wildtype` = "#9E9E9E"
 )
-
-other_colors <- c("#0346a3", "#076466", "#2a6607")
 ```
 
-First, we need to load in the splice junction usage data
+## Load data
+
+First, we need to load in the splice junction usage data from script 04
 
 ```{r load in data}
-# Load MARVEL object
-setbp1_marvel <- read_rds(here::here(
-  "data", "marvel",
-  "setbp1_marvel_aligned.rds"
-))
-
-# Retrieve sample metadata
-sample_metadata <- setbp1_marvel$sample.metadata
+# Load MARVEL data from marvel 04
+load(here::here("data", "marvel", "marvel_04_split_counts.Rdata"))
 
 # load in sj usage split by cell type
 sj_usage_cell_type <- readRDS(here::here(
@@ -99,36 +97,20 @@ sj_usage_condition <- readRDS(here::here(
   "data", "marvel",
   "sj_usage_condition.rds"
 ))
-
 ```
 
+### Adjust data formatiing
 
-```{r define cell groups}
-cell_group_list <- sample_metadata %>%
-  group_split(cell_type, .keep = TRUE) %>%
-  map(~ set_names(.$cell.id, .$cell_type[1]))
-
-
-cell_group_list <- set_names(cell_group_list, c(
-  "Astrocytes", "Excitatory Neurons",
-  "Inhibitory Neurons", "Microglia", "OPCs",
-  "Oligodendrocytes", "Vascular Cells"
-))
-
-```
-
-
+Also, we need to adjust some of the formatting for this data.
 
 ```{r fix sj_usage_condition}
-
-mutant_sju <- sj_usage_condition[1,]
+mutant_sju <- sj_usage_condition[1, ]
 mutant_sju <- do.call(cbind, mutant_sju)
 colnames(mutant_sju) <- names(cell_group_list)
 
-wt_sju <- sj_usage_condition[2,]
+wt_sju <- sj_usage_condition[2, ]
 wt_sju <- do.call(cbind, wt_sju)
 colnames(wt_sju) <- names(cell_group_list)
-
 ```
 
 reformat cell type level data for visualization
@@ -149,7 +131,7 @@ sj_usage_cell_type$sj_usage[is.infinite(sj_usage_cell_type$sj_usage)] <- NaN
 sj_usage_cell_type$sj_usage[sj_usage_cell_type$sj_usage > 100] <- 100
 ```
 
-visualize sj usage
+### Visualize sj usage
 
 ```{r visualize sj usage}
 # make df with dropped zeroes
@@ -177,7 +159,9 @@ sj_usage_cell_type_ridge <-
   ylab("Cell Type")
 
 sj_usage_cell_type_ridge
+```
 
+```{r save plot}
 # save
 png(here::here("results", "marvel_outputs", "nonzero_SJ_usage_cell_types.png"),
   width = 8, height = 6, units = "in", res = 300
@@ -186,8 +170,7 @@ sj_usage_cell_type_ridge
 dev.off()
 ```
 
-## Condition reformatting
-
+### Condition (mutant vs wt) reformatting
 
 ```{r reformat mutant level data for visualization}
 mutant_sju <- as.data.frame(mutant_sju)
@@ -205,7 +188,7 @@ mutant_sju$sj_usage[mutant_sju$sj_usage > 100] <- 100
 ```
 
 
-```{r reformat mutant level data for visualization}
+```{r reformat wt level data for visualization}
 wt_sju <- as.data.frame(wt_sju)
 wt_sju$sj_position <- rownames(wt_sju)
 rownames(wt_sju) <- NULL
@@ -218,14 +201,12 @@ wt_sju <- pivot_longer(wt_sju,
 
 wt_sju$sj_usage[is.infinite(wt_sju$sj_usage)] <- NaN
 wt_sju$sj_usage[wt_sju$sj_usage > 100] <- 100
-```
 
-```{r bind together both conditions}
-
+# r bind together both conditions
 conditions_sju <- rbind(mutant_sju, wt_sju)
-
 ```
 
+## Visualize SJ usage distirubutions split by cell type and condition
 
 ```{r visualize sj usage}
 # make df with dropped zeroes
@@ -254,7 +235,9 @@ sj_usage_condition_ridge <-
   ylab("Cell Type")
 
 sj_usage_condition_ridge
+```
 
+```{r save plot}
 # save
 png(here::here("results", "marvel_outputs", "nonzero_SJ_usage_conditions.png"),
   width = 8, height = 6, units = "in", res = 300
@@ -264,6 +247,8 @@ dev.off()
 ```
 
 ## Count splice junctions for each gene
+
+Now, we want to count the splice junctions detected for each gene. I also am curious at what is driving this number, so I will look at the relationships between median expression and gene length.
 
 ```{r count splice junctions}
 # Get all expressed gene names
@@ -301,7 +286,6 @@ write.csv(sj_per_gene, here::here("results", "tables", "sj_per_gene.csv"))
 I want to visualize a dot plot and color by cell type, I think I need to pivot longer and make a column called cell type.
 
 ```{r pivot dataframe}
-
 sj_per_gene <- as.data.frame(sj_per_gene)
 sj_per_gene$gene_name <- rownames(sj_per_gene)
 rownames(sj_per_gene) <- NULL
@@ -315,24 +299,25 @@ sj_per_gene <- pivot_longer(sj_per_gene,
 To plot with median expression in a cell type, we need to get the median expression of each gene for each cell type.
 
 ```{r make df for median expression}
-
 median_gene_expr <- data.frame(matrix(ncol = 7, nrow = nrow(gene_counts)))
 colnames(median_gene_expr) <- names(cell_group_list)
 rownames(median_gene_expr) <- rownames(gene_counts)
-
 ```
 
 ```{r get normalized data split by cell type}
 split_norm_list <- lapply(names(cell_group_list), function(x) {
-  subset_cell_type_matrices(gene_matrix = setbp1_marvel[["gene.norm.matrix"]],
-                            cell_type = x)
+  subset_cell_type_matrices(
+    gene_matrix = setbp1_marvel[["gene.norm.matrix"]],
+    cell_type = x
+  )
 })
 
 names(split_norm_list) <- names(cell_group_list)
 
 # use the normalized gene expression data
-for(type in names(cell_group_list)) {
-  median_gene_expr[,type] <- rowMedians(as.matrix(split_norm_list[[type]][["Gene Counts"]]))
+for (type in names(cell_group_list)) {
+  median_gene_expr[, type] <-
+    rowMedians(as.matrix(split_norm_list[[type]][["Gene Counts"]]))
 }
 
 # move rownames
@@ -346,17 +331,23 @@ median_gene_expr <- pivot_longer(median_gene_expr,
 )
 
 # combine with number of sjs
-sj_per_gene <- left_join(sj_per_gene, median_gene_expr, by = c('gene_name' = 'gene_name', 'cell_type' = 'cell_type'))
-
+sj_per_gene <- left_join(sj_per_gene, median_gene_expr,
+  by = c(
+    "gene_name" = "gene_name",
+    "cell_type" = "cell_type"
+  )
+)
 ```
 
 ## Plot!!!
 
 ```{r make scatterplot}
-
-smooth_sj_per_gene <- ggplot(sj_per_gene, aes(x = median_expr, y = num_sjs,
-                                              color = cell_type)) +
-  geom_smooth(method = lm, aes(fill = cell_type)) +
+smooth_sj_per_gene <- ggplot(sj_per_gene, aes(
+  x = median_expr, y = num_sjs,
+  color = cell_type, fill = cell_type
+)) +
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) +
   scale_fill_manual(values = cell_type_colors) +
   scale_color_manual(values = cell_type_colors) +
   theme_minimal(base_size = 15) +
@@ -367,13 +358,17 @@ smooth_sj_per_gene <- ggplot(sj_per_gene, aes(x = median_expr, y = num_sjs,
     legend.title = element_text(face = "bold"),
     axis.text.x = element_text()
   ) +
-  guides(color = guide_legend(title = "Cell Type"),
-         fill = guide_legend(title = "Cell Type")) +
+  guides(
+    color = guide_legend(title = "Cell Type"),
+    fill = guide_legend(title = "Cell Type")
+  ) +
   xlab("Median Gene Expression") +
   ylab("Number of Splice Junctions")
 
 smooth_sj_per_gene
+```
 
+```{r save plot}
 # save
 png(here::here("results", "marvel_outputs", "smooth_sj_per_gene.png"),
   width = 8, height = 6, units = "in", res = 300
@@ -381,12 +376,18 @@ png(here::here("results", "marvel_outputs", "smooth_sj_per_gene.png"),
 smooth_sj_per_gene
 dev.off()
 
+```
+
+```{r facet wrap}
 # use facet wrap and geom_scatter to split out each cell type
-supps_sj_per_gene <- ggplot(sj_per_gene, aes(x = median_expr, y = num_sjs,
-                                             color = cell_type)) +
+supps_sj_per_gene <- ggplot(sj_per_gene, aes(
+  x = median_expr, y = num_sjs,
+  color = cell_type, fill = cell_type
+)) +
   geom_point(alpha = 0.5) +
   facet_wrap(~cell_type) +
-  geom_smooth(method = lm, aes(fill = cell_type)) +
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) +
   scale_fill_manual(values = cell_type_colors) +
   scale_color_manual(values = cell_type_colors) +
   theme_minimal(base_size = 15) +
@@ -397,13 +398,17 @@ supps_sj_per_gene <- ggplot(sj_per_gene, aes(x = median_expr, y = num_sjs,
     legend.title = element_text(face = "bold"),
     axis.text.x = element_text()
   ) +
-  guides(color = guide_legend(title = "Cell Type"),
-         fill = guide_legend(title = "Cell Type")) +
+  guides(
+    color = guide_legend(title = "Cell Type"),
+    fill = guide_legend(title = "Cell Type")
+  ) +
   xlab("Median Gene Expression") +
   ylab("Number of Splice Junctions")
 
 supps_sj_per_gene
+```
 
+```{r save plot}
 # save
 png(here::here("results", "marvel_outputs", "supps_sj_per_gene.png"),
   width = 12, height = 10, units = "in", res = 300
@@ -415,12 +420,12 @@ dev.off()
 ## How does gene length influence number of splice junctions?
 
 ```{r get gene length}
-
 # genome directory
 genome_dir <- "/data/project/lasseigne_lab/GENOME_dir/GENCODE_mm39/release_M31/"
 
 # load GTF
-m31_gtf <- import(paste0(genome_dir, "GTF/gencode.vM31.primary_assembly.annotation.gtf"))
+m31_gtf <-
+  import(paste0(genome_dir, "GTF/gencode.vM31.primary_assembly.annotation.gtf"))
 
 # get lengths for all attributes
 gene_lengths <- width(m31_gtf)
@@ -435,7 +440,7 @@ gene_names <- m31_gtf@elementMetadata@listData[["gene_name"]]
 gene_lengths <- cbind(gene_names, gene_lengths)
 
 # pull only full genes
-gene_lengths <- gene_lengths[types == "gene",]
+gene_lengths <- gene_lengths[types == "gene", ]
 
 # make df
 gene_lengths <- as.data.frame(gene_lengths)
@@ -443,7 +448,7 @@ gene_lengths <- as.data.frame(gene_lengths)
 # keep only genes in count matrix
 gene_counts <- setbp1_marvel[["gene.count.matrix"]]
 to_keep <- rownames(gene_counts)
-gene_lengths <- gene_lengths[gene_lengths$gene_names %in% to_keep,]
+gene_lengths <- gene_lengths[gene_lengths$gene_names %in% to_keep, ]
 
 # pull out duplicates
 duplicated <- gene_lengths$gene_names[duplicated(gene_lengths$gene_names)]
@@ -455,11 +460,97 @@ max_values <- duplicated_lengths %>%
   arrange(gene_names, gene_lengths)
 
 # remove all duplicates
-gene_lengths <- gene_lengths[!gene_lengths$gene_names %in% duplicated,]
+gene_lengths <- gene_lengths[!gene_lengths$gene_names %in% duplicated, ]
 # add back max duplicates
 gene_lengths <- rbind(gene_lengths, max_values)
 
+colnames(gene_lengths) <- c("gene_name", "gene_length")
 ```
+
+
+```{r plot gene lengths and number of sjs}
+sjs_lengths <- left_join(sj_per_gene, gene_lengths)
+
+sjs_lengths$gene_length <- as.numeric(sjs_lengths$gene_length)
+```
+
+## Plot!!!
+
+```{r make scatterplot}
+smooth_sjs_lengths <- ggplot(sjs_lengths, aes(
+  x = gene_length, y = num_sjs,
+  color = cell_type, fill = cell_type
+)) +
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) +
+  scale_fill_manual(values = cell_type_colors) +
+  scale_color_manual(values = cell_type_colors) +
+  theme_minimal(base_size = 15) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    legend.title = element_text(face = "bold"),
+    axis.text.x = element_text()
+  ) +
+  guides(
+    color = guide_legend(title = "Cell Type"),
+    fill = guide_legend(title = "Cell Type")
+  ) +
+  xlab("Gene Length") +
+  ylab("Number of Splice Junctions")
+
+smooth_sjs_lengths
+```
+
+```{r save plot}
+# save
+png(here::here("results", "marvel_outputs", "smooth_sjs_lengths.png"),
+  width = 8, height = 6, units = "in", res = 300
+)
+smooth_sjs_lengths
+dev.off()
+
+```
+
+```{r facet wrap}
+# use facet wrap and geom_point to split out each cell type
+supps_sjs_lengths <- ggplot(sjs_lengths, aes(
+  x = gene_length, y = num_sjs,
+  color = cell_type, fill = cell_type
+)) +
+  geom_point(alpha = 0.5) +
+  facet_wrap(~cell_type) +
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2"))) +
+  scale_fill_manual(values = cell_type_colors) +
+  scale_color_manual(values = cell_type_colors) +
+  theme_minimal(base_size = 15) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    legend.title = element_text(face = "bold"),
+    axis.text.x = element_text()
+  ) +
+  guides(
+    color = guide_legend(title = "Cell Type"),
+    fill = guide_legend(title = "Cell Type")
+  ) +
+  xlab("Gene Length") +
+  ylab("Number of Splice Junctions")
+
+supps_sjs_lengths
+
+# save
+png(here::here("results", "marvel_outputs", "supps_sjs_lengths.png"),
+  width = 12, height = 10, units = "in", res = 300
+)
+supps_sjs_lengths
+dev.off()
+```
+
+
 
 #### Style
 
