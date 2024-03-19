@@ -1,0 +1,121 @@
+---
+title: "Get CV of Splice Junctions"
+output: html_document
+date: "2024-03-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The purpose of this script is to get CV of the numbers of splice junctions detected for each cell. We can use the metadata to get this information.
+
+## Load packages
+
+```{r load packages}
+suppressPackageStartupMessages({
+  # Load Lasseigne Lab standard packages
+  library(here)
+  library(styler)
+  library(lintr)
+  library(tidyverse)
+  library(patchwork)
+  library(ComplexHeatmap)
+  library(viridis)
+
+  # Load MARVEL package
+  library(MARVEL)
+
+  # Load adjunct MARVEL packages
+  library(ggnewscale)
+  library(ggrepel)
+  library(reshape2)
+  library(plyr)
+  library(stringr)
+  library(textclean)
+  library(AnnotationDbi)
+  library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(org.Mm.eg.db)
+  library(gtools)
+  library(GenomicRanges)
+  library(IRanges)
+  library(S4Vectors)
+  library(wiggleplotr)
+  library(Matrix)
+  library(data.table)
+  library(gridExtra)
+  library(ggridges)
+  library(GenomicFeatures)
+  library(rtracklayer)
+  library(ggpmisc)
+})
+
+# set seed
+set.seed(123)
+
+# source functions
+source(here::here("src", "marvel", "functions.R"))
+```
+
+```{r load in data}
+
+# Load MARVEL data from marvel 04
+load(here::here("data", "marvel", "marvel_04_split_counts.Rdata"))
+
+# Convert data type
+sj_counts <- as(sj_counts, "CsparseMatrix")
+gene_counts <- as(gene_counts, "CsparseMatrix")
+```
+
+```{r format metadata columns}
+sample_metadata$num_sjs <- diff(sj_counts@p)
+sample_metadata$num_genes <- diff(gene_counts@p)
+sample_metadata$num_sjs_genes <- diff(sj_counts@p) / diff(gene_counts@p)
+
+mutant_ids <- sample_metadata$cell.id[sample_metadata$seq_folder == "mutant"]
+wildtype_ids <- sample_metadata$cell.id[!sample_metadata$seq_folder == "mutant"]
+```
+
+
+```{r get cv}
+
+cv_gene_data <- sample_metadata %>%
+  group_by(cell_type, seq_folder) %>%
+  summarize_at(vars(num_sjs_genes),
+    list(cv = function(x) {sd(x) / mean(x) * 100})
+  )
+
+```
+
+```{r plot cv}
+
+cv_gene_plot <- ggplot(cv_gene_data, aes(x = cell_type, y = cv, color = cell_type,
+                    alpha = seq_folder)) +
+  geom_bar(stat = "identity", position = position_dodge(),
+           aes(fill = cell_type)) +
+  theme_minimal(base_size = 15) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(face = "bold", size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  scale_fill_manual(values = cell_type_colors, guide = "none") +
+  scale_color_manual(values = cell_type_colors, guide = "none") +
+  scale_alpha_manual(values = c(0.2, 0.6)) +
+  xlab("Cell Type") +
+  ylab("Coefficient of Variation") +
+  guides(
+    alpha = guide_legend(title = "Condition")
+  ) 
+
+# save
+png(here::here("results", "marvel_outputs", "cv_norm_sjs.png"),
+  width = 8, height = 6, units = "in", res = 300
+)
+cv_gene_plot
+dev.off()
+
+```
