@@ -428,6 +428,17 @@ ggplot(res_table_thres) +
         axis.title = element_text(size = rel(1.15)))  
 
 ```
+```{r run deseq2 on all cell types}
+
+# run function on all clusters
+map(cluster_names, get_dds_resultsAvsB, A = "wildtype", B = "mutant")
+
+# microglia and vascular cell do not have any significant genes, probably due to low cell counts
+
+```
+
+
+
 
 #### Style
 

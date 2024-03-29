@@ -347,7 +347,7 @@ smooth_sj_per_gene <- ggplot(sj_per_gene, aes(
   color = cell_type, fill = cell_type
 )) +
   stat_poly_line() +
-  stat_poly_eq(use_label(c("eq", "R2"))) +
+  stat_poly_eq(use_label(c("eq", "P"))) +
   scale_fill_manual(values = cell_type_colors) +
   scale_color_manual(values = cell_type_colors) +
   theme_minimal(base_size = 15) +
@@ -387,7 +387,7 @@ supps_sj_per_gene <- ggplot(sj_per_gene, aes(
   geom_point(alpha = 0.5) +
   facet_wrap(~cell_type) +
   stat_poly_line() +
-  stat_poly_eq(use_label(c("eq", "R2"))) +
+  stat_poly_eq(use_label(c("eq", "P"))) +
   scale_fill_manual(values = cell_type_colors) +
   scale_color_manual(values = cell_type_colors) +
   theme_minimal(base_size = 15) +
@@ -482,7 +482,7 @@ smooth_sjs_lengths <- ggplot(sjs_lengths, aes(
   color = cell_type, fill = cell_type
 )) +
   stat_poly_line() +
-  stat_poly_eq(use_label(c("eq", "R2"))) +
+  stat_poly_eq(use_label(c("eq", "P"))) +
   scale_fill_manual(values = cell_type_colors) +
   scale_color_manual(values = cell_type_colors) +
   theme_minimal(base_size = 15) +
@@ -522,7 +522,7 @@ supps_sjs_lengths <- ggplot(sjs_lengths, aes(
   geom_point(alpha = 0.5) +
   facet_wrap(~cell_type) +
   stat_poly_line() +
-  stat_poly_eq(use_label(c("eq", "R2"))) +
+  stat_poly_eq(use_label(c("eq", "P"))) +
   scale_fill_manual(values = cell_type_colors) +
   scale_color_manual(values = cell_type_colors) +
   theme_minimal(base_size = 15) +
