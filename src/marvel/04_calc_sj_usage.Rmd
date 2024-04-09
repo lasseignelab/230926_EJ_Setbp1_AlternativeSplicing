@@ -133,6 +133,13 @@ split_mutants_list <- lapply(
 )
 ```
 
+#### Save R environment
+
+```{r save r env}
+# save rds with objects
+save.image(file = here::here("data", "marvel", "marvel_04_split_counts.Rdata"))
+```
+
 ## Calculate Splice Junction Usage
 
 #### Aggregated by cell type

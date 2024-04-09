@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Create figure 2
 
-The purpose of this script is to create a finalized version of figure 1. It is dependent on Marvel scripts 01 through 06. Run in docker 1.0.6.
+The purpose of this script is to create a finalized version of figure 1. It is dependent on Marvel scripts 01 through 06. Run in docker 1.0.8.
 
 ## Load in packages
 
@@ -64,51 +64,47 @@ source(here::here("src", "figures", "geom_split_violin.R"))
 ## Load in data
 
 ```{r load in data}
-# load in normalized sj expression (from script 05, which was deleted, need to put code for this somewhere)
+# Load MARVEL data from marvel 04
+load(here::here("data", "marvel", "marvel_04_split_counts.Rdata"))
 
-# normalized sj expression
-normalized_sj_expression <- read_rds(here::here(
-  "data", "marvel",
-  "normalized_sj_expression.Rds"
-))
-
-# Load MARVEL object
-setbp1_marvel <- read_rds(here::here(
-  "data", "marvel",
-  "setbp1_marvel_aligned.rds"
-))
-
-# Retrieve sample metadata
-sample_metadata <- setbp1_marvel$sample.metadata
-
-# Retrieve sj metadata
-sj_metadata <- setbp1_marvel$sj.metadata
-
-# Save counts objects for easy accessibility
-sj_counts <- setbp1_marvel[["sj.count.matrix"]]
-gene_counts <- setbp1_marvel[["gene.count.matrix"]]
-
-# Convert data type
-sj_counts <- as(sj_counts, "CsparseMatrix")
-gene_counts <- as(gene_counts, "CsparseMatrix")
+# load normalized sj expression
+normalized_sj_expression <- 
+  load(here::here("data", "marvel", "normalized_sj_expression.Rdata"))
 ```
 
-## Format new metadata columns
 
-```{r format metadata columns}
-sample_metadata$num_sjs <- diff(sj_counts@p)
-sample_metadata$num_genes <- diff(gene_counts@p)
-sample_metadata$num_sjs_genes <- diff(sj_counts@p) / diff(gene_counts@p)
+```{r get cell groups}
+# Pull cell types and matching ids
+cell_group_list <- sample_metadata %>%
+  group_split(cell_type, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$cell_type[1]))
 
-mutant_ids <- sample_metadata$cell.id[sample_metadata$seq_folder == "mutant"]
-wildtype_ids <- sample_metadata$cell.id[!sample_metadata$seq_folder == "mutant"]
+# Rename
+cell_group_list <- set_names(cell_group_list, c(
+  "Astrocytes", "Excitatory Neurons",
+  "Inhibitory Neurons", "Microglia", "OPCs",
+  "Oligodendrocytes", "Vascular Cells"
+))
+
+# Pull mutant vs wildtype and matching ids
+mutant_list <- sample_metadata %>%
+  group_split(seq_folder, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$seq_folder[[1]]))
+
+# Rename
+mutant_list <- set_names(mutant_list, c(
+  "Mutant", "Wildtype"
+))
 ```
+
 
 ## Split out sparse matrices
 
 To use ggridges, I need to make a dataframe with a row for each value and a condition column that has mutant or wildtype.
 
 ```{r pull out mutants and wildtype normalized expression}
+mutant_ids <- mutant_list[[1]]
+
 # mutant
 mutant_sj <-
   normalized_sj_expression[, colnames(normalized_sj_expression) == mutant_ids]
@@ -192,11 +188,21 @@ First, I want to show the expression distributions across mutants and wildtypes.
 
 ## Make density plots
 
+```{r format metadata columns}
+sample_metadata$num_sjs <- diff(sj_counts@p)
+sample_metadata$num_genes <- diff(gene_counts@p)
+sample_metadata$num_sjs_genes <- diff(sj_counts@p) / diff(gene_counts@p)
+
+mutant_ids <- sample_metadata$cell.id[sample_metadata$seq_folder == "mutant"]
+wildtype_ids <- sample_metadata$cell.id[!sample_metadata$seq_folder == "mutant"]
+```
+
+
 ### Splice junction expression
 
 ```{r make sj ridge plot}
 
-nonzero_norm_sj_exp_ridge <- 
+nonzero_norm_sj_exp_ridge <-
   ggplot(sj_vals, aes(x = sj_expr, y = Condition, alpha = Condition)) + 
   geom_density_ridges(fill = other_colors[1], color = other_colors[1],
                       show.legend = FALSE)  +
@@ -250,7 +256,33 @@ sjs_genes_lm <- lm(num_sjs ~ num_genes, data = sample_metadata)
 summary(sjs_genes_lm)
 
 ```
+
 Yes, number of genes can predict number of splice junctions per cell.
+
+```{r make quick plot}
+
+ggplot(sample_metadata, aes(x = num_genes, y = num_sjs)) +
+  geom_point() +
+  stat_poly_line() +
+  stat_poly_eq(use_label(c("eq", "R2", "P"))) +
+  scale_fill_manual(values = cell_type_colors) +
+  scale_color_manual(values = cell_type_colors) +
+  theme_minimal(base_size = 15) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    legend.title = element_text(face = "bold"),
+    axis.text.x = element_text()
+  ) +
+  guides(
+    color = guide_legend(title = "Cell Type"),
+    fill = guide_legend(title = "Cell Type")
+  ) +
+  xlab("Median Gene Expression") +
+  ylab("Number of Splice Junctions")
+
+```
 
 ## Average splice junctions / genes detected per cell
 
@@ -297,6 +329,40 @@ num_sj_gene_violin
 ### Split Violin Plot
 
 ```{r plot splice junctions normalized by number of genes expressed}
+num_sj_split_violin <- ggplot(
+  sample_metadata,
+  aes(
+    x = cell_type, y = num_sjs,
+    fill = cell_type, alpha = seq_folder
+  )
+) +
+  geom_split_violin(show.legend = FALSE) +
+  scale_alpha_manual(values = c(1, 0.4)) +
+  theme_minimal(base_size = 15) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  scale_fill_manual(
+    labels = names(cell_type_colors),
+    values = cell_type_colors
+  ) +
+  xlab("Cell Type") +
+  ylab("Splice Junctions")
+
+num_sj_gene_split_violin
+
+
+png(here::here("results", "marvel_outputs", "num_sj_split_violin.png"),
+  width = 10, height = 8, units = "in", res = 300
+)
+num_sj_split_violin
+dev.off()
+```
+
+```{r plot splice junctions normalized by number of genes expressed}
 num_sj_gene_split_violin <- ggplot(
   sample_metadata,
   aes(
@@ -321,6 +387,13 @@ num_sj_gene_split_violin <- ggplot(
   ylab("Splice Junctions / Genes")
 
 num_sj_gene_split_violin
+
+
+png(here::here("results", "marvel_outputs", "num_sj_gene_split_violin.png"),
+  width = 10, height = 8, units = "in", res = 300
+)
+num_sj_gene_split_violin
+dev.off()
 ```
 is num_sjs_genes normally distributed?
 
