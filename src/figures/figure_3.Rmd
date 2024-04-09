@@ -1,0 +1,204 @@
+---
+title: "Create Figure 3"
+author: "Emma Jones"
+date: "2024-03-28"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Create figure 
+
+The purpose of this script is to create a finalized version of figure 3. It is dependent on Marvel scripts 01 through 06. And DESeq2 script 01. Run in docker 1.0.8.
+
+## Load packages
+
+```{r load in packages}
+suppressPackageStartupMessages({
+library(tidyverse)
+library(here)
+library(styler)
+library(lintr)
+library(cowplot)
+library(patchwork)
+  library(viridis)
+  library(MARVEL)
+})
+
+```
+
+## Load data
+
+```{r load in data}
+# Load MARVEL data from marvel 04
+load(here::here("data", "marvel", "marvel_04_split_counts.Rdata"))
+
+# load normalized sj expression
+normalized_sj_expression <- 
+  load(here::here("data", "marvel", "normalized_sj_expression.Rdata"))
+
+# load in sj usage split by cell type
+sj_usage_cell_type <- readRDS(here::here(
+  "data", "marvel",
+  "sj_usage_cell_type.rds"
+))
+
+# load in sj usage split by cell type and condition
+sj_usage_condition <- readRDS(here::here(
+  "data", "marvel",
+  "sj_usage_condition.rds"
+))
+```
+
+
+```{r get cell groups}
+# Pull cell types and matching ids
+cell_group_list <- sample_metadata %>%
+  group_split(cell_type, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$cell_type[1]))
+
+# Rename
+cell_group_list <- set_names(cell_group_list, c(
+  "Astrocytes", "Excitatory Neurons",
+  "Inhibitory Neurons", "Microglia", "OPCs",
+  "Oligodendrocytes", "Vascular Cells"
+))
+
+# Pull mutant vs wildtype and matching ids
+mutant_list <- sample_metadata %>%
+  group_split(seq_folder, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$seq_folder[[1]]))
+
+# Rename
+mutant_list <- set_names(mutant_list, c(
+  "Mutant", "Wildtype"
+))
+```
+
+
+## data wrangling - split everything by mutant and wildtype!!!
+
+
+```{r pull out mutants and wildtype normalized expression}
+mutant_ids <- mutant_list[[1]]
+
+# mutant
+mutant_sj <-
+  normalized_sj_expression[, colnames(normalized_sj_expression) == mutant_ids]
+
+mutant_gene <-
+  setbp1_marvel$gene.norm.matrix[
+    , colnames(setbp1_marvel$gene.norm.matrix)
+    == mutant_ids
+  ]
+
+# wildtype
+wildtype_sj <-
+  normalized_sj_expression[, !colnames(normalized_sj_expression) == mutant_ids]
+
+wildtype_gene <-
+  setbp1_marvel$gene.norm.matrix[
+    , !colnames(setbp1_marvel$gene.norm.matrix)
+    == mutant_ids
+  ]
+```
+
+```{r fix sj_usage_condition}
+mutant_sju <- sj_usage_condition[1, ]
+mutant_sju <- do.call(cbind, mutant_sju)
+colnames(mutant_sju) <- names(cell_group_list)
+
+wt_sju <- sj_usage_condition[2, ]
+wt_sju <- do.call(cbind, wt_sju)
+colnames(wt_sju) <- names(cell_group_list)
+```
+
+reformat cell type level data for visualization
+
+```{r reformat cell type level data for visualization}
+colnames(sj_usage_cell_type) <- names(cell_type_colors)
+
+sj_usage_cell_type <- as.data.frame(sj_usage_cell_type)
+sj_usage_cell_type$sj_position <- rownames(sj_usage_cell_type)
+rownames(sj_usage_cell_type) <- NULL
+
+sj_usage_cell_type <- pivot_longer(sj_usage_cell_type,
+  cols = colnames(sj_usage_cell_type)[1:7], names_to = "cell_type",
+  values_to = "sj_usage"
+)
+
+sj_usage_cell_type$sj_usage[is.infinite(sj_usage_cell_type$sj_usage)] <- NaN
+sj_usage_cell_type$sj_usage[sj_usage_cell_type$sj_usage > 100] <- 100
+```
+
+
+```{r reformat mutant level data for visualization}
+mutant_sju <- as.data.frame(mutant_sju)
+mutant_sju$sj_position <- rownames(mutant_sju)
+rownames(mutant_sju) <- NULL
+mutant_sju$condition <- "Mutant"
+
+mutant_sju <- pivot_longer(mutant_sju,
+  cols = colnames(mutant_sju)[1:7], names_to = "cell_type",
+  values_to = "sj_usage"
+)
+
+mutant_sju$sj_usage[is.infinite(mutant_sju$sj_usage)] <- NaN
+mutant_sju$sj_usage[mutant_sju$sj_usage > 100] <- 100
+```
+
+
+```{r reformat wt level data for visualization}
+wt_sju <- as.data.frame(wt_sju)
+wt_sju$sj_position <- rownames(wt_sju)
+rownames(wt_sju) <- NULL
+wt_sju$condition <- "Wildtype"
+
+wt_sju <- pivot_longer(wt_sju,
+  cols = colnames(wt_sju)[1:7], names_to = "cell_type",
+  values_to = "sj_usage"
+)
+
+wt_sju$sj_usage[is.infinite(wt_sju$sj_usage)] <- NaN
+wt_sju$sj_usage[wt_sju$sj_usage > 100] <- 100
+
+# r bind together both conditions
+conditions_sju <- rbind(mutant_sju, wt_sju)
+```
+
+## make dot plots for setbp1 gene and sj expression
+
+```{r make dot plots for gene expres}
+setbp1_marvel <- adhocGene.TabulateExpression.Gene.10x(
+  MarvelObject = setbp1_marvel,
+  cell.group.list = cell_group_list,
+  gene_short_name = "Setbp1",
+  min.pct.cells = 1,
+  downsample = FALSE
+)
+
+setbp1_marvel$adhocGene$Expression$Gene$Plot
+```
+
+
+
+```{r splice junction usage}
+
+setbp1_marvel <- adhocGene.TabulateExpression.PSI.10x(
+  MarvelObject = setbp1_marvel,
+  min.pct.cells = 0
+)
+
+setbp1_marvel$adhocGene$Expression$PSI$Plot +
+  labs(color = "SJ Usage") +
+  xlab("Splice Junctions")
+
+```
+
+## Make bar plot for gene expression
+
+
