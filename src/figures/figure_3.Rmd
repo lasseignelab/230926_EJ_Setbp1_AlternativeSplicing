@@ -19,16 +19,36 @@ The purpose of this script is to create a finalized version of figure 3. It is d
 
 ```{r load in packages}
 suppressPackageStartupMessages({
-library(tidyverse)
-library(here)
-library(styler)
-library(lintr)
-library(cowplot)
-library(patchwork)
+  library(tidyverse)
+  library(here)
+  library(styler)
+  library(lintr)
+  library(cowplot)
+  library(patchwork)
   library(viridis)
   library(MARVEL)
+  library(ComplexHeatmap)
+  library(Matrix)
+library(slam)
 })
 
+# source functions
+source(here::here("src", "figures", "functions.R"))
+source(here::here("src", "figures", "geom_split_violin.R"))
+```
+
+## Set colors
+
+```{r set colors}
+cell_type_colors <- c(
+  `Astrocytes` = "#6CA9E2",
+  `Excitatory Neurons` = "#98D070",
+  `Inhibitory Neurons` = "#DEE971",
+  `Microglia` = "#B898E4",
+  `Oligodendrocytes` = "#4AD8E6",
+  `OPCs` = "#0A9A8D",
+  `Vascular Cells` = "#E28C67"
+)
 ```
 
 ## Load data
@@ -38,8 +58,8 @@ library(patchwork)
 load(here::here("data", "marvel", "marvel_04_split_counts.Rdata"))
 
 # load normalized sj expression
-normalized_sj_expression <- 
-  load(here::here("data", "marvel", "normalized_sj_expression.Rdata"))
+normalized_sj_expression <-
+  readRDS(here::here("data", "marvel", "normalized_sj_expression.Rds"))
 
 # load in sj usage split by cell type
 sj_usage_cell_type <- readRDS(here::here(
@@ -106,6 +126,7 @@ wildtype_gene <-
     == mutant_ids
   ]
 ```
+## reformat SJ Usage
 
 ```{r fix sj_usage_condition}
 mutant_sju <- sj_usage_condition[1, ]
@@ -137,68 +158,273 @@ sj_usage_cell_type$sj_usage[sj_usage_cell_type$sj_usage > 100] <- 100
 
 
 ```{r reformat mutant level data for visualization}
-mutant_sju <- as.data.frame(mutant_sju)
-mutant_sju$sj_position <- rownames(mutant_sju)
-rownames(mutant_sju) <- NULL
-mutant_sju$condition <- "Mutant"
+mutant_sju[is.infinite(mutant_sju)] <- NaN
+mutant_sju[mutant_sju > 100] <- 100
 
-mutant_sju <- pivot_longer(mutant_sju,
-  cols = colnames(mutant_sju)[1:7], names_to = "cell_type",
-  values_to = "sj_usage"
-)
+colnames(mutant_sju) <- paste0(colnames(mutant_sju), "_mutant")
 
-mutant_sju$sj_usage[is.infinite(mutant_sju$sj_usage)] <- NaN
-mutant_sju$sj_usage[mutant_sju$sj_usage > 100] <- 100
 ```
 
 
 ```{r reformat wt level data for visualization}
-wt_sju <- as.data.frame(wt_sju)
-wt_sju$sj_position <- rownames(wt_sju)
-rownames(wt_sju) <- NULL
-wt_sju$condition <- "Wildtype"
+wt_sju[is.infinite(wt_sju)] <- NaN
+wt_sju[wt_sju > 100] <- 100
 
-wt_sju <- pivot_longer(wt_sju,
-  cols = colnames(wt_sju)[1:7], names_to = "cell_type",
-  values_to = "sj_usage"
-)
-
-wt_sju$sj_usage[is.infinite(wt_sju$sj_usage)] <- NaN
-wt_sju$sj_usage[wt_sju$sj_usage > 100] <- 100
+colnames(wt_sju) <- paste0(colnames(wt_sju), "_mutant")
 
 # r bind together both conditions
-conditions_sju <- rbind(mutant_sju, wt_sju)
+conditions_sju <- cbind(mutant_sju, wt_sju)
 ```
 
-## make dot plots for setbp1 gene and sj expression
+## Make split violin plots for showing gene expression
 
-```{r make dot plots for gene expres}
-setbp1_marvel <- adhocGene.TabulateExpression.Gene.10x(
-  MarvelObject = setbp1_marvel,
-  cell.group.list = cell_group_list,
-  gene_short_name = "Setbp1",
-  min.pct.cells = 1,
-  downsample = FALSE
+We need to make a non-sparse tidy data frame to make split violin plots. That means each row will be a cell, there will be one column for the normalized gene expression values, one column for cell type, and one column for condition. We can pull that information from the sample metadata matrix.
+
+```{r make dataframe for split violin}
+base_df <- sample_metadata[, c("cell.id", "seq_folder", "cell_type")]
+
+setbp1_gene_expr_df <- make_norm_gene_expr_df("Setbp1")
+```
+
+```{r split violin plots - setbp1}
+setbp1_split_violin <- ggplot(
+  setbp1_gene_expr_df,
+  aes(
+    x = cell_type, y = norm_expr,
+    fill = cell_type, alpha = seq_folder
+  )
+) +
+  geom_split_violin(show.legend = TRUE) +
+  scale_alpha_manual(
+    name = "Condition",
+    labels = c("Mutant", "Wildtype"),
+    values = c(1, 0.4),
+    guide = guide_legend(override.aes = list(fill = "gray15"))
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold", size = 12),
+    legend.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  scale_fill_manual(
+    labels = names(cell_type_colors),
+    values = cell_type_colors,
+    guide = "none"
+  ) +
+  xlab("Cell Type") +
+  ylab("Normalized Gene Expression")
+
+setbp1_split_violin
+```
+
+
+
+```{r splice junctions list}
+
+setbp1_sjs <- setbp1_marvel[["sj.metadata"]]$coord.intron[setbp1_marvel[["sj.metadata"]]$gene_short_name.start == "Setbp1"]
+
+setbp1_sj_expr_dfs <- sapply(setbp1_sjs, make_norm_sj_expr_df, simplify = FALSE)
+
+my_cols <- c("#443A83FF","#31688EFF","#21908CFF","#35B779FF","#8FD744FF")
+
+setbp1_sj_vln_plots <- map2(setbp1_sj_expr_dfs, my_cols, make_sj_split_violin)
+
+setbp1_sj_vln_plots[[1]] + ggtitle(names(setbp1_sj_vln_plots[1]))
+setbp1_sj_vln_plots[[2]] + ggtitle(names(setbp1_sj_vln_plots[2]))
+setbp1_sj_vln_plots[[3]] + ggtitle(names(setbp1_sj_vln_plots[3]))
+setbp1_sj_vln_plots[[4]] + ggtitle(names(setbp1_sj_vln_plots[4]))
+setbp1_sj_vln_plots[[5]] + ggtitle(names(setbp1_sj_vln_plots[5]))
+```
+
+Ok, these really aren't that informative. I will make a heatmap with the mean expression instead.
+
+```{r make dataframe with splice junction means - this is not including cell type}
+
+wt_sjs_for_barplot <- data.frame("coord_intron" = rownames(wildtype_sj), "mean_expr" = rowMeans(wildtype_sj), "condition" = rep("wildtype", length(rownames(wildtype_sj))))
+
+mut_sjs_for_barplot <- data.frame("coord_intron" = rownames(mutant_sj), "mean_expr" = rowMeans(mutant_sj), "condition" = c(rep("mutant", length(rownames(mutant_sj)))))
+
+# now bind the 2 dfs
+sjs_for_heatmap <- rbind(wt_sjs_for_barplot, mut_sjs_for_barplot)
+
+```
+
+Need to split this out by cell type
+
+```{r reformat cell type level data for visualization}
+# mutants
+mutant_sj_expr_means <- list()
+for(i in seq_along(cell_group_list)) {
+  # get only mutant ids
+  cell_group_mutants <- intersect(cell_group_list[[i]], mutant_list[["Mutant"]])
+  # split cell type
+  cell_type_sj_expr <-
+  normalized_sj_expression[, colnames(normalized_sj_expression) %in% cell_group_mutants]
+  # get means
+  mutant_sj_expr_means[[i]] <- rowMeans(cell_type_sj_expr)
+  
+}
+names(mutant_sj_expr_means) <- names(cell_group_list)
+
+mutant_sj_expr_means <- do.call(cbind, mutant_sj_expr_means)
+
+mutant_sj_expr_means <- as.data.frame(mutant_sj_expr_means)
+
+colnames(mutant_sj_expr_means) <- paste0(colnames(mutant_sj_expr_means), "_mutant")
+
+```
+
+```{r get wt expr means}
+# wildtypes
+wildtype_sj_expr_means <- list()
+for(i in seq_along(cell_group_list)) {
+  # get only wildtype ids
+  cell_group_wildtypes <- intersect(cell_group_list[[i]], mutant_list[["Wildtype"]])
+  # split cell type
+  cell_type_sj_expr <-
+    normalized_sj_expression[, colnames(normalized_sj_expression) %in% cell_group_wildtypes]
+  # get means
+  wildtype_sj_expr_means[[i]] <- rowMeans(cell_type_sj_expr)
+  
+}
+names(wildtype_sj_expr_means) <- names(cell_group_list)
+
+wildtype_sj_expr_means <- do.call(cbind, wildtype_sj_expr_means)
+
+wildtype_sj_expr_means <- as.data.frame(wildtype_sj_expr_means)
+
+colnames(wildtype_sj_expr_means) <- paste0(colnames(wildtype_sj_expr_means), "_wildtype")
+```
+
+
+```{r bind everything together!}
+# now bind the 2 dfs
+sj_expr_for_heatmap <- cbind(mutant_sj_expr_means, wildtype_sj_expr_means)
+
+sj_expr_for_heatmap <- as.matrix(sj_expr_for_heatmap)
+
+```
+
+```{r create heatmap}
+annot_colors_list <- list(
+  `Cell Type` = c("Astrocytes" = "#6CA9E2",
+  "Excitatory Neurons" = "#98D070",
+  "Inhibitory Neurons" = "#DEE971",
+  "Microglia" = "#B898E4",
+  "Oligodendrocytes" = "#4AD8E6",
+  "OPCs" = "#0A9A8D",
+  "Vascular Cells" = "#E28C67"),
+  `Condition` = c("Mutant" = "#9E9E9E", "Wildtype" =  "#D8D8D8")
 )
 
-setbp1_marvel$adhocGene$Expression$Gene$Plot
+# make annotation
+col_annot <- HeatmapAnnotation(`Cell Type` = rep(names(cell_group_list), 2),
+                               `Condition` = c(rep("Mutant", 7), rep("Wildtype", 7)),
+                               col = annot_colors_list)
+
+# make splice junction expression heatmap
+setbp1_sje_heatmap_df <- sj_expr_for_heatmap[rownames(sj_expr_for_heatmap) %in% setbp1_sjs, ]
+
+gene_heatmap <- Heatmap(setbp1_sje_heatmap_df,
+                        name = "Mean Norm\nSJ Expression",
+        col = RColorBrewer::brewer.pal(name = "GnBu", n = 9),
+        top_annotation = col_annot, cluster_rows = FALSE,
+        show_column_names = FALSE,
+        row_title = "SJ Expression")
+
+# make splice junction usage heatmap
+setbp1_sju_heatmap_df <- conditions_sju[rownames(conditions_sju) %in% setbp1_sjs, ]
+
+sj_heatmap <- Heatmap(setbp1_sju_heatmap_df, name = "SJ Usage",
+        col = RColorBrewer::brewer.pal(name = "YlOrBr", n = 9), cluster_rows = FALSE,
+        show_column_names = FALSE,
+        row_title = "SJ Usage")
+
+
+both_heatmaps <- gene_heatmap %v% sj_heatmap
+
+sj_expr_usage_heatmaps <- grid.grabExpr(draw(both_heatmaps))
+
 ```
 
+```{r plot grid}
 
+plot_grid(setbp1_split_violin, sj_expr_usage_heatmaps)
 
-```{r splice junction usage}
+```
 
-setbp1_marvel <- adhocGene.TabulateExpression.PSI.10x(
-  MarvelObject = setbp1_marvel,
-  min.pct.cells = 0
+#### Style
+
+```{r tidy script}
+style_file("figure_3.Rmd")
+
+lint("figure_3.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
 )
-
-setbp1_marvel$adhocGene$Expression$PSI$Plot +
-  labs(color = "SJ Usage") +
-  xlab("Splice Junctions")
-
 ```
 
-## Make bar plot for gene expression
+#### Software versions
 
+My software versions will be commented below.
 
+```{r versions}
+sessionInfo()
+```
+
+R version 4.3.1 (2023-06-16)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 22.04.3 LTS
+
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C               LC_TIME=en_US.UTF-8       
+ [4] LC_COLLATE=en_US.UTF-8     LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                  LC_ADDRESS=C              
+[10] LC_TELEPHONE=C             LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: Etc/UTC
+tzcode source: system (glibc)
+
+attached base packages:
+[1] grid      stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] ComplexHeatmap_2.16.0 MARVEL_2.0.5          viridis_0.6.4        
+ [4] viridisLite_0.4.2     patchwork_1.1.3       cowplot_1.1.1        
+ [7] lintr_3.1.0           styler_1.10.2         here_1.0.1           
+[10] lubridate_1.9.3       forcats_1.0.0         stringr_1.5.1        
+[13] dplyr_1.1.3           purrr_1.0.2           readr_2.1.4          
+[16] tidyr_1.3.0           tibble_3.2.1          ggplot2_3.4.4        
+[19] tidyverse_2.0.0      
+
+loaded via a namespace (and not attached):
+ [1] tidyselect_1.2.0    farver_2.1.1        R.utils_2.12.2      fastmap_1.1.1      
+ [5] lazyeval_0.2.2      rex_1.2.1           digest_0.6.33       timechange_0.2.0   
+ [9] lifecycle_1.0.4     cluster_2.1.4       processx_3.8.2      magrittr_2.0.3     
+[13] compiler_4.3.1      rlang_1.1.2         tools_4.3.1         utf8_1.2.4         
+[17] yaml_2.3.7          data.table_1.14.8   knitr_1.44          labeling_0.4.3     
+[21] xmlparsedata_1.0.5  plyr_1.8.9          xml2_1.3.5          RColorBrewer_1.1-3 
+[25] R.cache_0.16.0      withr_2.5.2         BiocGenerics_0.46.0 desc_1.4.2         
+[29] R.oo_1.25.0         stats4_4.3.1        fansi_1.0.5         colorspace_2.1-0   
+[33] scales_1.2.1        iterators_1.0.14    cli_3.6.1           rmarkdown_2.25     
+[37] crayon_1.5.2        generics_0.1.3      remotes_2.4.2.1     rstudioapi_0.15.0  
+[41] tzdb_0.4.0          rjson_0.2.21        parallel_4.3.1      matrixStats_1.0.0  
+[45] vctrs_0.6.4         Matrix_1.6-1.1      callr_3.7.3         IRanges_2.34.1     
+[49] hms_1.1.3           GetoptLong_1.0.5    S4Vectors_0.38.2    clue_0.3-65        
+[53] cyclocomp_1.1.1     foreach_1.5.2       glue_1.6.2          codetools_0.2-19   
+[57] ps_1.7.5            shape_1.4.6         stringi_1.8.1       gtable_0.3.4       
+[61] munsell_0.5.0       pillar_1.9.0        htmltools_0.5.6.1   circlize_0.4.15    
+[65] R6_2.5.1            doParallel_1.0.17   rprojroot_2.0.3     evaluate_0.22      
+[69] lattice_0.21-8      R.methodsS3_1.8.2   png_0.1-8           backports_1.4.1    
+[73] Rcpp_1.0.11         gridExtra_2.3       xfun_0.40           pkgconfig_2.0.3    
+[77] GlobalOptions_0.1.2
