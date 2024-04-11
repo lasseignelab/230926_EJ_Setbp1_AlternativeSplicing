@@ -29,11 +29,11 @@ suppressPackageStartupMessages({
   library(MARVEL)
   library(ComplexHeatmap)
   library(Matrix)
-library(slam)
+  library(slam)
+  library(circlize)
 })
 
 # source functions
-source(here::here("src", "figures", "functions.R"))
 source(here::here("src", "figures", "geom_split_violin.R"))
 ```
 
@@ -99,9 +99,7 @@ mutant_list <- set_names(mutant_list, c(
 ))
 ```
 
-
 ## data wrangling - split everything by mutant and wildtype!!!
-
 
 ```{r pull out mutants and wildtype normalized expression}
 mutant_ids <- mutant_list[[1]]
@@ -162,7 +160,6 @@ mutant_sju[is.infinite(mutant_sju)] <- NaN
 mutant_sju[mutant_sju > 100] <- 100
 
 colnames(mutant_sju) <- paste0(colnames(mutant_sju), "_mutant")
-
 ```
 
 
@@ -170,10 +167,13 @@ colnames(mutant_sju) <- paste0(colnames(mutant_sju), "_mutant")
 wt_sju[is.infinite(wt_sju)] <- NaN
 wt_sju[wt_sju > 100] <- 100
 
-colnames(wt_sju) <- paste0(colnames(wt_sju), "_mutant")
+colnames(wt_sju) <- paste0(colnames(wt_sju), "_wildtype")
 
 # r bind together both conditions
 conditions_sju <- cbind(mutant_sju, wt_sju)
+
+# create delta sj usage matrix
+delta_sju <- mutant_sju - wt_sju
 ```
 
 ## Make split violin plots for showing gene expression
@@ -197,15 +197,15 @@ setbp1_split_violin <- ggplot(
   geom_split_violin(show.legend = TRUE) +
   scale_alpha_manual(
     name = "Condition",
-    labels = c("Mutant", "Wildtype"),
+    labels = c("S858R+/-", "Wildtype"),
     values = c(1, 0.4),
-    guide = guide_legend(override.aes = list(fill = "gray15"))
+    guide = guide_legend(override.aes = list(fill = "gray40", color = "black"))
   ) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 12) +
   theme(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(face = "bold", color = "black"),
-    legend.text = element_text(face = "bold", size = 12),
+    legend.text = element_text(face = "bold", size = 10),
     legend.title = element_text(face = "bold"),
     axis.text.x = element_text(angle = 45, hjust = 1)
   ) +
@@ -220,52 +220,24 @@ setbp1_split_violin <- ggplot(
 setbp1_split_violin
 ```
 
+## Create heatmaps
 
-
-```{r splice junctions list}
-
-setbp1_sjs <- setbp1_marvel[["sj.metadata"]]$coord.intron[setbp1_marvel[["sj.metadata"]]$gene_short_name.start == "Setbp1"]
-
-setbp1_sj_expr_dfs <- sapply(setbp1_sjs, make_norm_sj_expr_df, simplify = FALSE)
-
-my_cols <- c("#443A83FF","#31688EFF","#21908CFF","#35B779FF","#8FD744FF")
-
-setbp1_sj_vln_plots <- map2(setbp1_sj_expr_dfs, my_cols, make_sj_split_violin)
-
-setbp1_sj_vln_plots[[1]] + ggtitle(names(setbp1_sj_vln_plots[1]))
-setbp1_sj_vln_plots[[2]] + ggtitle(names(setbp1_sj_vln_plots[2]))
-setbp1_sj_vln_plots[[3]] + ggtitle(names(setbp1_sj_vln_plots[3]))
-setbp1_sj_vln_plots[[4]] + ggtitle(names(setbp1_sj_vln_plots[4]))
-setbp1_sj_vln_plots[[5]] + ggtitle(names(setbp1_sj_vln_plots[5]))
-```
-
-Ok, these really aren't that informative. I will make a heatmap with the mean expression instead.
-
-```{r make dataframe with splice junction means - this is not including cell type}
-
-wt_sjs_for_barplot <- data.frame("coord_intron" = rownames(wildtype_sj), "mean_expr" = rowMeans(wildtype_sj), "condition" = rep("wildtype", length(rownames(wildtype_sj))))
-
-mut_sjs_for_barplot <- data.frame("coord_intron" = rownames(mutant_sj), "mean_expr" = rowMeans(mutant_sj), "condition" = c(rep("mutant", length(rownames(mutant_sj)))))
-
-# now bind the 2 dfs
-sjs_for_heatmap <- rbind(wt_sjs_for_barplot, mut_sjs_for_barplot)
-
-```
-
-Need to split this out by cell type
+#### split sj expression by cell type
 
 ```{r reformat cell type level data for visualization}
 # mutants
 mutant_sj_expr_means <- list()
-for(i in seq_along(cell_group_list)) {
+for (i in seq_along(cell_group_list)) {
   # get only mutant ids
   cell_group_mutants <- intersect(cell_group_list[[i]], mutant_list[["Mutant"]])
   # split cell type
   cell_type_sj_expr <-
-  normalized_sj_expression[, colnames(normalized_sj_expression) %in% cell_group_mutants]
+    normalized_sj_expression[
+      ,
+      colnames(normalized_sj_expression) %in% cell_group_mutants
+    ]
   # get means
   mutant_sj_expr_means[[i]] <- rowMeans(cell_type_sj_expr)
-  
 }
 names(mutant_sj_expr_means) <- names(cell_group_list)
 
@@ -273,22 +245,27 @@ mutant_sj_expr_means <- do.call(cbind, mutant_sj_expr_means)
 
 mutant_sj_expr_means <- as.data.frame(mutant_sj_expr_means)
 
-colnames(mutant_sj_expr_means) <- paste0(colnames(mutant_sj_expr_means), "_mutant")
-
+colnames(mutant_sj_expr_means) <-
+  paste0(colnames(mutant_sj_expr_means), "_mutant")
 ```
+
+#### Get means
 
 ```{r get wt expr means}
 # wildtypes
 wildtype_sj_expr_means <- list()
-for(i in seq_along(cell_group_list)) {
+for (i in seq_along(cell_group_list)) {
   # get only wildtype ids
-  cell_group_wildtypes <- intersect(cell_group_list[[i]], mutant_list[["Wildtype"]])
+  cell_group_wildtypes <-
+    intersect(cell_group_list[[i]], mutant_list[["Wildtype"]])
   # split cell type
   cell_type_sj_expr <-
-    normalized_sj_expression[, colnames(normalized_sj_expression) %in% cell_group_wildtypes]
+    normalized_sj_expression[
+      ,
+      colnames(normalized_sj_expression) %in% cell_group_wildtypes
+    ]
   # get means
   wildtype_sj_expr_means[[i]] <- rowMeans(cell_type_sj_expr)
-  
 }
 names(wildtype_sj_expr_means) <- names(cell_group_list)
 
@@ -296,7 +273,8 @@ wildtype_sj_expr_means <- do.call(cbind, wildtype_sj_expr_means)
 
 wildtype_sj_expr_means <- as.data.frame(wildtype_sj_expr_means)
 
-colnames(wildtype_sj_expr_means) <- paste0(colnames(wildtype_sj_expr_means), "_wildtype")
+colnames(wildtype_sj_expr_means) <-
+  paste0(colnames(wildtype_sj_expr_means), "_wildtype")
 ```
 
 
@@ -306,54 +284,115 @@ sj_expr_for_heatmap <- cbind(mutant_sj_expr_means, wildtype_sj_expr_means)
 
 sj_expr_for_heatmap <- as.matrix(sj_expr_for_heatmap)
 
+# make delta expression matrix
+
+delta_expr_for_heatmap <- 
+  as.matrix(mutant_sj_expr_means) - as.matrix(wildtype_sj_expr_means)
 ```
 
-```{r create heatmap}
+#### Create heatmap
+
+```{r create heatmap annotation}
 annot_colors_list <- list(
-  `Cell Type` = c("Astrocytes" = "#6CA9E2",
-  "Excitatory Neurons" = "#98D070",
-  "Inhibitory Neurons" = "#DEE971",
-  "Microglia" = "#B898E4",
-  "Oligodendrocytes" = "#4AD8E6",
-  "OPCs" = "#0A9A8D",
-  "Vascular Cells" = "#E28C67"),
-  `Condition` = c("Mutant" = "#9E9E9E", "Wildtype" =  "#D8D8D8")
+  `Cell Type` = c(
+    "Astrocytes" = "#6CA9E2",
+    "Excitatory Neurons" = "#98D070",
+    "Inhibitory Neurons" = "#DEE971",
+    "Microglia" = "#B898E4",
+    "Oligodendrocytes" = "#4AD8E6",
+    "OPCs" = "#0A9A8D",
+    "Vascular Cells" = "#E28C67"
+  ),
+  `Condition` = c("Mutant" = "#9E9E9E", "Wildtype" = "#D8D8D8")
 )
 
-# make annotation
-col_annot <- HeatmapAnnotation(`Cell Type` = rep(names(cell_group_list), 2),
-                               `Condition` = c(rep("Mutant", 7), rep("Wildtype", 7)),
-                               col = annot_colors_list)
-
-# make splice junction expression heatmap
-setbp1_sje_heatmap_df <- sj_expr_for_heatmap[rownames(sj_expr_for_heatmap) %in% setbp1_sjs, ]
-
-gene_heatmap <- Heatmap(setbp1_sje_heatmap_df,
-                        name = "Mean Norm\nSJ Expression",
-        col = RColorBrewer::brewer.pal(name = "GnBu", n = 9),
-        top_annotation = col_annot, cluster_rows = FALSE,
-        show_column_names = FALSE,
-        row_title = "SJ Expression")
-
-# make splice junction usage heatmap
-setbp1_sju_heatmap_df <- conditions_sju[rownames(conditions_sju) %in% setbp1_sjs, ]
-
-sj_heatmap <- Heatmap(setbp1_sju_heatmap_df, name = "SJ Usage",
-        col = RColorBrewer::brewer.pal(name = "YlOrBr", n = 9), cluster_rows = FALSE,
-        show_column_names = FALSE,
-        row_title = "SJ Usage")
-
-
-both_heatmaps <- gene_heatmap %v% sj_heatmap
-
-sj_expr_usage_heatmaps <- grid.grabExpr(draw(both_heatmaps))
-
+# get setbp1 sjs
+setbp1_sjs <-
+  setbp1_marvel[["sj.metadata"]]$coord.intron[
+    setbp1_marvel[["sj.metadata"]]$gene_short_name.start == "Setbp1"
+  ]
 ```
 
+## make heatmap with delta values
+
+```{r make annotation}
+col_annot <- HeatmapAnnotation(
+  `Cell Type` = names(cell_group_list),
+  col = annot_colors_list, annotation_name_gp = gpar(fontface = "bold")
+)
+
+delta_gene_expr_cols <-
+  colorRamp2(
+    c(
+      min(setbp1_delta_sje_heatmap_df), 0,
+      max(setbp1_delta_sje_heatmap_df)
+    ),
+    c(RColorBrewer::brewer.pal(name = "BrBG", n = 3))
+  )
+
+delta_sju_cols <-
+  colorRamp2(
+    c(
+      min(setbp1_delta_sju_heatmap_df), 0,
+      max(setbp1_delta_sju_heatmap_df)
+    ),
+    c(RColorBrewer::brewer.pal(name = "PRGn", n = 3))
+  )
+```
+
+```{r make heatmaps}
+# make splice junction expression heatmap
+setbp1_delta_sje_heatmap_df <-
+  delta_expr_for_heatmap[rownames(delta_expr_for_heatmap) %in% setbp1_sjs, ]
+
+delta_gene_heatmap <- Heatmap(setbp1_delta_sje_heatmap_df,
+  name = "\u0394 Mean Norm\nSJ Expression",
+  column_order = sort(colnames(setbp1_delta_sje_heatmap_df)),
+  col = delta_gene_expr_cols,
+  top_annotation = col_annot_2, cluster_rows = FALSE,
+  show_column_names = FALSE,
+  row_title = "SJ Expression", border = TRUE,
+  row_title_gp = gpar(fontface = "bold"),
+  row_names_gp = gpar(fontface = "bold")
+)
+
+# make splice junction usage heatmap
+setbp1_delta_sju_heatmap_df <-
+  delta_sju[rownames(delta_sju) %in% setbp1_sjs, ]
+
+delta_sj_heatmap <- Heatmap(setbp1_delta_sju_heatmap_df,
+  name = "\u0394 SJ Usage",
+  column_order = sort(colnames(setbp1_delta_sju_heatmap_df)),
+  col = delta_sju_cols,
+  cluster_rows = FALSE,
+  show_column_names = FALSE,
+  row_title = "SJ Usage", border = TRUE,
+  row_title_gp = gpar(fontface = "bold"),
+  row_names_gp = gpar(fontface = "bold")
+)
+
+both_delta_heatmaps <- delta_gene_heatmap %v% delta_sj_heatmap
+
+delta_sj_expr_usage_heatmaps <- grid.grabExpr(draw(both_delta_heatmaps))
+```
+
+## Combine all plots and save
+
 ```{r plot grid}
+# arrange vln plot
+gene_expr_vln <- plot_grid(setbp1_split_violin, NULL, ncol = 1)
 
-plot_grid(setbp1_split_violin, sj_expr_usage_heatmaps)
+# arrange panels
+figure_3 <- plot_grid(gene_expr_vln, delta_sj_expr_usage_heatmaps,
+  labels = c("A", "B"), nrow = 1
+)
 
+# save
+png(here::here("results", "final_outputs", "figure3.png"),
+  width = 14, height = 8, units = "in", res = 300
+)
+figure_3
+dev.off()
 ```
 
 #### Style
