@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Create figure 
 
-The purpose of this script is to create a finalized version of figure 3. It is dependent on Marvel scripts 01 through 06. And DESeq2 script 01. Run in docker 1.0.8.
+The purpose of this script is to create a finalized version of figure 3. It is dependent on Marvel scripts 01 through 06. Run in docker 1.0.9.
 
 ## Load packages
 
@@ -31,10 +31,13 @@ suppressPackageStartupMessages({
   library(Matrix)
   library(slam)
   library(circlize)
+  library(ggtranscript)
+  library(rtracklayer)
 })
 
 # source functions
 source(here::here("src", "figures", "geom_split_violin.R"))
+source(here::here("src", "figures", "functions.R"))
 ```
 
 ## Set colors
@@ -215,7 +218,10 @@ setbp1_split_violin <- ggplot(
     guide = "none"
   ) +
   xlab("Cell Type") +
-  ylab("Normalized Gene Expression")
+  ylab(expression(bold(atop(
+    paste("Normalized ", bolditalic("Setbp1")),
+    "Gene Expression"
+  ))))
 
 setbp1_split_violin
 ```
@@ -252,6 +258,9 @@ colnames(mutant_sj_expr_means) <-
 #### Get means
 
 ```{r get wt expr means}
+# overall means
+sj_expr_means <- rowMeans(normalized_sj_expression)
+
 # wildtypes
 wildtype_sj_expr_means <- list()
 for (i in seq_along(cell_group_list)) {
@@ -286,11 +295,11 @@ sj_expr_for_heatmap <- as.matrix(sj_expr_for_heatmap)
 
 # make delta expression matrix
 
-delta_expr_for_heatmap <- 
+delta_expr_for_heatmap <-
   as.matrix(mutant_sj_expr_means) - as.matrix(wildtype_sj_expr_means)
 ```
 
-#### Create heatmap
+#### Create heatmap - both conditions
 
 ```{r create heatmap annotation}
 annot_colors_list <- list(
@@ -303,7 +312,7 @@ annot_colors_list <- list(
     "OPCs" = "#0A9A8D",
     "Vascular Cells" = "#E28C67"
   ),
-  `Condition` = c("Mutant" = "#9E9E9E", "Wildtype" = "#D8D8D8")
+  `Condition` = c("S858R+/-" = "#666666", "Wildtype" = "#C1C1C1")
 )
 
 # get setbp1 sjs
@@ -311,7 +320,62 @@ setbp1_sjs <-
   setbp1_marvel[["sj.metadata"]]$coord.intron[
     setbp1_marvel[["sj.metadata"]]$gene_short_name.start == "Setbp1"
   ]
+
+# get setbp1 sj expr
+setbp1_sj_mean_expr <- sj_expr_means[setbp1_sjs]
 ```
+
+
+```{r make annotation}
+col_annot_conditions <- HeatmapAnnotation(
+  `Cell Type` = rep(names(cell_group_list), 2),
+  `Condition` = c(rep("S858R+/-", 7), rep("Wildtype", 7)),
+  col = annot_colors_list, annotation_name_gp = gpar(fontface = "bold")
+)
+
+gene_expr_cols <- c("#FFFFFF", RColorBrewer::brewer.pal(name = "GnBu", n = 9))
+
+sju_cols <- c("#FFFFFF", RColorBrewer::brewer.pal(name = "YlOrBr", n = 9))
+```
+
+
+```{r create more heatmaps}
+# make splice junction expression heatmap
+setbp1_sje_heatmap_df <-
+  sj_expr_for_heatmap[rownames(sj_expr_for_heatmap) %in% setbp1_sjs, ]
+
+gene_heatmap <- Heatmap(setbp1_sje_heatmap_df,
+  name = "Mean Norm\nSJ Expression",
+  column_order = sort(colnames(setbp1_sje_heatmap_df)),
+  col = gene_expr_cols,
+  top_annotation = col_annot_conditions, cluster_rows = FALSE,
+  show_column_names = FALSE,
+  row_title = "SJ Expression", border = TRUE,
+  row_title_gp = gpar(fontface = "bold"),
+  row_names_gp = gpar(fontface = "bold")
+)
+
+# make splice junction usage heatmap
+setbp1_sju_heatmap_df <-
+  conditions_sju[rownames(conditions_sju) %in% setbp1_sjs, ]
+
+sj_heatmap <- Heatmap(setbp1_sju_heatmap_df,
+  name = "SJ Usage",
+  column_order = sort(colnames(setbp1_sju_heatmap_df)),
+  col = sju_cols,
+  cluster_rows = FALSE,
+  show_column_names = FALSE,
+  row_title = "SJ Usage", border = TRUE,
+  row_title_gp = gpar(fontface = "bold"),
+  row_names_gp = gpar(fontface = "bold")
+)
+
+both_heatmaps <- gene_heatmap %v% sj_heatmap
+
+sj_expr_usage_heatmaps <- grid.grabExpr(draw(both_heatmaps))
+```
+
+#### Create heatmap - difference between conditions
 
 ## make heatmap with delta values
 
@@ -320,7 +384,16 @@ col_annot <- HeatmapAnnotation(
   `Cell Type` = names(cell_group_list),
   col = annot_colors_list, annotation_name_gp = gpar(fontface = "bold")
 )
+```
 
+```{r make heatmaps}
+# make splice junction expression heatmap
+setbp1_delta_sje_heatmap_df <-
+  delta_expr_for_heatmap[rownames(delta_expr_for_heatmap) %in% setbp1_sjs, ]
+
+rownames(setbp1_delta_sje_heatmap_df) <- c(paste0("SJ-", 1:5))
+
+# set colors
 delta_gene_expr_cols <-
   colorRamp2(
     c(
@@ -330,28 +403,17 @@ delta_gene_expr_cols <-
     c(RColorBrewer::brewer.pal(name = "BrBG", n = 3))
   )
 
-delta_sju_cols <-
-  colorRamp2(
-    c(
-      min(setbp1_delta_sju_heatmap_df), 0,
-      max(setbp1_delta_sju_heatmap_df)
-    ),
-    c(RColorBrewer::brewer.pal(name = "PRGn", n = 3))
-  )
-```
-
-```{r make heatmaps}
-# make splice junction expression heatmap
-setbp1_delta_sje_heatmap_df <-
-  delta_expr_for_heatmap[rownames(delta_expr_for_heatmap) %in% setbp1_sjs, ]
-
+# create heatmap
 delta_gene_heatmap <- Heatmap(setbp1_delta_sje_heatmap_df,
   name = "\u0394 Mean Norm\nSJ Expression",
   column_order = sort(colnames(setbp1_delta_sje_heatmap_df)),
   col = delta_gene_expr_cols,
-  top_annotation = col_annot_2, cluster_rows = FALSE,
+  top_annotation = col_annot, cluster_rows = FALSE,
   show_column_names = FALSE,
-  row_title = "SJ Expression", border = TRUE,
+  row_title = expression(bold(paste(
+    bolditalic("Setbp1 "),
+    "SJ Expression"
+  ))), border = TRUE,
   row_title_gp = gpar(fontface = "bold"),
   row_names_gp = gpar(fontface = "bold")
 )
@@ -360,13 +422,29 @@ delta_gene_heatmap <- Heatmap(setbp1_delta_sje_heatmap_df,
 setbp1_delta_sju_heatmap_df <-
   delta_sju[rownames(delta_sju) %in% setbp1_sjs, ]
 
+rownames(setbp1_delta_sju_heatmap_df) <- c(paste0("SJ-", 1:5))
+
+# set colors
+delta_sju_cols <-
+  colorRamp2(
+    c(
+      min(setbp1_delta_sju_heatmap_df), 0,
+      max(setbp1_delta_sju_heatmap_df)
+    ),
+    c(RColorBrewer::brewer.pal(name = "PRGn", n = 3))
+  )
+
+# make heatmap
 delta_sj_heatmap <- Heatmap(setbp1_delta_sju_heatmap_df,
   name = "\u0394 SJ Usage",
   column_order = sort(colnames(setbp1_delta_sju_heatmap_df)),
   col = delta_sju_cols,
   cluster_rows = FALSE,
   show_column_names = FALSE,
-  row_title = "SJ Usage", border = TRUE,
+  row_title = expression(bold(paste(
+    bolditalic("Setbp1 "),
+    "SJ Usage"
+  ))), border = TRUE,
   row_title_gp = gpar(fontface = "bold"),
   row_names_gp = gpar(fontface = "bold")
 )
@@ -376,23 +454,239 @@ both_delta_heatmaps <- delta_gene_heatmap %v% delta_sj_heatmap
 delta_sj_expr_usage_heatmaps <- grid.grabExpr(draw(both_delta_heatmaps))
 ```
 
+## Visualize transcripts
+
+```{r import gtf}
+# set file path
+gtf_file_path <- "/data/project/lasseigne_lab/GENOME_dir/GENCODE_mm39/release_M31/GTF/gencode.vM31.primary_assembly.annotation.gtf"
+
+# import gtf
+gtf <- rtracklayer::import(gtf_file_path)
+
+# make into tibble
+gtf <- gtf %>% dplyr::as_tibble()
+```
+
+```{r pull setbp1 information from gtf}
+setbp1_annotation_from_gtf <- gtf %>%
+  dplyr::filter(
+    !is.na(gene_name),
+    gene_name == "Setbp1"
+  )
+
+setbp1_annotation_from_gtf <- setbp1_annotation_from_gtf %>%
+  dplyr::select(
+    seqnames,
+    start,
+    end,
+    strand,
+    type,
+    gene_name,
+    transcript_name,
+    transcript_type
+  )
+
+head(setbp1_annotation_from_gtf)
+```
+
+```{r extract exons and plot}
+# extract exons
+setbp1_exons <- setbp1_annotation_from_gtf %>% dplyr::filter(type == "exon")
+
+setbp1_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_name
+  )) +
+  geom_range(
+    aes(fill = transcript_type)
+  ) +
+  geom_intron(
+    data = to_intron(setbp1_exons, "transcript_name"),
+    aes(strand = strand)
+  )
+```
+
+```{r make junctions df}
+setbp1_junctions <- strsplit(setbp1_sjs, ":")
+
+setbp1_junctions <- as_tibble(do.call(rbind, setbp1_junctions))
+
+colnames(setbp1_junctions) <- c("seqnames", "start", "end")
+
+setbp1_junctions$start <- as.numeric(setbp1_junctions$start)
+
+setbp1_junctions$end <- as.numeric(setbp1_junctions$end)
+
+setbp1_junctions$strand <- "-"
+
+setbp1_junctions$mean_count <- setbp1_sj_mean_expr
+
+setbp1_junctions <- setbp1_junctions %>%
+  dplyr::mutate(transcript_name = "Setbp1-201")
+
+setbp1_transcript <- setbp1_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_name
+  )) +
+  geom_range(
+    aes(fill = transcript_type)
+  ) +
+  geom_intron(
+    data = to_intron(setbp1_exons, "transcript_name"),
+    aes(strand = strand)
+  ) +
+  geom_junction(
+    data = setbp1_junctions, junction.y.max = 0.5,
+    aes(linewidth = mean_count)
+  ) +
+  scale_linewidth(range = c(0.1, 1)) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    axis.title.y = element_blank()
+  ) +
+  guides(fill = FALSE) +
+  labs(linewidth = "Normalized SJ\nExpression") +
+  xlab("Genomic Location")
+
+setbp1_transcript
+```
+
+```{r try different labeling scheme}
+setbp1_junctions$sj_label <- paste0("SJ-", 1:5)
+
+setbp1_transcript_label <- setbp1_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_name
+  )) +
+  geom_range(
+    aes(fill = transcript_type)
+  ) +
+  geom_intron(
+    data = to_intron(setbp1_exons, "transcript_name"),
+    aes(strand = strand)
+  ) +
+  geom_junction(
+    data = setbp1_junctions, junction.y.max = 0.5,
+    aes(linewidth = mean_count)
+  ) +
+  geom_junction_label_repel(
+    data = setbp1_junctions,
+    aes(label = sj_label), junction.y.max = 0.5,
+    segment.color = NA
+  ) +
+  scale_linewidth(range = c(0.1, 1)) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    axis.title.y = element_blank()
+  ) +
+  guides(fill = FALSE) +
+  labs(linewidth = "Normalized SJ\nExpression") +
+  xlab("Genomic Location")
+
+setbp1_transcript_label
+```
+
+
+
+```{r try long label}
+setbp1_junctions$sj_label_long <- setbp1_sjs
+
+setbp1_transcript_long <- setbp1_exons %>%
+  ggplot(aes(
+    xstart = start,
+    xend = end,
+    y = transcript_name
+  )) +
+  geom_range(
+    aes(fill = transcript_type)
+  ) +
+  geom_intron(
+    data = to_intron(setbp1_exons, "transcript_name"),
+    aes(strand = strand)
+  ) +
+  geom_junction(
+    data = setbp1_junctions, junction.y.max = 0.5,
+    aes(linewidth = mean_count)
+  ) +
+  geom_junction_label_repel(
+    data = setbp1_junctions,
+    aes(label = sj_label_long), junction.y.max = 0.5,
+    segment.color = NA
+  ) +
+  scale_linewidth(range = c(0.1, 1)) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_blank(),
+    legend.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    axis.title.y = element_blank()
+  ) +
+  guides(fill = FALSE) +
+  labs(linewidth = "Normalized SJ\nExpression") +
+  xlab("Genomic Location")
+
+setbp1_transcript_long
+```
+
 ## Combine all plots and save
 
 ```{r plot grid}
 # arrange vln plot
-gene_expr_vln <- plot_grid(setbp1_split_violin, NULL, ncol = 1)
+gene_expr_vln <- plot_grid(setbp1_transcript_label, setbp1_split_violin,
+  ncol = 1,
+  labels = c("A", "B")
+)
 
 # arrange panels
 figure_3 <- plot_grid(gene_expr_vln, delta_sj_expr_usage_heatmaps,
-  labels = c("A", "B"), nrow = 1
+  labels = c("", "C"), nrow = 1
 )
 
+figure_3
+
 # save
-png(here::here("results", "final_outputs", "figure3.png"),
-  width = 14, height = 8, units = "in", res = 300
+png(here::here("results", "final_outputs", "figure3_new.png"),
+  width = 12, height = 7, units = "in", res = 300
 )
 figure_3
 dev.off()
+```
+
+```{r get all AS genes}
+
+load(here::here("data", "marvel", "significant_tables.RData"))
+
+# get sig tables
+matching_dfs <- mget(ls(pattern = "sig_table"))
+
+# get the column you want
+sig_sj_genes <- unique(unlist(lapply(matching_dfs, function(df_name) {df_name$gene_short_name})))
+
+```
+
+```{r apply function to all AS genes}
+
+lapply(sig_sj_genes, function(gene) {
+  make_gene_sj_expr_usage_plots(gene_of_interest = gene,
+                                save_path = here::here("results",
+                                                       "as_gene_summaries"))
+  })
+
 ```
 
 #### Style
