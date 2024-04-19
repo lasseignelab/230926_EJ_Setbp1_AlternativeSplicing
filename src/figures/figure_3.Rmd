@@ -660,7 +660,7 @@ figure_3 <- plot_grid(gene_expr_vln, delta_sj_expr_usage_heatmaps,
 figure_3
 
 # save
-png(here::here("results", "final_outputs", "figure3_new.png"),
+png(here::here("results", "final_outputs", "figure3.png"),
   width = 12, height = 7, units = "in", res = 300
 )
 figure_3
@@ -668,25 +668,27 @@ dev.off()
 ```
 
 ```{r get all AS genes}
-
 load(here::here("data", "marvel", "significant_tables.RData"))
 
 # get sig tables
 matching_dfs <- mget(ls(pattern = "sig_table"))
 
 # get the column you want
-sig_sj_genes <- unique(unlist(lapply(matching_dfs, function(df_name) {df_name$gene_short_name})))
-
+sig_sj_genes <- unique(unlist(lapply(matching_dfs, function(df_name) {
+  df_name$gene_short_name
+})))
 ```
 
 ```{r apply function to all AS genes}
-
 lapply(sig_sj_genes, function(gene) {
-  make_gene_sj_expr_usage_plots(gene_of_interest = gene,
-                                save_path = here::here("results",
-                                                       "as_gene_summaries"))
-  })
-
+  make_gene_sj_expr_usage_plots(
+    gene_of_interest = gene,
+    save_path = here::here(
+      "results",
+      "as_gene_summaries"
+    )
+  )
+})
 ```
 
 #### Style
