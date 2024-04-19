@@ -294,7 +294,6 @@ sj_expr_for_heatmap <- cbind(mutant_sj_expr_means, wildtype_sj_expr_means)
 sj_expr_for_heatmap <- as.matrix(sj_expr_for_heatmap)
 
 # make delta expression matrix
-
 delta_expr_for_heatmap <-
   as.matrix(mutant_sj_expr_means) - as.matrix(wildtype_sj_expr_means)
 ```
@@ -391,7 +390,7 @@ col_annot <- HeatmapAnnotation(
 setbp1_delta_sje_heatmap_df <-
   delta_expr_for_heatmap[rownames(delta_expr_for_heatmap) %in% setbp1_sjs, ]
 
-rownames(setbp1_delta_sje_heatmap_df) <- c(paste0("SJ-", 1:5))
+rownames(setbp1_delta_sje_heatmap_df) <- c(paste0("SJ-", rev(1:5)))
 
 # set colors
 delta_gene_expr_cols <-
@@ -422,7 +421,7 @@ delta_gene_heatmap <- Heatmap(setbp1_delta_sje_heatmap_df,
 setbp1_delta_sju_heatmap_df <-
   delta_sju[rownames(delta_sju) %in% setbp1_sjs, ]
 
-rownames(setbp1_delta_sju_heatmap_df) <- c(paste0("SJ-", 1:5))
+rownames(setbp1_delta_sju_heatmap_df) <- c(paste0("SJ-", rev(1:5)))
 
 # set colors
 delta_sju_cols <-
@@ -560,7 +559,7 @@ setbp1_transcript
 ```
 
 ```{r try different labeling scheme}
-setbp1_junctions$sj_label <- paste0("SJ-", 1:5)
+setbp1_junctions$sj_label <- paste0("SJ-", rev(1:5))
 
 setbp1_transcript_label <- setbp1_exons %>%
   ggplot(aes(
