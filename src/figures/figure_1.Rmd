@@ -56,8 +56,8 @@ cell_type_colors <- c(
 )
 
 condition_colors <- c(
-  `mutant` = "#D8D8D8",
-  `wildtype` = "#9E9E9E"
+  `mutant` = "#666666",
+  `wildtype` = "#C1C1C1"
 )
 
 other_colors <- c("#0346a3", "#076466", "#2a6607")
@@ -99,7 +99,7 @@ Panel B will be a dot plot of cell type markers.
 ```{r plot dotplot of cell types}
 # create dotplot
 dotplot <- DotPlot(annotated_brain_samples,
-  cols = c("lightgray", other_colors[3]),
+  cols = c("lightgray", other_colors[2]),
   features = c(
     "Vtn", "Cx3cr1", "Pdgfra", "Gad2", "Mbp",
     "Slc1a3", "Slc17a7"
@@ -137,12 +137,13 @@ umap_2 <- DimPlot(annotated_brain_samples,
     axis.title = element_text(face = "bold")
   ) +
   scale_color_manual(
-    labels = c("Mutant", "Wildtype"),
+    labels = c("S858R+/-", "Wildtype"),
     values = condition_colors
   ) +
   labs(color = "Condition", title = NULL) +
   xlab("UMAP 1") +
-  ylab("UMAP 2")
+  ylab("UMAP 2") +
+  NoLegend()
 
 # show umap
 umap_2
@@ -167,7 +168,7 @@ colnames(df) <- c("Cell_Type", "Condition", "Freq")
 # make silly data for legend
 df3 <- data.frame(
   "Cell_Type" = as.numeric(c(NA, NA)),
-  "Condition" = c("Mutant", "Wildtype"),
+  "Condition" = c("S858R+/-", "Wildtype"),
   "Freq" = as.numeric(c(NA, NA))
 )
 
@@ -179,7 +180,7 @@ barplot <- ggplot(data = df, aes(
   theme_minimal(base_size = 15) +
   geom_col(position = "fill", width = 0.75, show.legend = FALSE) +
   scale_fill_manual(
-    labels = c("Mutant", "Wildtype"),
+    labels = c("S858R+/-", "Wildtype"),
     values = condition_colors
   ) +
   theme(
@@ -197,8 +198,8 @@ barplot <- ggplot(data = df, aes(
     y = Freq, color = Condition
   ), size = 4) +
   scale_color_manual(
-    labels = c("Mutant", "Wildtype"),
-    values = c("#D8D8D8", "#9E9E9E")
+    labels = c("S858R+/-", "Wildtype"),
+    values = c("#666666", "#C1C1C1")
   ) +
   theme(legend.key = element_blank())
 
