@@ -177,11 +177,8 @@ make_gene_sj_expr_usage_plots <- function(gene_of_interest, save_path) {
   delta_sju_heatmap_df <-
     delta_sju[rownames(delta_sju) %in% gene_sjs, ]
   
-  if(gene_junctions$strand[1] == "+") {
-    rownames(delta_sju_heatmap_df) <- paste0("SJ-", seq_len(nrow(gene_junctions)))  
-  } 
-  {rownames(delta_sju_heatmap_df) <- paste0("SJ-", rev(seq_len(nrow(gene_junctions))))
-  }
+  ifelse(gene_junctions$strand[1] == "+", rownames(delta_sju_heatmap_df) <- c(paste0("SJ-", seq_len(nrow(gene_junctions)))),
+         rownames(delta_sju_heatmap_df) <- c(paste0("SJ-", rev(seq_len(nrow(gene_junctions))))))
   
   # set colors
   delta_sju_cols <-
