@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-## Create figure 
+## Create figure 3
 
 The purpose of this script is to create a finalized version of figure 3. It is dependent on Marvel scripts 01 through 06. Run in docker 1.0.9.
 
