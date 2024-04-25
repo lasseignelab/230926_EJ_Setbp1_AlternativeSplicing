@@ -27,6 +27,9 @@ suppressPackageStartupMessages({
   library(viridis)
     library(org.Mm.eg.db)
   library(gprofiler2)
+    library(AnnotationDbi)
+  library(clusterProfiler)
+  library(ComplexHeatmap)
 })
 
 ```
@@ -156,7 +159,6 @@ glia_background <- glia_nonzero@Dimnames[[1]]
 ```
 
 ```{r run gprofiler}
-
 # run gprofiler2
 neuron_gostres <- gost(
     query = neuron_genes,
@@ -169,12 +171,12 @@ neuron_gostres <- gost(
 
 # create bubble plot
 neuron_fea_bubble <- ggplot(neuron_gostres[["result"]],
-                            aes(x = intersection_size,
+                            aes(x = precision,
                                 y = reorder(term_name, -p_value),
                                 size = intersection_size,
                                 color = p_value)) + 
   geom_point(aes(color = p_value)) +
-  scale_color_viridis(direction = -1) +
+  scale_color_viridis(direction = -1, option = "plasma") +
   theme_minimal(base_size = 10) +
   theme(
     axis.title = element_text(face = "bold"),
@@ -183,7 +185,7 @@ neuron_fea_bubble <- ggplot(neuron_gostres[["result"]],
     legend.title = element_text(face = "bold"),
     title = element_text(face = "bold")
   ) +
-  xlab("Intersection Size") +
+  xlab("Precision") +
   ylab("Term Name") +
   labs(color = "p-value", size = "Intersection Size") +
   ggtitle("Neuron Functional Enrichment Analysis") +
@@ -204,12 +206,12 @@ glia_gostres <- gost(
 
 # create bubble plot
 glia_fea_bubble <- ggplot(glia_gostres[["result"]],
-                          aes(x = intersection_size,
+                          aes(x = precision,
                               y = reorder(term_name, -p_value),
                               size = intersection_size,
                               color = p_value)) + 
   geom_point() +
-  scale_color_viridis(direction = -1) +
+  scale_color_viridis(direction = -1, option = "plasma") +
   theme_minimal(base_size = 10) +
   theme(
     axis.title = element_text(face = "bold"),
@@ -218,7 +220,7 @@ glia_fea_bubble <- ggplot(glia_gostres[["result"]],
     legend.title = element_text(face = "bold"),
     title = element_text(face = "bold")
   ) +
-  xlab("Intersection Size") +
+  xlab("Precision") +
   ylab("Term Name") +
   labs(color = "p-value", size = "Intersection Size") +
   ggtitle("Glia Functional Enrichment Analysis") +
