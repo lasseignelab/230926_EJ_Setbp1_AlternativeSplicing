@@ -10,7 +10,7 @@
 ## and arranged in matching named lists (as illustrated in tutorial above)
 ## This function assumes the contrast (e.g. stim vs. control) is stored in a variable named "group_id"
 
-get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05) {
+get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05, save_path) {
   
   print(clustx) # useful for debugging
   
@@ -36,14 +36,14 @@ get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05) {
   
   ## Plot and save PCA plot
   DESeq2::plotPCA(rld, intgroup = "group_id")
-  ggsave(here::here(paste0("results/deseq2/", clustx, "_specific_PCAplot.png")))
+  ggsave(here::here(paste0(save_path, clustx, "_specific_PCAplot.png")))
   
   ## Extract rlog matrix from the object and compute pairwise correlation values
   rld_mat <- assay(rld)
   rld_cor <- cor(rld_mat)
   
   ## Plot and save heatmap
-  png(here::here(paste0("results/deseq2/", clustx, "_specific_heatmap.png")),
+  png(here::here(paste0(save_path, clustx, "_specific_heatmap.png")),
       height = 6, width = 7.5, units = "in", res = 300)
   pheatmap(rld_cor, annotation = cluster_metadata[, c("group_id"), drop = FALSE])
   dev.off()
@@ -53,7 +53,7 @@ get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05) {
   dds <- DESeq(dds)
   
   ## Plot dispersion estimates
-  png(here::here(paste0("results/deseq2/", clustx, "_dispersion_plot.png")),
+  png(here::here(paste0(save_path, clustx, "_dispersion_plot.png")),
       height = 5, width = 6, units = "in", res = 300)
   plotDispEsts(dds)
   dev.off()
@@ -71,7 +71,7 @@ get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05) {
     as_tibble()
   
   write.csv(res_tbl,
-            here::here(paste0("results/deseq2/", clustx, "_", contrast, "_all_genes.csv")),
+            here::here(paste0(save_path, clustx, "_", contrast, "_all_genes.csv")),
             quote = FALSE, 
             row.names = FALSE)
   
@@ -80,7 +80,7 @@ get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05) {
     dplyr::arrange(padj)
   
   write.csv(sig_res,
-            here::here(paste0("results/deseq2/", clustx, "_", contrast, "_signif_genes.csv")),
+            here::here(paste0(save_path, clustx, "_", contrast, "_signif_genes.csv")),
             quote = FALSE, 
             row.names = FALSE)
   
@@ -129,7 +129,7 @@ get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05) {
     theme(plot.title = element_text(hjust = 0.5)) +
     facet_wrap(~ gene)
   
-  ggsave(here::here(paste0("results/deseq2/", clustx, "_", contrast, "_top20_DE_genes.png")))}
+  ggsave(here::here(paste0(save_path, clustx, "_", contrast, "_top20_DE_genes.png")))}
   
   # how many genes are there?
   number <- length(top20_sig_genes)
@@ -167,6 +167,6 @@ get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05) {
     theme(plot.title = element_text(hjust = 0.5)) +
     facet_wrap(~ gene)
   
-  ggsave(here::here(paste0("results/deseq2/", clustx, "_", contrast, "_top", number, "_DE_genes.png")))}
+  ggsave(here::here(paste0(save_path, clustx, "_", contrast, "_top", number, "_DE_genes.png")))}
   
 }

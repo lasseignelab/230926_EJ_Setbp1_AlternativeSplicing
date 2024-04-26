@@ -40,6 +40,12 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
+source(here(
+  "src",
+  "deseq2",
+  "functions.R"
+))
+
 # set seed
 set.seed(123)
 ```
@@ -431,7 +437,13 @@ ggplot(res_table_thres) +
 ```{r run deseq2 on all cell types}
 
 # run function on all clusters
-map(cluster_names, get_dds_resultsAvsB, A = "wildtype", B = "mutant")
+map(
+  cluster_names,
+  get_dds_resultsAvsB,
+  A = "wildtype",
+  B = "mutant",
+  save_path = "results/deseq2/"
+)
 
 # microglia and vascular cell do not have any significant genes, probably due to low cell counts
 
