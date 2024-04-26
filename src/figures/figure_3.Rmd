@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-## Create figure 
+## Create figure 3
 
 The purpose of this script is to create a finalized version of figure 3. It is dependent on Marvel scripts 01 through 06. Run in docker 1.0.9.
 
@@ -343,6 +343,8 @@ sju_cols <- c("#FFFFFF", RColorBrewer::brewer.pal(name = "YlOrBr", n = 9))
 setbp1_sje_heatmap_df <-
   sj_expr_for_heatmap[rownames(sj_expr_for_heatmap) %in% setbp1_sjs, ]
 
+rownames(setbp1_sje_heatmap_df) <- c(paste0("SJ-", rev(1:5)))
+
 gene_heatmap <- Heatmap(setbp1_sje_heatmap_df,
   name = "Mean Norm\nSJ Expression",
   column_order = sort(colnames(setbp1_sje_heatmap_df)),
@@ -358,6 +360,8 @@ gene_heatmap <- Heatmap(setbp1_sje_heatmap_df,
 setbp1_sju_heatmap_df <-
   conditions_sju[rownames(conditions_sju) %in% setbp1_sjs, ]
 
+rownames(setbp1_sju_heatmap_df) <- c(paste0("SJ-", rev(1:5)))
+
 sj_heatmap <- Heatmap(setbp1_sju_heatmap_df,
   name = "SJ Usage",
   column_order = sort(colnames(setbp1_sju_heatmap_df)),
@@ -372,6 +376,16 @@ sj_heatmap <- Heatmap(setbp1_sju_heatmap_df,
 both_heatmaps <- gene_heatmap %v% sj_heatmap
 
 sj_expr_usage_heatmaps <- grid.grabExpr(draw(both_heatmaps))
+```
+
+```{r save setbp1 expression figure for supps}
+
+png(here::here("results", "supplementary_figures", "setbp1_sj_expr_usage.png"),
+  width = 6, height = 6, units = "in", res = 300
+)
+draw(both_heatmaps)
+dev.off()
+
 ```
 
 #### Create heatmap - difference between conditions
@@ -688,6 +702,12 @@ lapply(sig_sj_genes, function(gene) {
     )
   )
 })
+```
+
+```{r make extra son plot}
+
+
+
 ```
 
 #### Style
