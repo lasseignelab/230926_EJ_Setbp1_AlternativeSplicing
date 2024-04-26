@@ -1,0 +1,277 @@
+---
+title: "Create Figure 4"
+author: "Emma Jones"
+date: "2024-04-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Create figure 4
+
+The purpose of this script is to make and complete figure 4. This figure has an upset plot of all alternatively spliced genes, and functional enrichment analysis of the neuron and glia specific AS genes.
+
+## Load packages
+
+```{r load packages}
+
+suppressPackageStartupMessages({
+    library(tidyverse)
+  library(here)
+  library(styler)
+  library(lintr)
+  library(cowplot)
+  library(patchwork)
+  library(viridis)
+    library(org.Mm.eg.db)
+  library(gprofiler2)
+    library(AnnotationDbi)
+  library(clusterProfiler)
+  library(ComplexHeatmap)
+})
+
+```
+
+
+```{r load marvel object and significant gene tables}
+# Load MARVEL object
+setbp1_marvel <- read_rds(here::here(
+  "data", "marvel",
+  "setbp1_marvel_aligned.rds"
+))
+
+# Retrieve sample metadata
+sample_metadata <- setbp1_marvel$sample.metadata
+
+# Load significant gene tables
+load(here::here("data", "marvel", "significant_tables.RData"))
+
+# Pull cell types and matching ids
+cell_group_list <- sample_metadata %>%
+  group_split(cell_type, .keep = TRUE) %>%
+  map(~ set_names(.$cell.id, .$cell_type[1]))
+
+# Rename
+cell_group_list <- set_names(cell_group_list, c(
+  "Astrocytes", "Excitatory Neurons",
+  "Inhibitory Neurons", "Microglia", "OPCs",
+  "Oligodendrocytes", "Vascular Cells"
+))
+
+```
+
+### Prep data for UpSet Plot with ComplexHeatmap
+
+```{r make upset plot}
+# make list of sig tables
+tables_list <- mget(ls(pattern = "_sig_table"))
+
+# remove all cell types from list
+tables_list <- tables_list[2:8]
+
+# pull out only genes
+gene_lists <- map(tables_list, ~ select(.x, gene_short_name))
+
+# make into character list
+gene_lists <- map(gene_lists, ~ flatten(.))
+
+# create matrix
+gene_lists_mat <- ComplexHeatmap::list_to_matrix(gene_lists)
+
+# rename columns
+colnames(gene_lists_mat) <- c(
+  "Astrocytes", "Excitatory Neurons",
+  "Inhibitory Neurons", "Microglia",
+  "Oligodendrocytes", "OPCs", "Vascular Cells"
+)
+
+# generate combination matrix
+gene_lists_comb_mat <- make_comb_mat(gene_lists_mat)
+```
+
+### Draw and save UpSet Plot
+
+```{r draw and save upsetplot}
+gene_lists_upset_plot <- UpSet(gene_lists_comb_mat,
+  comb_col = viridis(8)[2:7][comb_degree(gene_lists_comb_mat)],
+  top_annotation = upset_top_annotation(gene_lists_comb_mat,
+    add_numbers = TRUE, annotation_name_gp = gpar(fontface = "bold"),
+    axis_param = list(gp = gpar(fontface = "bold")),
+    numbers_gp = gpar(fontface = "bold")
+  ),
+  right_annotation = upset_right_annotation(gene_lists_comb_mat,
+    add_numbers = TRUE, annotation_name_gp = gpar(fontface = "bold"),
+    axis_param = list(gp = gpar(fontface = "bold")),
+    numbers_gp = gpar(fontface = "bold")
+  ),
+  row_names_gp = gpar(fontface = "bold")
+)
+
+# view upsetplot
+gene_lists_upset_plot
+
+# convert to grob
+gene_lists_upset_plot <- grid.grabExpr(draw(gene_lists_upset_plot))
+```
+
+There is one gene that has significant PSI in all non-vascular cell types. This is the Son gene.
+
+## FEA for each
+
+```{r make gene lists for neurons and glia}
+
+neuron_genes <- unlist(c(gene_lists[["excitatory_sig_table"]],
+                  gene_lists[["inhibitory_sig_table"]]))
+
+glia_genes <- unlist(c(gene_lists[["astrocytes_sig_table"]],
+                  gene_lists[["microglia_sig_table"]],
+                  gene_lists[["oligodendrocytes_sig_table"]],
+                  gene_lists[["opcs_sig_table"]]))
+```
+
+```{r get background genes}
+
+background_genes <- setbp1_marvel[["gene.count.matrix"]]@Dimnames[[1]]
+
+neuron_cells <- unname(c(cell_group_list[["Excitatory Neurons"]],
+                  cell_group_list[["Inhibitory Neurons"]]))
+
+neuron_nonzero <- setbp1_marvel[["gene.count.matrix"]][, neuron_cells]
+
+neuron_nonzero <- neuron_nonzero[rowSums(neuron_nonzero) > 0,]
+
+neuron_background <- neuron_nonzero@Dimnames[[1]]
+
+# do same for glia
+glia_cells <- unname(c(cell_group_list[["Astrocytes"]],
+                  cell_group_list[["Oligodendrocytes"]],
+                  cell_group_list[["OPCs"]],
+                  cell_group_list[["Microglia"]]))
+
+glia_nonzero <- setbp1_marvel[["gene.count.matrix"]][, glia_cells]
+
+glia_nonzero <- glia_nonzero[rowSums(glia_nonzero) > 0,]
+
+glia_background <- glia_nonzero@Dimnames[[1]]
+
+```
+
+```{r run gprofiler}
+# run gprofiler2
+neuron_gostres <- gost(
+    query = neuron_genes,
+    organism = "mmusculus", ordered_query = FALSE,
+    multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+    measure_underrepresentation = FALSE, evcodes = TRUE,
+    user_threshold = 0.05, correction_method = "g_SCS",
+    domain_scope = "custom", custom_bg = neuron_background,
+    numeric_ns = "", sources = NULL, as_short_link = FALSE)
+
+# create bubble plot
+neuron_fea_bubble <- ggplot(neuron_gostres[["result"]],
+                            aes(x = precision,
+                                y = reorder(term_name, -p_value),
+                                size = intersection_size,
+                                color = p_value)) + 
+  geom_point(aes(color = p_value)) +
+  scale_color_viridis(direction = -1, option = "plasma") +
+  theme_minimal(base_size = 10) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    title = element_text(face = "bold")
+  ) +
+  xlab("Precision") +
+  ylab("Term Name") +
+  labs(color = "p-value", size = "Intersection Size") +
+  ggtitle("Neuron Functional Enrichment Analysis") +
+  guides(size = guide_legend(order = 1),
+         color = guide_colorbar(order = 2))
+
+neuron_fea_bubble
+
+# run gprofiler2
+glia_gostres <- gost(
+    query = glia_genes,
+    organism = "mmusculus", ordered_query = FALSE,
+    multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+    measure_underrepresentation = FALSE, evcodes = TRUE,
+    user_threshold = 0.05, correction_method = "g_SCS",
+    domain_scope = "custom", custom_bg = glia_background,
+    numeric_ns = "", sources = NULL, as_short_link = FALSE)
+
+# create bubble plot
+glia_fea_bubble <- ggplot(glia_gostres[["result"]],
+                          aes(x = precision,
+                              y = reorder(term_name, -p_value),
+                              size = intersection_size,
+                              color = p_value)) + 
+  geom_point() +
+  scale_color_viridis(direction = -1, option = "plasma") +
+  theme_minimal(base_size = 10) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    title = element_text(face = "bold")
+  ) +
+  xlab("Precision") +
+  ylab("Term Name") +
+  labs(color = "p-value", size = "Intersection Size") +
+  ggtitle("Glia Functional Enrichment Analysis") +
+  guides(size = guide_legend(order = 1),
+         color = guide_colorbar(order = 2))
+
+glia_fea_bubble
+
+```
+
+
+```{r arrange all results}
+
+bottom_plots <- plot_grid(neuron_fea_bubble, glia_fea_bubble,
+                          labels = c("B", "C"), nrow = 1)
+
+figure_4 <- plot_grid(gene_lists_upset_plot, bottom_plots, ncol = 1,
+                      labels = c("A", ""))
+
+figure_4
+
+```
+```{r save figure 4}
+
+# save
+png(here::here("results", "final_outputs", "figure4.png"),
+  width = 12, height = 8, units = "in", res = 300
+)
+figure_4
+dev.off()
+
+```
+
+#### Style
+
+```{r tidy script}
+style_file("figure_4.Rmd")
+
+lint("figure_4.Rmd",
+  linters = linters_with_defaults(
+    object_length_linter = NULL,
+    object_name_linter = NULL,
+    object_usage_linter = NULL
+  )
+)
+```
+
+#### Software versions
+
+My software versions will be commented below.
+
+```{r versions}
+sessionInfo()
+```
