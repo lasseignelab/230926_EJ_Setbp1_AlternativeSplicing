@@ -71,6 +71,8 @@ return(sj_split_violin)}
 # the purpose of this function is for plotting gene expression for a given gene,
 # splice junction expression, splice junction usage, and transcript structure.
 make_gene_sj_expr_usage_plots <- function(gene_of_interest, save_path) {
+  #print gene name for error handling
+  print(gene_of_interest)
   
   # run own function to get normalized expression
   gene_expr_df <- make_norm_gene_expr_df(gene_of_interest)
@@ -95,7 +97,7 @@ make_gene_sj_expr_usage_plots <- function(gene_of_interest, save_path) {
   
   gene_junctions$end <- as.numeric(gene_junctions$end)
   
-  gene_junctions$strand <- "-"
+  gene_junctions$strand <- gtf$strand[gtf$gene_name == gene_of_interest][1]
   
   gene_junctions$mean_count <- sj_mean_expr
   
@@ -144,8 +146,11 @@ make_gene_sj_expr_usage_plots <- function(gene_of_interest, save_path) {
   delta_sje_heatmap_df <-
     delta_expr_for_heatmap[rownames(delta_expr_for_heatmap) %in% gene_sjs, ]
   
-  rownames(delta_sje_heatmap_df) <- paste0("SJ-", seq_len(nrow(gene_junctions)))
+  print(gene_junctions$strand[1])
   
+  ifelse(gene_junctions$strand[1] == "+", rownames(delta_sje_heatmap_df) <- c(paste0("SJ-", seq_len(nrow(gene_junctions)))),
+         rownames(delta_sje_heatmap_df) <- c(paste0("SJ-", rev(seq_len(nrow(gene_junctions))))))
+
   # set colors
   delta_gene_expr_cols <-
     colorRamp2(
@@ -172,7 +177,8 @@ make_gene_sj_expr_usage_plots <- function(gene_of_interest, save_path) {
   delta_sju_heatmap_df <-
     delta_sju[rownames(delta_sju) %in% gene_sjs, ]
   
-  rownames(delta_sju_heatmap_df) <- paste0("SJ-", seq_len(nrow(gene_junctions)))
+  ifelse(gene_junctions$strand[1] == "+", rownames(delta_sju_heatmap_df) <- c(paste0("SJ-", seq_len(nrow(gene_junctions)))),
+         rownames(delta_sju_heatmap_df) <- c(paste0("SJ-", rev(seq_len(nrow(gene_junctions))))))
   
   # set colors
   delta_sju_cols <-
@@ -238,7 +244,11 @@ make_gene_sj_expr_usage_plots <- function(gene_of_interest, save_path) {
       aes(strand = strand)
     )
   
-  gene_junctions$sj_label <- paste0("SJ-", seq_len(nrow(gene_junctions)))
+  if(gene_junctions$strand[1] == "+") {
+    gene_junctions$sj_label <- paste0("SJ-", seq_len(nrow(gene_junctions)))  
+  } 
+  { gene_junctions$sj_label <- paste0("SJ-", rev(seq_len(nrow(gene_junctions))))
+  }
   
   # plot labeled transcripts with splice junctions
   gene_transcript_label <- gene_exons %>%
