@@ -30,6 +30,7 @@ suppressPackageStartupMessages({
     library(AnnotationDbi)
   library(clusterProfiler)
   library(ComplexHeatmap)
+  library(readxl)
 })
 
 ```
@@ -116,7 +117,7 @@ gene_lists_upset_plot
 gene_lists_upset_plot <- grid.grabExpr(draw(gene_lists_upset_plot))
 ```
 
-There is one gene that has significant PSI in all non-vascular cell types. This is the Son gene.
+There is one gene that has significant change in splice junction usage in all non-vascular cell types. This is the Son gene.
 
 ## FEA for each
 
@@ -129,6 +130,10 @@ glia_genes <- unlist(c(gene_lists[["astrocytes_sig_table"]],
                   gene_lists[["microglia_sig_table"]],
                   gene_lists[["oligodendrocytes_sig_table"]],
                   gene_lists[["opcs_sig_table"]]))
+
+vascular_genes <- unlist(c(gene_lists[["vascular_sig_table"]]))
+
+as_genes <- unique(c(neuron_genes, glia_genes, vascular_genes))
 ```
 
 ```{r get background genes}
@@ -251,6 +256,37 @@ png(here::here("results", "final_outputs", "figure4.png"),
 )
 figure_4
 dev.off()
+
+```
+
+## Compare my 34 genes to 38 splicing genes in blood
+
+This supplementary table was downloaded from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9490002/ 
+
+```{r compare to splicing genes in blood}
+
+blood_aberrantly_spliced <- read_xlsx(path = here("doc", "Data_Sheet_2.xlsx"),
+                                      sheet = 2, skip = 1)
+
+# there is a mistake in their table and unknown genes all have the same gene symbol
+# even though they have different locations
+
+# the authors of the paper count this as 38 genes, when it is only 37
+blood_aberrantly_spliced$hgncSymbol[blood_aberrantly_spliced$hgncSymbol == "KNOWN"] <- NA
+
+# drop na
+blood_aberrantly_spliced <- drop_na(blood_aberrantly_spliced)
+
+blood_aberrantly_spliced_genes <- unique(blood_aberrantly_spliced$hgncSymbol)
+
+# convert human to mouse
+source("/data/user/efjones/230926_EJ_Setbp1_AlternativeSplicing/src/seurat/functions.R")
+mouse_blood_spliced_genes <- convert_human_gene_list(blood_aberrantly_spliced_genes)
+
+# look at overlap
+overlapping_genes <- intersect(mouse_blood_spliced_genes, as_genes)
+
+# no overlap
 
 ```
 
