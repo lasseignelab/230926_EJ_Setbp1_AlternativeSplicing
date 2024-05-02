@@ -8,7 +8,7 @@ date: "2024-03-19"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to get CV of the numbers of splice junctions detected for each cell. We can use the metadata to get this information.
+The purpose of this script is to get CV of the numbers of splice junctions detected for each cell. We can use the metadata to get this information. THIS SCRIPT IS NOW ARCHIVED.
 
 ## Load packages
 
