@@ -1,0 +1,55 @@
+---
+title: "Compare DE Analysis"
+output: html_document
+date: "2024-04-30"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Compare DE genes between MARVEL and DESeq2 Pseudobulk
+
+The purpose of this script is to compare pseudobulk gene expression analysis to the marvel DEGs from a wilcoxon rank-sum test. It is dependent on seurat scripts 01 and 02, and deseq2 01. It should be run in docker 1.1.0.
+
+## Load packages
+
+```{r load packages}
+suppressPackageStartupMessages({
+  library(here)
+  library(styler)
+  library(lintr)
+  library(tidyverse)
+  library(patchwork)
+  library(ComplexHeatmap)
+  library(viridis)
+  library(Seurat)
+  library(Matrix.utils)
+  library(edgeR)
+  library(Matrix)
+  library(reshape2)
+  library(S4Vectors)
+  library(SingleCellExperiment)
+  library(pheatmap)
+  library(apeglm)
+  library(png)
+  library(DESeq2)
+  library(RColorBrewer)
+  library(data.table)
+})
+
+source(here(
+  "src",
+  "deseq2",
+  "functions.R"
+))
+
+```
+
+
+```{r load in data}
+
+
+
+```
