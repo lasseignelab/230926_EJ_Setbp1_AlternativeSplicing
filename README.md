@@ -1,7 +1,7 @@
 Examining cell-type specific patterns of alternative splicing of a
 Schinzel-Giedion Syndrome mouse model using snRNA-Seq data
 ================
-2024-02-14
+2024-05-02
 
 ## Authors
 
@@ -53,22 +53,32 @@ and expression data for MARVEL analyses.
     ## ├── 01_format_MARVEL_data.Rmd
     ## ├── 02_MARVEL_differential_analysis.Rmd
     ## ├── 03_analyze_de_genes.Rmd
-    ## ├── 04_calc_psi_all_sjs.R
-    ## ├── 04_submit_calc_psi.sh
-    ## ├── 05_join_psi_matrix.Rmd
+    ## ├── 04_calc_sj_usage.Rmd
     ## ├── PlotSJPosition_modification.R
+    ## ├── cv_sj_celltypes.Rmd
+    ## ├── explore_sj_usage.Rmd
     ## ├── functions.R
-    ## ├── logs
-    ## ├── setbp1_psi_plots.R
     ## └── setbp1_targets_properties.Rmd
 
 - 01_format_MARVEL_data.Rmd
 - 02_MARVEL_differential_analysis.Rmd
 - 03_analyze_de_genes.Rmd
-- 04_calc_psi_all.Rmd
-- 04_submit_calc_psi.Rmd
-- 05_join_psi_matrix.Rmd
+- 04_calc_sj_usage.Rmd
 - setbp1_targets_properties.Rmd
+- functions.R
+
+#### DESeq2
+
+The following scripts are for running a pseudobulk differential gene
+expression analysis
+
+    ## src/deseq2
+    ## ├── 01_pseudobulk_analysis.Rmd
+    ## ├── 02_compare_degs.Rmd
+    ## └── functions.R
+
+- 01_pseudobulk_analysis.Rmd
+- 02_compare_degs.Rmd
 - functions.R
 
 ## Lasseigne Lab

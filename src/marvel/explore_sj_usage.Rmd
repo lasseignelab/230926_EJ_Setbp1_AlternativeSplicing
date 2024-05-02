@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to visualize the splice junction usage across cell types. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Please use docker image setbp1_alternative_splicing:1.0.7.
+The purpose of this script is to visualize the splice junction usage across cell types. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Please use docker image setbp1_alternative_splicing:1.0.7. THIS SCRIPT IS NOW ARCHIVED.
 
 ## Load packages
 
