@@ -61,7 +61,7 @@ cell_type_colors <- c(
 load(here::here("data", "marvel", "marvel_04_split_counts.Rdata"))
 
 # load in sj usage split by cell type
-sj_usage_cell_type <- readRDS(here::here(
+sj_usage_cell_type_tc <- readRDS(here::here(
   "data", "marvel",
   "sj_usage_cell_type.rds"
 ))
@@ -103,11 +103,15 @@ cell_group_list <- sample_metadata %>%
   map(~ set_names(.$cell.id, .$cell_type[1]))
 
 # Rename
-cell_group_list <- set_names(cell_group_list, c(
-  "Astrocytes", "Excitatory Neurons",
-  "Inhibitory Neurons", "Microglia", "OPCs",
-  "Oligodendrocytes", "Vascular Cells"
-))
+cell_types <- list()
+for (i in seq_along(cell_group_list)) {
+  cell_types[i] <- names(cell_group_list[[i]][1])
+}
+
+cell_group_list <- set_names(
+  cell_group_list,
+  cell_types
+)
 
 # Pull mutant vs wildtype and matching ids
 mutant_list <- sample_metadata %>%
@@ -115,15 +119,21 @@ mutant_list <- sample_metadata %>%
   map(~ set_names(.$cell.id, .$seq_folder[[1]]))
 
 # Rename
-mutant_list <- set_names(mutant_list, c(
-  "Mutant", "Wildtype"
-))
+condition_types <- list()
+for (i in seq_along(mutant_list)) {
+  condition_types[i] <- names(mutant_list[[i]][1])
+}
+
+mutant_list <- set_names(
+  mutant_list,
+  condition_types
+)
 ```
 
 ## data wrangling - split everything by mutant and wildtype!!!
 
 ```{r pull out mutants and wildtype normalized expression}
-mutant_ids <- mutant_list[[1]]
+mutant_ids <- mutant_list[["mutant"]]
 
 # mutant
 mutant_sj <-
@@ -253,7 +263,7 @@ setbp1_split_violin
 mutant_sj_expr_means <- list()
 for (i in seq_along(cell_group_list)) {
   # get only mutant ids
-  cell_group_mutants <- intersect(cell_group_list[[i]], mutant_list[["Mutant"]])
+  cell_group_mutants <- intersect(cell_group_list[[i]], mutant_list[["mutant"]])
   # split cell type
   cell_type_sj_expr <-
     normalized_sj_expression[
@@ -284,7 +294,7 @@ wildtype_sj_expr_means <- list()
 for (i in seq_along(cell_group_list)) {
   # get only wildtype ids
   cell_group_wildtypes <-
-    intersect(cell_group_list[[i]], mutant_list[["Wildtype"]])
+    intersect(cell_group_list[[i]], mutant_list[["wildtype"]])
   # split cell type
   cell_type_sj_expr <-
     normalized_sj_expression[
