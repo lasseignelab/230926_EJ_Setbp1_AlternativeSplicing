@@ -61,7 +61,7 @@ cell_type_colors <- c(
 load(here::here("data", "marvel", "marvel_04_split_counts.Rdata"))
 
 # load in sj usage split by cell type
-sj_usage_cell_type_tc <- readRDS(here::here(
+sj_usage_cell_type <- readRDS(here::here(
   "data", "marvel",
   "sj_usage_cell_type.rds"
 ))
@@ -80,7 +80,8 @@ I wonder what it would look like to do similar scaling on the splice junction co
 
 ```{r scale splice junction counts}
 # copy sparse matrix
-normalized_sj_expression <- as(setbp1_marvel[["sj.count.matrix"]], "CsparseMatrix")
+normalized_sj_expression <-
+  as(setbp1_marvel[["sj.count.matrix"]], "CsparseMatrix")
 # divide by column sums
 normalized_sj_expression@x <- normalized_sj_expression@x /
   rep.int(colSums(normalized_sj_expression), diff(normalized_sj_expression@p))
@@ -407,13 +408,11 @@ sj_expr_usage_heatmaps <- grid.grabExpr(draw(both_heatmaps))
 ```
 
 ```{r save setbp1 expression figure for supps}
-
 png(here::here("results", "supplementary_figures", "setbp1_sj_expr_usage.png"),
   width = 6, height = 6, units = "in", res = 300
 )
 draw(both_heatmaps)
 dev.off()
-
 ```
 
 #### Create heatmap - difference between conditions
@@ -732,18 +731,12 @@ lapply(sig_sj_genes, function(gene) {
 })
 ```
 
-```{r make extra son plot}
-
-
-
-```
-
 #### Style
 
 ```{r tidy script}
-style_file("figure_3.Rmd")
+style_file("figure_2.Rmd")
 
-lint("figure_3.Rmd",
+lint("figure_2.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,
