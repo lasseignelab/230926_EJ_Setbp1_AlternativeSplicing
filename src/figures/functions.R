@@ -230,25 +230,8 @@ make_gene_sj_expr_usage_plots <- function(gene_of_interest, save_path) {
   # extract exons
   gene_exons <- gene_annotation_from_gtf %>% dplyr::filter(type == "exon")
   
-  gene_exons %>%
-    ggplot(aes(
-      xstart = start,
-      xend = end,
-      y = transcript_name
-    )) +
-    geom_range(
-      aes(fill = transcript_type)
-    ) +
-    geom_intron(
-      data = to_intron(gene_exons, "transcript_name"),
-      aes(strand = strand)
-    )
-  
-  if(gene_junctions$strand[1] == "+") {
-    gene_junctions$sj_label <- paste0("SJ-", seq_len(nrow(gene_junctions)))  
-  } 
-  { gene_junctions$sj_label <- paste0("SJ-", rev(seq_len(nrow(gene_junctions))))
-  }
+  ifelse(gene_junctions$strand[1] == "+", gene_junctions$sj_label <- c(paste0("SJ-", seq_len(nrow(gene_junctions)))),
+         gene_junctions$sj_label <- c(paste0("SJ-", rev(seq_len(nrow(gene_junctions))))))
   
   # plot labeled transcripts with splice junctions
   gene_transcript_label <- gene_exons %>%
@@ -295,5 +278,3 @@ make_gene_sj_expr_usage_plots <- function(gene_of_interest, save_path) {
   print(paneled_figure)
   dev.off()
 }
-
-
