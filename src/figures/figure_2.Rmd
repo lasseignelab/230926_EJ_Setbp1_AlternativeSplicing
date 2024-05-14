@@ -1,5 +1,5 @@
 ---
-title: "Create Figure 3"
+title: "Create Figure 2"
 author: "Emma Jones"
 date: "2024-03-28"
 output: html_document
@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Create figure 2
 
-The purpose of this script is to create a finalized version of figure 3. It is dependent on Marvel scripts 01 through 06. Run in docker 1.0.9.
+The purpose of this script is to create a finalized version of figure 2. It is dependent on Marvel scripts 01 through 06. Run in docker 1.0.9.
 
 ## Load packages
 
