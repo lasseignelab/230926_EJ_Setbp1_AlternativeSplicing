@@ -1,5 +1,5 @@
 ---
-title: "Create Figure 3"
+title: "Create Figure 2"
 author: "Emma Jones"
 date: "2024-03-28"
 output: html_document
@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Create figure 2
 
-The purpose of this script is to create a finalized version of figure 3. It is dependent on Marvel scripts 01 through 06. Run in docker 1.0.9.
+The purpose of this script is to create a finalized version of figure 2. It is dependent on Marvel scripts 01 through 06. Run in docker 1.0.9.
 
 ## Load packages
 
@@ -80,7 +80,8 @@ I wonder what it would look like to do similar scaling on the splice junction co
 
 ```{r scale splice junction counts}
 # copy sparse matrix
-normalized_sj_expression <- as(setbp1_marvel[["sj.count.matrix"]], "CsparseMatrix")
+normalized_sj_expression <-
+  as(setbp1_marvel[["sj.count.matrix"]], "CsparseMatrix")
 # divide by column sums
 normalized_sj_expression@x <- normalized_sj_expression@x /
   rep.int(colSums(normalized_sj_expression), diff(normalized_sj_expression@p))
@@ -103,11 +104,15 @@ cell_group_list <- sample_metadata %>%
   map(~ set_names(.$cell.id, .$cell_type[1]))
 
 # Rename
-cell_group_list <- set_names(cell_group_list, c(
-  "Astrocytes", "Excitatory Neurons",
-  "Inhibitory Neurons", "Microglia", "OPCs",
-  "Oligodendrocytes", "Vascular Cells"
-))
+cell_types <- list()
+for (i in seq_along(cell_group_list)) {
+  cell_types[i] <- names(cell_group_list[[i]][1])
+}
+
+cell_group_list <- set_names(
+  cell_group_list,
+  cell_types
+)
 
 # Pull mutant vs wildtype and matching ids
 mutant_list <- sample_metadata %>%
@@ -115,15 +120,21 @@ mutant_list <- sample_metadata %>%
   map(~ set_names(.$cell.id, .$seq_folder[[1]]))
 
 # Rename
-mutant_list <- set_names(mutant_list, c(
-  "Mutant", "Wildtype"
-))
+condition_types <- list()
+for (i in seq_along(mutant_list)) {
+  condition_types[i] <- names(mutant_list[[i]][1])
+}
+
+mutant_list <- set_names(
+  mutant_list,
+  condition_types
+)
 ```
 
 ## data wrangling - split everything by mutant and wildtype!!!
 
 ```{r pull out mutants and wildtype normalized expression}
-mutant_ids <- mutant_list[[1]]
+mutant_ids <- mutant_list[["mutant"]]
 
 # mutant
 mutant_sj <-
@@ -253,7 +264,7 @@ setbp1_split_violin
 mutant_sj_expr_means <- list()
 for (i in seq_along(cell_group_list)) {
   # get only mutant ids
-  cell_group_mutants <- intersect(cell_group_list[[i]], mutant_list[["Mutant"]])
+  cell_group_mutants <- intersect(cell_group_list[[i]], mutant_list[["mutant"]])
   # split cell type
   cell_type_sj_expr <-
     normalized_sj_expression[
@@ -284,7 +295,7 @@ wildtype_sj_expr_means <- list()
 for (i in seq_along(cell_group_list)) {
   # get only wildtype ids
   cell_group_wildtypes <-
-    intersect(cell_group_list[[i]], mutant_list[["Wildtype"]])
+    intersect(cell_group_list[[i]], mutant_list[["wildtype"]])
   # split cell type
   cell_type_sj_expr <-
     normalized_sj_expression[
@@ -397,13 +408,11 @@ sj_expr_usage_heatmaps <- grid.grabExpr(draw(both_heatmaps))
 ```
 
 ```{r save setbp1 expression figure for supps}
-
 png(here::here("results", "supplementary_figures", "setbp1_sj_expr_usage.png"),
   width = 6, height = 6, units = "in", res = 300
 )
 draw(both_heatmaps)
 dev.off()
-
 ```
 
 #### Create heatmap - difference between conditions
@@ -722,18 +731,12 @@ lapply(sig_sj_genes, function(gene) {
 })
 ```
 
-```{r make extra son plot}
-
-
-
-```
-
 #### Style
 
 ```{r tidy script}
-style_file("figure_3.Rmd")
+style_file("figure_2.Rmd")
 
-lint("figure_3.Rmd",
+lint("figure_2.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,
