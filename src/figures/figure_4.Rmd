@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Create Figure 4
 
-The point of this figure is to convey the important of the Son gene and also add an additional panel to show where the splice junctions lit on transcript structures.
+The point of this figure is to convey the importance of the Son gene and also add an additional panel to show where the splice junctions lit on transcript structures.
 
 ```{r load in packages}
 suppressPackageStartupMessages({
@@ -99,6 +99,7 @@ normalized_sj_expression <- read_rds(
 )
 ```
 
+## Define cell types
 
 ```{r get cell groups}
 # Pull cell types and matching ids
@@ -134,7 +135,7 @@ mutant_list <- set_names(
 )
 ```
 
-## data wrangling - split everything by mutant and wildtype!!!
+## Data wrangle normalized expression
 
 ```{r pull out mutants and wildtype normalized expression}
 mutant_ids <- mutant_list[["mutant"]]
@@ -159,7 +160,7 @@ wildtype_gene <-
     == mutant_ids
   ]
 ```
-## reformat SJ Usage
+## Prepare data for plotting
 
 ```{r fix sj_usage_condition}
 mutant_sju <- sj_usage_condition[1, ]
@@ -245,6 +246,8 @@ colnames(mutant_sj_expr_means) <-
   paste0(colnames(mutant_sj_expr_means), "_mutant")
 ```
 
+### Get mean splice junction expression for wildtype and mutant cells
+
 ```{r get wt expr means}
 # wildtypes
 wildtype_sj_expr_means <- list()
@@ -283,13 +286,13 @@ delta_expr_for_heatmap <-
   as.matrix(mutant_sj_expr_means) - as.matrix(wildtype_sj_expr_means)
 ```
 
-
-
 ```{r make dataframe for split violin}
 base_df <- sample_metadata[, c("cell.id", "seq_folder", "cell_type")]
 
 gene_expr_df <- make_norm_gene_expr_df("Son")
 ```
+
+## Filter data for Son
 
 ```{r plot son again and tweak as needed}
 # overall means
@@ -326,16 +329,7 @@ gene_junctions$long_name <- gene_sjs
 gene_junctions <- gene_junctions[order(gene_junctions$long_name), ]
 ```
 
-
-
-
-```{r make annotation}
-col_annot <- HeatmapAnnotation(
-  `Cell Type` = names(cell_group_list),
-  col = annot_colors_list, annotation_name_gp = gpar(fontface = "bold")
-)
-```
-
+## Make split violin plot
 
 ```{r make split violin}
 # make split violin plot of gene expression
@@ -371,8 +365,10 @@ split_violin <- ggplot(
   ) +
   xlab("Cell Type") +
   ylab("Normalized\nGene Expression") +
-  theme(legend.position = "bottom") 
+  theme(legend.position = "bottom")
 ```
+
+## Prepare data for heatmaps
 
 ```{r make heatmaps}
 # get sj expr
@@ -402,6 +398,8 @@ delta_gene_expr_cols <-
   )
 ```
 
+## Create heatmap
+
 ```{r create heatmap}
 # create heatmap
 delta_gene_heatmap <- Heatmap(delta_sje_heatmap_df,
@@ -412,7 +410,10 @@ delta_gene_heatmap <- Heatmap(delta_sje_heatmap_df,
   show_column_names = FALSE,
   row_title = "SJ Expression", border = TRUE,
   row_title_gp = gpar(fontface = "bold"),
-  row_names_gp = gpar(fontface = "bold")
+  row_names_gp = gpar(
+    fontface = "bold",
+    col = c(rep("black", 2), rep("gray60", 19))
+  )
 )
 
 # make splice junction usage heatmap
@@ -447,7 +448,10 @@ delta_sj_heatmap <- Heatmap(delta_sju_heatmap_df,
   show_column_names = FALSE,
   row_title = "SJ Usage", border = TRUE,
   row_title_gp = gpar(fontface = "bold"),
-  row_names_gp = gpar(fontface = "bold")
+  row_names_gp = gpar(
+    fontface = "bold",
+    col = c(rep("black", 2), rep("gray60", 19))
+  )
 )
 
 # combine heatmaps
@@ -456,6 +460,71 @@ both_delta_heatmaps <- delta_gene_heatmap %v% delta_sj_heatmap
 # make heatmaps compatible with cowplot
 delta_sj_expr_usage_heatmaps <- grid.grabExpr(draw(both_delta_heatmaps))
 ```
+
+```{r make significance matrix}
+son_signif_mtx <- matrix(
+  data = NA, nrow = nrow(delta_sje_heatmap_df),
+  ncol = ncol(delta_sje_heatmap_df)
+)
+
+colnames(son_signif_mtx) <- substr(
+  colnames(delta_sje_heatmap_df), 1,
+  nchar(colnames(delta_sje_heatmap_df)) - 7
+)
+
+rownames(son_signif_mtx) <- rownames(delta_sje_heatmap_df)
+
+son_signif_mtx["SJ-1", ] <- c("**", NA, NA, NA, NA, "*", NA)
+
+son_signif_mtx["SJ-2", ] <- c("**", "**", "**", "**", "**", "**", NA)
+```
+
+```{r add asterisks to heatmaps}
+delta_gene_heatmap_sig <- Heatmap(delta_sje_heatmap_df,
+  name = "\u0394 Mean Norm\nSJ Expression",
+  column_order = sort(colnames(delta_sje_heatmap_df)),
+  col = delta_gene_expr_cols,
+  top_annotation = col_annot, cluster_rows = FALSE,
+  show_column_names = FALSE,
+  row_title = "SJ Expression", border = TRUE,
+  row_title_gp = gpar(fontface = "bold"),
+  row_names_gp = gpar(
+    fontface = "bold",
+    col = c(rep("black", 2), rep("gray60", 19))
+  )
+)
+
+# make heatmap
+delta_sj_heatmap_sig <- Heatmap(delta_sju_heatmap_df,
+  name = "\u0394 SJ Usage",
+  column_order = sort(colnames(delta_sju_heatmap_df)),
+  col = delta_sju_cols,
+  cluster_rows = FALSE,
+  show_column_names = FALSE,
+  row_title = "SJ Usage", border = TRUE,
+  row_title_gp = gpar(fontface = "bold"),
+  row_names_gp = gpar(
+    fontface = "bold",
+    col = c(rep("black", 2), rep("gray60", 19))
+  ),
+  cell_fun = function(j, i, x, y, w, h, fill) {
+    if (!is.na(son_signif_mtx[i, j])) {
+      grid.text(sprintf("%s", son_signif_mtx[i, j]), x, y,
+        gp = gpar(fontsize = 10)
+      )
+    }
+  }
+)
+
+# combine heatmaps
+both_delta_heatmaps_sig <- delta_gene_heatmap_sig %v% delta_sj_heatmap_sig
+
+both_delta_heatmaps_sig
+# make heatmaps compatible with cowplot
+delta_sj_expr_usage_heatmaps_sig <- grid.grabExpr(draw(both_delta_heatmaps_sig))
+```
+
+## Transcript visualization figure
 
 ```{r transcript visualization figure}
 # filter annotation for specific gene
@@ -570,7 +639,6 @@ son_202_cds <- son_cds %>% dplyr::filter(transcript_name == "Son-202")
 
 # make dummy column as example
 gene_junctions$sj_1_2_labs <- c("SJ-1", "SJ-2", rep(NA, 19))
-
 ```
 
 show just son 202, one of the most "complete" transcripts
@@ -600,10 +668,10 @@ son_202_plot <- son_202_exons %>%
   scale_linewidth(range = c(0.1, 1)) +
   geom_junction_label_repel(
     data = gene_junctions,
-    aes(label = sj_1_2_labs), junction.y.max = 0.5
-    #,segment.color = NA
+    aes(label = sj_label), junction.y.max = 0.5,
+    segment.color = NA
   ) +
-   theme_minimal() +
+  theme_minimal() +
   theme(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(face = "bold", color = "black"),
@@ -613,7 +681,7 @@ son_202_plot <- son_202_exons %>%
   ) +
   labs(linewidth = "Normalized SJ\nExpression") +
   xlab("Genomic Location") +
-  theme(legend.position = "bottom") 
+  theme(legend.position = "bottom")
 
 
 options(ggrepel.max.overlaps = Inf)
@@ -621,18 +689,24 @@ options(ggrepel.max.overlaps = Inf)
 son_202_plot
 ```
 
+```{r zoom into 202 plot}
+son_202_zoom <- son_202_plot + coord_cartesian(xlim = c(91445000, 91460000))
+
+son_202_zoom
+```
+
 ```{r arrange plots}
 options(ggrepel.max.overlaps = Inf)
 
 # arrange vln plot
-gene_expr_vln <- plot_grid(son_202_plot, split_violin,
+gene_expr_vln <- plot_grid(son_202_zoom, split_violin,
   ncol = 1,
   labels = c("B", "C")
 )
 
 # arrange panels
 paneled_figure <- plot_grid(gene_transcript_label, gene_expr_vln,
-                            delta_sj_expr_usage_heatmaps,
+  delta_sj_expr_usage_heatmaps_sig,
   labels = c("A", "", "D"), nrow = 1
 )
 
@@ -642,7 +716,6 @@ paneled_figure
 ### Save final figure 4
 
 ```{r save fig 4}
-
 # save
 png(here::here("results", "final_outputs", "figure4.png"),
   width = 14, height = 8, units = "in", res = 300
@@ -650,6 +723,24 @@ png(here::here("results", "final_outputs", "figure4.png"),
 paneled_figure
 dev.off()
 
+# save son full transcript figure
+png(here::here("results", "final_outputs", "supporting_fig_3.png"),
+  width = 14, height = 3, units = "in", res = 300
+)
+son_202_plot
+dev.off()
+```
+
+#### Save any extra info
+
+```{r save csv}
+write.csv(gene_junctions,
+  here::here(
+    "results", "supplementary_figures",
+    "son_splice_junction_info.csv"
+  ),
+  row.names = FALSE
+)
 ```
 
 #### Style
