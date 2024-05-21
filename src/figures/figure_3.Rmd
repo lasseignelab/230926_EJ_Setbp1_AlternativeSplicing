@@ -116,89 +116,39 @@ gene_lists_upset_plot <- grid.grabExpr(draw(gene_lists_upset_plot))
 
 There is one gene that has significant change in splice junction usage in all non-vascular cell types. This is the Son gene.
 
-## FEA for each
-
-```{r make gene lists for neurons and glia}
-neuron_genes <- unlist(c(
-  gene_lists[["excitatory_sig_table"]],
-  gene_lists[["inhibitory_sig_table"]]
-))
-
-glia_genes <- unlist(c(
-  gene_lists[["astrocytes_sig_table"]],
-  gene_lists[["microglia_sig_table"]],
-  gene_lists[["oligodendrocytes_sig_table"]],
-  gene_lists[["opcs_sig_table"]]
-))
-
-vascular_genes <- unlist(c(gene_lists[["vascular_sig_table"]]))
-
-as_genes <- unique(c(neuron_genes, glia_genes, vascular_genes))
-```
+## FEA for each cell type
 
 ```{r get background genes}
 background_genes <- setbp1_marvel[["gene.count.matrix"]]@Dimnames[[1]]
 ```
 
-```{r run gprofiler on neurons}
-# run gprofiler2
-neuron_gostres <- gost(
-  query = neuron_genes,
-  organism = "mmusculus", ordered_query = FALSE,
-  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
-  measure_underrepresentation = FALSE, evcodes = TRUE,
-  user_threshold = 0.05, correction_method = "g_SCS",
-  domain_scope = "custom", custom_bg = background_genes,
-  numeric_ns = "", sources = NULL, as_short_link = FALSE
-)
+To avoid aggregating cells and losing specific signals, lets only include genes from each cell type.
 
-# create bubble plot
-neuron_fea_bubble <- ggplot(
-  neuron_gostres[["result"]],
-  aes(
-    x = precision,
-    y = reorder(term_name, -p_value),
-    size = intersection_size,
-    color = p_value
+```{r run fea on each cell type}
+cell_type_goresults <- lapply(gene_lists, function(x) {
+  neuron_gostres <- gost(
+    query = unlist(x),
+    organism = "mmusculus", ordered_query = FALSE,
+    multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+    measure_underrepresentation = FALSE, evcodes = TRUE,
+    user_threshold = 0.05, correction_method = "g_SCS",
+    domain_scope = "custom", custom_bg = background_genes,
+    numeric_ns = "", sources = NULL, as_short_link = FALSE
   )
-) +
-  geom_point(aes(color = p_value)) +
-  scale_color_viridis(direction = -1, option = "plasma") +
-  theme_minimal(base_size = 10) +
-  theme(
-    axis.title = element_text(face = "bold"),
-    axis.text = element_text(face = "bold", color = "black"),
-    legend.text = element_text(face = "bold"),
-    legend.title = element_text(face = "bold"),
-    title = element_text(face = "bold")
-  ) +
-  xlab("Precision") +
-  ylab("Term Name") +
-  labs(color = "p-value", size = "Intersection Size") +
-  ggtitle("Neuron Functional Enrichment Analysis") +
-  guides(
-    size = guide_legend(order = 1),
-    color = guide_colorbar(order = 2)
-  )
-
-neuron_fea_bubble
+})
 ```
 
-```{r run gprofiler on glia}
-# run gprofiler2
-glia_gostres <- gost(
-  query = glia_genes,
-  organism = "mmusculus", ordered_query = FALSE,
-  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
-  measure_underrepresentation = FALSE, evcodes = TRUE,
-  user_threshold = 0.05, correction_method = "g_SCS",
-  domain_scope = "custom", custom_bg = background_genes,
-  numeric_ns = "", sources = NULL, as_short_link = FALSE
+```{r save and plot new go results}
+# save rds
+write_rds(
+  cell_type_goresults,
+  here::here("data", "marvel", "cell_type_goresults.rds")
 )
+```
 
-# create bubble plot
-glia_fea_bubble <- ggplot(
-  glia_gostres[["result"]],
+```{r plot oligodendrocytes and excitatory neuron terms}
+excitatory_panel <- ggplot(
+  cell_type_goresults[["excitatory_sig_table"]][["result"]],
   aes(
     x = precision,
     y = reorder(term_name, -p_value),
@@ -207,8 +157,8 @@ glia_fea_bubble <- ggplot(
   )
 ) +
   geom_point() +
-  scale_color_viridis(direction = -1, option = "plasma") +
-  theme_minimal(base_size = 10) +
+  scale_color_viridis(direction = 1, option = "mako") +
+  theme_minimal(base_size = 12) +
   theme(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(face = "bold", color = "black"),
@@ -219,47 +169,47 @@ glia_fea_bubble <- ggplot(
   xlab("Precision") +
   ylab("Term Name") +
   labs(color = "p-value", size = "Intersection Size") +
-  ggtitle("Glia Functional Enrichment Analysis") +
+  ggtitle("Excitatory Neuron Functional\nEnrichment Analysis") +
   guides(
     size = guide_legend(order = 1),
     color = guide_colorbar(order = 2)
   )
 
-glia_fea_bubble
-```
+excitatory_panel
 
-### Run for every individual cell type
+oligo_panel <- ggplot(
+  cell_type_goresults[["oligodendrocytes_sig_table"]][["result"]],
+  aes(
+    x = precision,
+    y = reorder(term_name, -p_value),
+    size = intersection_size,
+    color = p_value
+  )
+) +
+  geom_point() +
+  scale_color_viridis(direction = 1, option = "mako") +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    title = element_text(face = "bold")
+  ) +
+  xlab("Precision") +
+  ylab("Term Name") +
+  labs(color = "p-value", size = "Intersection Size") +
+  ggtitle("Oligodendrocyte Functional\nEnrichment Analysis") +
+  guides(
+    size = guide_legend(order = 1),
+    color = guide_colorbar(order = 2)
+  )
 
-To avoid aggregating cells and losing specific signals, lets only include genes from each cell type.
-
-```{r run fea on each cell type}
-
-cell_type_goresults <- lapply(gene_lists, function(x) {
-  neuron_gostres <- gost(
-  query = x,
-  organism = "mmusculus", ordered_query = FALSE,
-  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
-  measure_underrepresentation = FALSE, evcodes = TRUE,
-  user_threshold = 0.05, correction_method = "g_SCS",
-  domain_scope = "custom", custom_bg = background_genes,
-  numeric_ns = "", sources = NULL, as_short_link = FALSE
-)
-})
-
-```
-
-```{r save and plot new go results}
-
-# save rds
-write_rds(
-  cell_type_goresults,
-  here::here("data", "marvel", "cell_type_goresults.rds")
-)
-
+oligo_panel
 ```
 
 ```{r arrange all results}
-bottom_plots <- plot_grid(neuron_fea_bubble, glia_fea_bubble,
+bottom_plots <- plot_grid(oligo_panel, excitatory_panel,
   labels = c("B", "C"), nrow = 1
 )
 
@@ -274,12 +224,150 @@ figure_3
 
 ```{r save figure 3}
 # save
-png(here::here("results", "final_outputs", "figure4.png"),
+png(here::here("results", "final_outputs", "figure3.png"),
   width = 12, height = 8, units = "in", res = 300
 )
 figure_3
 dev.off()
 ```
+
+```{r make supp information for other cell types}
+inhibitory_panel <- ggplot(
+  cell_type_goresults[["inhibitory_sig_table"]][["result"]],
+  aes(
+    x = precision,
+    y = reorder(term_name, -p_value),
+    size = intersection_size,
+    color = p_value
+  )
+) +
+  geom_point() +
+  scale_color_viridis(direction = 1, option = "mako") +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    title = element_text(face = "bold")
+  ) +
+  xlab("Precision") +
+  ylab("Term Name") +
+  labs(color = "p-value", size = "Intersection Size") +
+  ggtitle("Inhibitory Neuron Functional\nEnrichment Analysis") +
+  guides(
+    size = guide_legend(order = 1),
+    color = guide_colorbar(order = 2)
+  )
+
+inhibitory_panel
+
+astro_panel <- ggplot(
+  cell_type_goresults[["astrocytes_sig_table"]][["result"]],
+  aes(
+    x = precision,
+    y = reorder(term_name, -p_value),
+    size = intersection_size,
+    color = p_value
+  )
+) +
+  geom_point() +
+  scale_color_viridis(direction = 1, option = "mako") +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    title = element_text(face = "bold")
+  ) +
+  xlab("Precision") +
+  ylab("Term Name") +
+  labs(color = "p-value", size = "Intersection Size") +
+  ggtitle("Astrocyte Functional\nEnrichment Analysis") +
+  guides(
+    size = guide_legend(order = 1),
+    color = guide_colorbar(order = 2)
+  )
+
+astro_panel
+
+vascular_panel <- ggplot(
+  cell_type_goresults[["vascular_sig_table"]][["result"]],
+  aes(
+    x = precision,
+    y = reorder(term_name, -p_value),
+    size = intersection_size,
+    color = p_value
+  )
+) +
+  geom_point() +
+  scale_color_viridis(direction = 1, option = "mako") +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    title = element_text(face = "bold")
+  ) +
+  xlab("Precision") +
+  ylab("Term Name") +
+  labs(color = "p-value", size = "Intersection Size") +
+  ggtitle("Vascular Cell Functional\nEnrichment Analysis") +
+  guides(
+    size = guide_legend(order = 1),
+    color = guide_colorbar(order = 2)
+  )
+
+vascular_panel
+
+opc_panel <- ggplot(
+  cell_type_goresults[["opcs_sig_table"]][["result"]],
+  aes(
+    x = precision,
+    y = reorder(term_name, -p_value),
+    size = intersection_size,
+    color = p_value
+  )
+) +
+  geom_point() +
+  scale_color_viridis(direction = 1, option = "mako") +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold", color = "black"),
+    legend.text = element_text(face = "bold"),
+    legend.title = element_text(face = "bold"),
+    title = element_text(face = "bold")
+  ) +
+  xlab("Precision") +
+  ylab("Term Name") +
+  labs(color = "p-value", size = "Intersection Size") +
+  ggtitle("OPC Functional\nEnrichment Analysis") +
+  guides(
+    size = guide_legend(order = 1),
+    color = guide_colorbar(order = 2)
+  )
+
+opc_panel
+```
+
+```{r format and save}
+supp_4 <- plot_grid(inhibitory_panel, astro_panel, opc_panel, vascular_panel,
+  labels = c("A", "B", "C", "D")
+)
+
+supp_4
+
+# save
+png(here::here("results", "final_outputs", "fea_other_cell_types.png"),
+  width = 11, height = 8, units = "in", res = 300
+)
+supp_4
+dev.off()
+```
+
 
 ## Compare my 34 genes to 38 splicing genes in blood
 
