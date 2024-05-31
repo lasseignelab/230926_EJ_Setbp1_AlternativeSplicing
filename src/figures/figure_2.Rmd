@@ -693,17 +693,17 @@ gene_expr_vln <- plot_grid(setbp1_transcript_label, setbp1_split_violin,
 )
 
 # arrange panels
-figure_2 <- plot_grid(gene_expr_vln, delta_sj_expr_usage_heatmaps,
+figure_3 <- plot_grid(gene_expr_vln, delta_sj_expr_usage_heatmaps,
   labels = c("", "C"), nrow = 1
 )
 
-figure_2
+figure_3
 
 # save
-png(here::here("results", "final_outputs", "figure2.png"),
+png(here::here("results", "final_outputs", "figure3.png"),
   width = 12, height = 7, units = "in", res = 300
 )
-figure_2
+figure_3
 dev.off()
 ```
 
