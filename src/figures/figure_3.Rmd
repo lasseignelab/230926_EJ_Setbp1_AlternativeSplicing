@@ -393,9 +393,17 @@ blood_aberrantly_spliced <- drop_na(blood_aberrantly_spliced)
 blood_aberrantly_spliced_genes <- unique(blood_aberrantly_spliced$hgncSymbol)
 
 # convert human to mouse
-source(here(c("src", "seurat", "functions.R")))
+source(here("src", "seurat", "functions.R"))
 mouse_blood_spliced_genes <-
   convert_human_gene_list(blood_aberrantly_spliced_genes)
+
+# get sig tables
+matching_dfs <- mget(ls(pattern = "sig_table"))
+
+# get the column you want
+as_genes <- unique(unlist(lapply(matching_dfs, function(df_name) {
+  df_name$gene_short_name
+})))
 
 # look at overlap
 overlapping_genes <- intersect(mouse_blood_spliced_genes, as_genes)
