@@ -1,5 +1,4 @@
-Examining cell-type specific patterns of alternative splicing of a
-Schinzel-Giedion Syndrome mouse model using snRNA-Seq data
+Cerebral cortex cell-type-specific alternative splicing in a Schinzel-Giedion Syndrome patient variant mouse model
 ================
 2024-05-02
 
@@ -10,8 +9,7 @@ Lasseigne
 
 ## Purpose
 
-The purpose of this project is to analyze cell-type specific patterns of
-alternative splicing in a rare neurodevelopmental disease model.
+Schinzel-Giedion Syndrome (SGS) is an ultra-rare Mendelian disorder caused by gain-of-function mutations in the SETBP1 gene. While previous studies determined multiple roles for how SETBP1 and associated pathways may cause disease manifestation, they have not assessed whether alternative splicing (AS) plays a role in SGS. We used STARsolo to quantify gene and splice junction (SJ) expression for 51,465 nuclei previously generated from Setbp1S858R+/- SGS patient variant (n=3) and wild-type control (n=3) mouse snRNA-Seq cerebral cortex tissue. We annotated cell types with Seurat. We then performed pseudobulk differential gene expression and SJ usage (SJU) analyses across patient variant mice and wild-type controls. We identified 34 cell-type-specific and shared genes with statistically significant alterations in SJU. Oligodendrocytes had the most genes with changes in SJU, followed by astrocytes, excitatory, and inhibitory neurons. One gene, Son, a splicing cofactor known to cause the neurodevelopmental disorder ZTTK Syndrome, had SJU changes in all six non-vascular cell types in the Setbp1S858R+/- variant mice compared to controls. This is the first research to report neural changes in AS in SGS and the first study to link SGS to perturbations in Son, which may help explain SGS’s severe neurological phenotype.
 
 ## Scripts
 
@@ -74,11 +72,9 @@ expression analysis
 
     ## src/deseq2
     ## ├── 01_pseudobulk_analysis.Rmd
-    ## ├── 02_compare_degs.Rmd
     ## └── functions.R
 
 - 01_pseudobulk_analysis.Rmd
-- 02_compare_degs.Rmd
 - functions.R
 
 ## Lasseigne Lab
@@ -89,12 +85,11 @@ expression analysis
 
 ## Funding
 
-List project funding sources.
+This work was funded in part by the UAB Lasseigne Lab funds and the UAB Pilot Center for Precision Animal Modeling (C-PAM) (1U54OD030167).
 
 ## Acknowledgements
 
-We would like to thank all members of the Lasseigne Lab for their
-thoughtful feedback.
+We would like to acknowledge all current and prior members of the Lasseigne Lab for their thoughtful feedback, especially Elizabeth J. Wilk, Amanda D. Clark, and Vishal H. Oza. All figures and cartoons were assembled using BioRender.
 
 ## License
 
