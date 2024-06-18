@@ -555,9 +555,9 @@ dev.off()
 #### Style
 
 ```{r tidy script}
-style_file("05_explore_sj_usage.Rmd")
+style_file("explore_sj_usage.Rmd")
 
-lint("05_explore_sj_usage.Rmd",
+lint("explore_sj_usage.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,
