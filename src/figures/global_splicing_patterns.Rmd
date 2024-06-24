@@ -443,22 +443,13 @@ final_figure_2 <- plot_grid(figure_2_top, figure_2_bottom,
 final_figure_2
 ```
 
-Now, we can save figure 2
-
-```{r save figure 2}
-png(here::here("results", "final_outputs", "figure2.png"),
-  width = 12, height = 8, units = "in", res = 300
-)
-final_figure_2
-dev.off()
-```
 
 #### Style
 
 ```{r tidy script}
-style_file("figure_2.Rmd")
+style_file("global_splicing_patterns.Rmd")
 
-lint("figure_2.Rmd",
+lint("global_splicing_patterns.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,
