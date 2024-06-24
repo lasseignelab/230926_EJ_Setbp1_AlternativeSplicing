@@ -1,5 +1,5 @@
 ---
-title: "Figure 4"
+title: "Create Figure 5"
 author: "Emma Jones"
 date: "2024-05-13"
 output: html_document
@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Create Figure 4
+## Create Figure 5
 
 The point of this figure is to convey the importance of the Son gene and also add an additional panel to show where the splice junctions lit on transcript structures.
 
@@ -713,18 +713,18 @@ paneled_figure <- plot_grid(gene_transcript_label, gene_expr_vln,
 paneled_figure
 ```
 
-### Save final figure 4
+### Save final figure 5
 
-```{r save fig 4}
+```{r save fig 5}
 # save
-png(here::here("results", "final_outputs", "figure4.png"),
+png(here::here("results", "final_outputs", "figure5.png"),
   width = 14, height = 8, units = "in", res = 300
 )
 paneled_figure
 dev.off()
 
 # save son full transcript figure
-png(here::here("results", "final_outputs", "supporting_fig_3.png"),
+png(here::here("results", "final_outputs", "supporting_fig_5.png"),
   width = 14, height = 3, units = "in", res = 300
 )
 son_202_plot
@@ -746,9 +746,9 @@ write.csv(gene_junctions,
 #### Style
 
 ```{r tidy script}
-style_file("figure_4.Rmd")
+style_file("figure_5.Rmd")
 
-lint("figure_4.Rmd",
+lint("figure_5.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,
