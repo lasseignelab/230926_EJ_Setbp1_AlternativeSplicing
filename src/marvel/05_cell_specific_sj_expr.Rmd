@@ -106,7 +106,6 @@ sample_metadata$num_sjs_genes <- diff(sj_counts@p) / diff(gene_counts@p)
 # do number of genes predict number of sjs?
 
 ```{r run linear regression}
-
 # create linear model
 sjs_genes_lm <- lm(num_sjs ~ num_genes, data = sample_metadata)
 
@@ -114,7 +113,6 @@ sjs_genes_lm <- lm(num_sjs ~ num_genes, data = sample_metadata)
 summary(sjs_genes_lm)
 
 summary(sjs_genes_lm)$r.squared
-
 ```
 
 
@@ -139,7 +137,7 @@ genes_per_cell_violin <- ggplot(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(face = "bold", color = "black"),
     axis.text.x = element_text(angle = 45, vjust = 0.95, hjust = 0.95)
-  ) 
+  )
 
 genes_per_cell_violin
 ```
@@ -164,7 +162,7 @@ sjs_per_cell_violin <- ggplot(
     axis.title = element_text(face = "bold"),
     axis.text = element_text(face = "bold", color = "black"),
     axis.text.x = element_text(angle = 45, vjust = 0.95, hjust = 0.95)
-  ) 
+  )
 
 sjs_per_cell_violin
 ```
@@ -196,8 +194,12 @@ sjs_genes_per_cell_violin
 ## Combine figure for supporting information figure
 
 ```{r cowplot and save}
-
-supp_fig3 <- plot_grid(genes_per_cell_violin, sjs_per_cell_violin, sjs_genes_per_cell_violin, ncol = 1, labels = c("A", "B", "C"))
+supp_fig3 <- plot_grid(genes_per_cell_violin,
+  sjs_per_cell_violin,
+  sjs_genes_per_cell_violin,
+  ncol = 1,
+  labels = c("A", "B", "C")
+)
 
 supp_fig3
 
@@ -208,7 +210,6 @@ png(here::here("results", "supplementary_figures", "supp_fig3.png"),
 )
 supp_fig3
 dev.off()
-
 ```
 
 # Count total number of sjs detected in each cell type
