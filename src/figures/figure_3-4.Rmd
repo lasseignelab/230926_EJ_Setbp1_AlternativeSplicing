@@ -1,5 +1,5 @@
 ---
-title: "Create Figure 3"
+title: "Create Figure 3 and 4"
 author: "Emma Jones"
 date: "2024-04-22"
 output: html_document
@@ -9,9 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Create figure 3
+## Create figures 3 and 4
 
-The purpose of this script is to make and complete figure 3. This figure has an upset plot of all alternatively spliced genes, and functional enrichment analysis of cell-type specific AS genes.
+The purpose of this script is to make and complete figures 3 and 4. Figure 3 has an upset plot of all alternatively spliced genes, and Figure 4 has functional enrichment analysis of cell-type specific AS genes.
 
 ## Load packages
 
@@ -109,14 +109,21 @@ gene_lists_upset_plot <- UpSet(gene_lists_comb_mat,
 
 # view upsetplot
 gene_lists_upset_plot
+```
 
-# convert to grob
-gene_lists_upset_plot <- grid.grabExpr(draw(gene_lists_upset_plot))
+
+```{r save figure 3}
+# save
+png(here::here("results", "final_outputs", "figure3.png"),
+  width = 10, height = 4, units = "in", res = 300
+)
+gene_lists_upset_plot
+dev.off()
 ```
 
 There is one gene that has significant change in splice junction usage in all non-vascular cell types. This is the Son gene.
 
-## FEA for each cell type
+## FEA for each cell type - Figure 4
 
 ```{r get background genes}
 background_genes <- setbp1_marvel[["gene.count.matrix"]]@Dimnames[[1]]
@@ -206,29 +213,6 @@ oligo_panel <- ggplot(
   )
 
 oligo_panel
-```
-
-```{r arrange all results}
-bottom_plots <- plot_grid(oligo_panel, excitatory_panel,
-  labels = c("B", "C"), nrow = 1
-)
-
-figure_3 <- plot_grid(gene_lists_upset_plot, bottom_plots,
-  ncol = 1,
-  labels = c("A", "")
-)
-
-figure_3
-```
-
-
-```{r save figure 3}
-# save
-png(here::here("results", "final_outputs", "figure3.png"),
-  width = 12, height = 8, units = "in", res = 300
-)
-figure_3
-dev.off()
 ```
 
 ```{r make supp information for other cell types}
@@ -353,18 +337,19 @@ opc_panel <- ggplot(
 opc_panel
 ```
 
-```{r format and save}
-supp_4 <- plot_grid(inhibitory_panel, astro_panel, opc_panel, vascular_panel,
-  labels = c("A", "B", "C", "D")
+
+```{r format and save figure 4}
+figure_4 <- plot_grid(oligo_panel, excitatory_panel, inhibitory_panel, astro_panel, opc_panel, vascular_panel,
+  labels = c("A", "B", "C", "D", "E", "F"), nrow = 3
 )
 
-supp_4
+figure_4
 
 # save
-png(here::here("results", "final_outputs", "fea_other_cell_types.png"),
-  width = 11, height = 8, units = "in", res = 300
+png(here::here("results", "final_outputs", "figure4.png"),
+  width = 11, height = 15, units = "in", res = 300
 )
-supp_4
+figure_4
 dev.off()
 ```
 
@@ -414,9 +399,9 @@ overlapping_genes <- intersect(mouse_blood_spliced_genes, as_genes)
 #### Style
 
 ```{r tidy script}
-style_file("figure_3.Rmd")
+style_file("figure_3-4.Rmd")
 
-lint("figure_3.Rmd",
+lint("figure_3-4.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,

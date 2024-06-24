@@ -1,5 +1,5 @@
 ---
-title: "Create Figure 1"
+title: "Create Supp Figure 1"
 author: "Emma Jones"
 output: html_document
 date: "2024-02-20"
@@ -9,7 +9,7 @@ date: "2024-02-20"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to create a finalized version of figure 1. It is dependent on Seurat scripts 01 and 02. Run in docker 1.0.6.
+The purpose of this script is to create a finalized version of supporting information figure 1. It is dependent on Seurat scripts 01 and 02. Run in docker 1.0.6.
 
 ### Load Packages
 
@@ -216,7 +216,7 @@ figure_1 <- plot_grid(umap_1, dotplot, umap_2, barplot,
   labels = c("A", "B", "C", "D")
 )
 
-png(here::here("results", "final_outputs", "figure1.png"),
+png(here::here("results", "final_outputs", "supplementary_figures", "supp_figure1.png"),
   width = 12, height = 8, units = "in", res = 300
 )
 figure_1
@@ -226,9 +226,9 @@ dev.off()
 #### Style
 
 ```{r tidy script}
-style_file("figure_1.Rmd")
+style_file("supp_figure_1.Rmd")
 
-lint("figure_1.Rmd",
+lint("supp_figure_1.Rmd",
   linters = linters_with_defaults(
     object_length_linter = NULL,
     object_name_linter = NULL,
