@@ -37,8 +37,7 @@ of an SGS model and the first study to link SGS to perturbations in Son.
 #### STARsolo
 
 The following bash scripts are for running STARsolo on the raw fastq
-files. The J samples are all brain samples, while K samples are kidney.
-These scripts are not required to run if you download processed data
+files. These scripts are not required to run if you download processed data
 from zenodo.
 
     ## src/starsolo_conda
@@ -163,17 +162,6 @@ manuscript
 - supp_figure_2.Rmd - The purpose of this script is to create a
   finalized version of supporting information figure 2. It is dependent
   on Seurat scripts 01 and 02. Run in docker 1.0.6.
-
-#### SAMtools
-
-The following script is for running SAMtools
-
-    ## src/samtools
-    ## └── sort_index_bam.sh
-
-- sort_index_bam.sh - The purpose of this shell script is to sort and
-  index bam files for vizualization in IGV. It is run using sbatch
-  sort_index_bam.sh <sample id>.
 
 ## Lasseigne Lab
 
