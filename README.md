@@ -176,7 +176,7 @@ GitHub Repository:
 
 ## Docker
 
-We performed all analyses in docker with R version 4.3.1. The repository with all the Docker images used for this project can be found on Docker Hub at [emmafjones/setbp1_alternative_splicing]((https://hub.docker.com/repository/docker/emmafjones/setbp1_alternative_splicing/general)). While individual docker image tags are noted in every script, we provide an overview of analyses and their associated tags below:
+We performed all analyses in docker with R version 4.3.1. The repository with all the Docker images used for this project can be found on Docker Hub at [emmafjones/setbp1_alternative_splicing]((https://hub.docker.com/repository/docker/emmafjones/setbp1_alternative_splicing/general)). Docker images have backward compatibility, so all scripts can be run using tag 1.1.0. While individual docker image tags used are noted in every script, we provide an overview of analyses and their associated tags below:
 
 Tag | Associated Analyses  
 --- | ---
