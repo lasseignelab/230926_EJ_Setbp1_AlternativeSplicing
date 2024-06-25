@@ -4,8 +4,11 @@ Cell-type-specific alternative splicing in the cerebral cortex of a Schinzel-Gie
 
 ## Authors
 
-Emma F. Jones, Timothy C. Howton, Tabea M. Soelter, Anthony B. Crumley, Brittany N.
-Lasseigne
+**Emma F. Jones, Timothy C. Howton, Tabea M. Soelter, Anthony B. Crumley, Brittany N.
+Lasseigne**
+
+The University of Alabama at Birmingham, Heersink School of Medicine,
+Department of Cell, Developmental and Integrative Biology
 
 ## Project Overview
 
