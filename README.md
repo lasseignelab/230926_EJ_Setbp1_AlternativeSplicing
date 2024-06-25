@@ -1,15 +1,21 @@
-Cerebral cortex cell-type-specific alternative splicing in a Schinzel-Giedion Syndrome patient variant mouse model
+Cell-type-specific alternative splicing in the cerebral cortex of a Schinzel-Giedion Syndrome patient variant mouse model
 ================
-2024-06-07
+2024-06-25
 
 ## Authors
 
-Emma F. Jones, Timothy C. Howton, Tabea M. Soelter, Brittany N.
-Lasseigne
+**Emma F. Jones, Timothy C. Howton, Tabea M. Soelter, Anthony B. Crumley, Brittany N.
+Lasseigne**
 
-## Purpose
+The University of Alabama at Birmingham, Heersink School of Medicine,
+Department of Cell, Developmental and Integrative Biology
 
-Schinzel-Giedion Syndrome (SGS) is an ultra-rare Mendelian disorder caused by gain-of-function mutations in the SETBP1 gene. While previous studies determined multiple roles for how SETBP1 and associated pathways may cause disease manifestation, they have not assessed whether alternative splicing (AS) plays a role in SGS. We used STARsolo to quantify gene and splice junction (SJ) expression for 51,465 nuclei previously generated from Setbp1S858R+/- SGS patient variant (n=3) and wild-type control (n=3) mouse snRNA-Seq cerebral cortex tissue. We annotated cell types with Seurat. We then performed pseudobulk differential gene expression and SJ usage (SJU) analyses across patient variant mice and wild-type controls. We identified 34 cell-type-specific and shared genes with statistically significant alterations in SJU. Oligodendrocytes had the most genes with changes in SJU, followed by astrocytes, excitatory, and inhibitory neurons. One gene, Son, a splicing cofactor known to cause the neurodevelopmental disorder ZTTK Syndrome, had SJU changes in all six non-vascular cell types in the Setbp1S858R+/- variant mice compared to controls. This is the first research to report neural changes in AS in SGS and the first study to link SGS to perturbations in Son, which may help explain SGS’s severe neurological phenotype.
+## Project Overview
+
+Schinzel-Giedion Syndrome (SGS) is an ultra-rare Mendelian disorder caused by gain-of-function mutations in the *SETBP1* gene. While previous studies determined multiple roles for how *SETBP1* and associated pathways may cause disease manifestation, they have not assessed whether cell-type-specific alternative splicing (AS) plays a role in SGS. We used STARsolo to quantify gene and splice junction (SJ) expression for 51,465 nuclei previously generated from the cerebral cortex of atypical *Setbp1*<sup>S858R</sup> SGS patient variant mice (n = 3) and wild-type control mice (n = 3). After cell type annotation, we performed pseudobulk differential gene expression and SJ usage (SJU) analyses across cell types and conditions. We identified 34 genes with statistically significant alterations in SJU. Oligodendrocytes had the most genes with changes in SJU, followed by astrocytes, excitatory, and inhibitory neurons. One gene, *Son*, a splicing cofactor known to cause the neurodevelopmental disorder ZTTK Syndrome, had SJU changes in all six non-vascular cell types we measured in *Setbp1*<sup>S858R</sup> compared to controls. This is the first research to report AS changes in the cerebral cortex of an SGS model and the first study to link SGS to perturbations in *Son*.
+
+![Project Overview Jun 24 (2)](https://github.com/lasseignelab/230926_EJ_Setbp1_AlternativeSplicing/assets/85246122/a089c747-468b-4ad4-ae5c-3a696d72334f)
+(A) Schematic overview of our processing and analysis pipeline. (B) We analyzed pseudobulk gene expression and calculated SJU for each cell type and condition. (C) We compared SJU values for each cell type using a permutation test (Methods) to identify cell-type-specific differences in AS between *Setbp1*<sup>S858R</sup> and wild-type mouse brain tissue. (D) Next, we visualized all annotated transcripts and splice junction locations for each significant SJU gene. (E) Finally, we compared the genes and pathways identified through functional enrichment analysis that overlap between cell types and predict their biological relevance.
 
 ## Scripts
 
