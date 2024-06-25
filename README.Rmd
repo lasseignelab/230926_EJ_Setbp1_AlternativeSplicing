@@ -1,5 +1,5 @@
 ---
-title: "Examining cell-type specific patterns of alternative splicing of a Schinzel-Giedion Syndrome mouse model using snRNA-Seq data"
+title: "Cell-type-specific alternative splicing in the cerebral cortex of a Schinzel-Giedion Syndrome patient variant mouse model"
 author:
 output: github_document
 date: "`r Sys.Date()`"
@@ -11,11 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Authors 
 
-Emma F. Jones, Timothy C. Howton, Tabea M. Soelter, Brittany N. Lasseigne 
+Emma F. Jones, Timothy C. Howton, Tabea M. Soelter, Anthony B. Crumley, Brittany N. Lasseigne 
 
-## Purpose 
+## Project Overview 
 
-The purpose of this project is to analyze cell-type specific patterns of alternative splicing in a rare neurodevelopmental disease model. 
+Schinzel-Giedion Syndrome (SGS) is an ultra-rare Mendelian disorder caused by gain-of-function mutations in the SETBP1 gene. While previous studies determined multiple roles for how SETBP1 and associated pathways may cause disease manifestation, they have not assessed whether cell-type-specific alternative splicing (AS) plays a role in SGS. We used STARsolo to quantify gene and splice junction (SJ) expression for 51,465 nuclei previously generated from the cerebral cortex of atypical Setbp1S858R SGS patient variant mice (n = 3) and wild-type control mice (n = 3). After cell type annotation, we performed pseudobulk differential gene expression and SJ usage (SJU) analyses across cell types and conditions. We identified 34 genes with statistically significant alterations in SJU. Oligodendrocytes had the most genes with changes in SJU, followed by astrocytes, excitatory, and inhibitory neurons. One gene, Son, a splicing cofactor known to cause the neurodevelopmental disorder ZTTK Syndrome, had SJU changes in all six non-vascular cell types we measured in Setbp1S858R compared to controls. This is the first research to report AS changes in the cerebral cortex of an SGS model and the first study to link SGS to perturbations in Son.
 
 ## Scripts 
 
@@ -27,8 +27,8 @@ The following bash scripts are for running STARsolo on the raw fastq files. The 
 fs::dir_tree("src/starsolo_conda", recurse = FALSE, regexp = "*.sh")
 ```
 
-* 01_build_STAR_genome.sh
-* 02_run_STARsolo.sh
+* 01_build_STAR_genome.sh - The purpose of this script is to build a genome to run STAR.
+* 02_run_STARsolo.sh - The purpose of this script is to run STARsolo with custom filtering parameters to quantify gene and splice junction expression.
 
 #### Seurat
 
@@ -38,24 +38,25 @@ The following scripts are for processing and filtering the gene expression data.
 fs::dir_tree("src/seurat", recurse = FALSE)
 ```
 
-* 01_import_filter_data.Rmd
-* 02_annotate_cell_types.Rmd
-* functions.R
+* 01_import_filter_data.Rmd - The purpose of this script is to import and filter data using seurat. It is dependent on running the scripts in STARsolo_conda or downloading the data to start. Please use docker image setbp1_alternative_splicing:1.0.4.
+* 02_annotate_cell_types.Rmd - The purpose of this script is to annotate cell types using seurat. It is dependent on seurat script 01. Please use docker image setbp1_alternative_splicing:1.0.4.
+* functions.R - The purpose of this script is to provide function scripts necessary for analysis.
+* generate_cellcycle_lists.R
 
 #### MARVEL
 
-The following scripts are for formatting and importing splice junction and expression data for MARVEL analyses.
+The following scripts are for formatting, importing, and analyzing splice junction and expression data using the MARVEL package.
 
 ```{r echo = FALSE}
 fs::dir_tree("src/marvel", recurse = FALSE)
 ```
 
-* 01_format_MARVEL_data.Rmd
-* 02_MARVEL_differential_analysis.Rmd
-* 03_analyze_de_genes.Rmd
-* 04_calc_sj_usage.Rmd
-* setbp1_targets_properties.Rmd
-* functions.R
+* 01_format_MARVEL_data.Rmd - The purpose of this script is to format expression data from seurat and SJ outputs from STARsolo for MARVEL. It is dependent on running the seurat scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.5.
+* 02_MARVEL_differential_analysis.Rmd - The purpose of this script is to run differential analysis with MARVEL. It is dependent on running all seurat scripts, and marvel script 01. Please use docker image setbp1_alternative_splicing:1.0.5.
+* 03_analyze_de_genes.Rmd - The purpose of this script is to analyze differential analysis results MARVEL. It is dependent on running all seurat scripts, and marvel scripts 01 and 02. Please use docker image setbp1_alternative_splicing:1.0.6, since you need ComplexHeatmap so make the UpSet plots.
+* 04_calc_sj_usage.Rmd - The purpose of this script is to calculate splice junction usage for each cell type for each splice junction. The data is too sparse to calculate splice junction usage for single cells. It is dependent on running all seurat scripts, and marvel scripts 01 through 03. Please use docker image setbp1_alternative_splicing:1.0.6.
+* 05_cell_specific_sj_expr.Rmd - The purpose of this script is to quantify the splice junction expression across cell types, both per cell and aggregated for each cell type. It creates a new supplemental table that is referred to in the manuscript. It is dependent on running all seurat scripts, and marvel scripts 01 through 04. Please use docker image setbp1_alternative_splicing:1.1.0. 
+* functions.R - The purpose of this script is to provide function scripts necessary for analysis.
 
 #### DESeq2
 
@@ -64,9 +65,33 @@ The following scripts are for running a pseudobulk differential gene expression 
 ```{r echo = FALSE}
 fs::dir_tree("src/deseq2", recurse = FALSE)
 ```
-* 01_pseudobulk_analysis.Rmd
-* 02_compare_degs.Rmd
-* functions.R
+* 01_pseudobulk_analysis.Rmd - The purpose of this script is to run a pseudobulk gene expression analysis using the cell type data from seurat. It is dependent on seurat scripts 01 and 02. It should be run in docker 1.0.8.
+* functions.R - The purpose of this script is to provide function scripts necessary for analysis.
+
+#### Figures
+
+The following script are for creating finalized figures for the manuscript
+
+```{r echo = FALSE}
+fs::dir_tree("src/figures", recurse = FALSE)
+```
+* figure_2.Rmd - The purpose of this script is to create a finalized version of figure 2. It is dependent on Marvel scripts 01 through 06. Run in docker 1.0.9.
+* figure_3-4.Rmd - The purpose of this script is to make and complete figures 3 and 4. Figure 3 has an upset plot of all alternatively spliced genes, and Figure 4 has functional enrichment analysis of cell-type specific AS genes.
+* figure_5.Rmd - The point of this figure is to convey the importance of the Son gene and also add an additional panel to show where the splice junctions lit on transcript structures.
+* functions.R - The purpose of this script is to provide function scripts necessary for analysis.
+* geom_split_violin.R -  This is a split violin ggplot function borrowed from jan-glx on stackoverflow
+* mean_expression_celltype.R - This is a short R script to get average expression for each cell type of a Seurat object
+* supp_figure_2.Rmd - The purpose of this script is to create a finalized version of supporting information figure 2. It is dependent on Seurat scripts 01 and 02. Run in docker 1.0.6.
+
+#### SAMtools
+
+The following script is for running SAMtools
+
+```{r echo = FALSE}
+fs::dir_tree("src/samtools", recurse = FALSE, regexp = "sh")
+```
+
+* sort_index_bam.sh - The purpose of this shell script is to sort and index bam files for vizualization in IGV. It is run using sbatch sort_index_bam.sh <sample id>.
 
 ## Lasseigne Lab 
 
@@ -76,11 +101,11 @@ fs::dir_tree("src/deseq2", recurse = FALSE)
 
 ## Funding 
 
-List project funding sources. 
+This work was funded by the UAB Lasseigne Lab funds and the UAB Pilot Center for Precision Animal Modeling (C-PAM) (1U54OD030167).
 
 ## Acknowledgements 
 
-We would like to thank all members of the Lasseigne Lab for their thoughtful feedback.
+We would like to acknowledge all current and former members of the Lasseigne Lab for their thoughtful feedback, especially Elizabeth J. Wilk, Amanda D. Clark, and Vishal H. Oza. The graphical abstract was created using BioRender.
 
 ## License 
 

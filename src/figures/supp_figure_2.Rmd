@@ -9,7 +9,7 @@ date: "2024-02-20"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The purpose of this script is to create a finalized version of supporting information figure 1. It is dependent on Seurat scripts 01 and 02. Run in docker 1.0.6.
+The purpose of this script is to create a finalized version of supporting information figure 2. It is dependent on Seurat scripts 01 and 02. Run in docker 1.0.6.
 
 ### Load Packages
 
