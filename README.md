@@ -3,6 +3,9 @@ Schinzel-Giedion Syndrome patient variant mouse model
 ================
 2024-06-25
 
+bioRxiv Preprint:
+[![DOI:10.1101/2024.06.26.600823](http://img.shields.io/badge/DOI-10.1101/2024.06.26.600823-52BCA3.svg)](https://doi.org/10.1101/2024.06.26.600823)
+
 ## Authors
 
 Emma F. Jones, Timothy C. Howton, Tabea M. Soelter, Anthony B. Crumley,
