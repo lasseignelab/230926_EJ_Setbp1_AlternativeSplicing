@@ -35,7 +35,7 @@ suppressPackageStartupMessages({
 wd <- args[1]
 setwd(wd)
 
-source(file.path(wd, "src", "functions.R"))
+source(file.path(wd, "src", "functions_soelter.R"))
 
 output_path <- file.path(
         wd,
