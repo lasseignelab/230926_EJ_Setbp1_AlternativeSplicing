@@ -81,12 +81,12 @@ We also looked at markers for specific kinds of inhibitory neurons: Sst, Pvalb, 
 FeaturePlot(clustered_brain_samples,
   features = c("Snap25"),
   label = TRUE, repel = TRUE
-) # clusters 7, 20, 3, 14, 29, 31 seem to have no expression
+) # clusters 4, 7, 14, 15, 20, 22, 26, 30, 31 seem to have no expression
 
 FeaturePlot(clustered_brain_samples,
   features = c("Slc17a7"),
   label = TRUE, repel = TRUE
-) # excitatory neurons
+) # ex neurons - 1, 2, 3, 5, 6, 8, 11, 13, 16, 17, 19, 21, 23, 24, 27, 28, 29
 FeaturePlot(clustered_brain_samples,
   features = c("Pcp4"),
   label = TRUE
@@ -95,7 +95,7 @@ FeaturePlot(clustered_brain_samples,
 FeaturePlot(clustered_brain_samples,
   features = c("Gad1"),
   label = TRUE, repel = TRUE
-) # more inhibitory neurons - 11, 12, 9, 18
+) # more inhibitory neurons - 9, 10, 12, 13
 FeaturePlot(clustered_brain_samples,
   features = c("Gad2"),
   label = TRUE
@@ -112,14 +112,14 @@ FeaturePlot(clustered_brain_samples,
 FeaturePlot(clustered_brain_samples,
   features = c("Vip"),
   label = TRUE
-) # vip - 11
+) # vip - 10
 ```
 
 ### Glia cell annotation
 
 The markers I used for non-neuronal cells:
-Microglia - Cx3cr1, Cd68
-Astrocytes - Slc1a3, Gja1
+Microglia - Cx3cr1, Dock8
+Astrocytes - Slc1a3, Slc1a2, Aldh1l1 
 Vascular Cells (Pericytes/Fibroblasts/VLMCs/Endothelial Cells) - Vtn, Mgp, Bnc2, Pdgfrb, Col1a1, Dcn, Flt1
 OPCs - Pdgfra
 Oligodendrocytes - Mbp
@@ -128,26 +128,31 @@ Oligodendrocytes - Mbp
 FeaturePlot(clustered_brain_samples,
   features = c("Cx3cr1"),
   label = TRUE
-) # microglia - 14
+) # microglia - 15
 FeaturePlot(clustered_brain_samples,
-  features = c("Cd68"),
+  features = c("Dock8"),
   label = TRUE, repel = TRUE
-) # cluster 14 (macrophage and microglia)
+) # microglia - 15
 
 FeaturePlot(clustered_brain_samples,
-  features = c("Slc1a3", "Gja1"),
+  features = c("Slc1a3", "Aqp4"),
   label = TRUE
-) # astrocyte marker - 3
+) # astrocyte marker - 4
+
+FeaturePlot(clustered_brain_samples,
+  features = c("Aldh1l1"),
+  label = TRUE
+) # astrocyte marker - 4
 
 FeaturePlot(clustered_brain_samples,
   features = c("Mbp"),
   label = TRUE, repel = TRUE
-) # oligodendrocytes are 7, 20 ,22, 23, 31
+) # oligodendrocytes are 7, 20 , 26, 30
 
 FeaturePlot(clustered_brain_samples,
   features = c("Pdgfra"),
   label = TRUE
-) # cluster 13 is OPCs
+) # cluster 14 is OPCs
 
 FeaturePlot(clustered_brain_samples,
   features = c("Col1a1"),
@@ -167,27 +172,27 @@ FeaturePlot(clustered_brain_samples,
 FeaturePlot(clustered_brain_samples,
   features = c("Cald1"),
   label = TRUE, repel = TRUE
-) # fibroblast marker - 26 and 32
+) # fibroblast marker - 22
 
 FeaturePlot(clustered_brain_samples,
   features = c("Vtn"),
   label = TRUE, repel = TRUE
-) # pericyte marker - 26
+) # pericyte marker - 22
 
 FeaturePlot(clustered_brain_samples,
   features = c("Pdgfrb"),
   label = TRUE, repel = TRUE
-) # pericyte marker - 26
+) # pericyte marker - 22
 
 FeaturePlot(clustered_brain_samples,
   features = c("Flt1"),
   label = TRUE, repel = TRUE
-) # endothelial cells - 29
+) # endothelial cells - 31
 
 FeaturePlot(clustered_brain_samples,
   features = c("Cldn5"),
   label = TRUE, repel = TRUE
-) # endothelial cells - 29
+) # endothelial cells - 31
 
 FeaturePlot(clustered_brain_samples,
   features = c("Pecam1"),
@@ -203,36 +208,35 @@ Next, we assign cell types.
 annotated_brain_samples <- RenameIdents(clustered_brain_samples,
   `1` = "Excitatory Neurons",
   `2` = "Excitatory Neurons",
-  `3` = "Astrocytes",
-  `4` = "Excitatory Neurons",
+  `3` = "Excitatory Neurons",
+  `4` = "Astrocytes",
   `5` = "Excitatory Neurons",
   `6` = "Excitatory Neurons",
   `7` = "Oligodendrocytes",
   `8` = "Excitatory Neurons",
   `9` = "Inhibitory Neurons",
-  `10` = "Excitatory Neurons",
-  `11` = "Inhibitory Neurons",
+  `10` = "Inhibitory Neurons",
+  `11` = "Excitatory Neurons",
   `12` = "Inhibitory Neurons",
-  `13` = "OPCs",
-  `14` = "Microglia",
-  `15` = "Excitatory Neurons",
+  `13` = "Excitatory Neurons",
+  `14` = "OPCs",
+  `15` = "Microglia",
   `16` = "Excitatory Neurons",
   `17` = "Excitatory Neurons",
   `18` = "Inhibitory Neurons",
   `19` = "Excitatory Neurons",
   `20` = "Oligodendrocytes",
   `21` = "Excitatory Neurons",
-  `22` = "Test",
-  `23` = "Oligodendrocytes",
+  `22` = "Vascular Cells",
+  `23` = "Excitatory Neurons",
   `24` = "Excitatory Neurons",
-  `25` = "Excitatory Neurons",
-  `26` = "Vascular Cells",
+  `25` = "Oligodendrocytes",
+  `26` = "Oligodendrocytes",
   `27` = "Excitatory Neurons",
   `28` = "Excitatory Neurons",
-  `29` = "Vascular Cells",
-  `30` = "Excitatory Neurons",
-  `31` = "Oligodendrocytes",
-  `32` = "Vascular Cells"
+  `29` = "Excitatory Neurons",
+  `30` = "Oligodendrocytes",
+  `31` = "Vascular Cells"
 )
 
 annotated_brain_samples <-
@@ -248,101 +252,6 @@ Now that we have cell types identified, we can see what the final UMAP looks lik
 ```{r plot umap}
 DimPlot(annotated_brain_samples)
 ```
-
-There is a bit of oligodendrocytes that dont express Mbp and were not easily distinguishable as cluster 22. So, I want to subcluster 22.
-
-### Subcluster 22
-
-We can use Seurat's FindSubCluster function to help here
-
-```{r subcluster 22}
-subclustered_brain_samples <- FindSubCluster(
-  clustered_brain_samples,
-  22,
-  "RNA_snn",
-  subcluster.name = "subcluster_22",
-  resolution = 0.05,
-  algorithm = 4
-)
-
-DimPlot(subclustered_brain_samples, group.by = "subcluster_22")
-```
-
-Reannotate based on the featureplots of these subclustered cells.
-
-```{r look at astrocyte and oligodendrocyte markers}
-subclustered_brain_samples <- SetIdent(subclustered_brain_samples,
-  value = "subcluster_22"
-)
-
-FeaturePlot(subclustered_brain_samples,
-  features = c("Slc1a3", "Gja1"),
-  label = TRUE
-) # astrocyte marker - 3
-
-FeaturePlot(subclustered_brain_samples,
-  features = c("Mbp"),
-  label = TRUE, repel = TRUE
-) # oligodendrocyte marker
-```
-
-Set new names for new cell type annotation.
-
-```{r annotate subclusters}
-annotated_brain_samples <- RenameIdents(subclustered_brain_samples,
-  `1` = "Excitatory Neurons",
-  `2` = "Excitatory Neurons",
-  `3` = "Astrocytes",
-  `4` = "Excitatory Neurons",
-  `5` = "Excitatory Neurons",
-  `6` = "Excitatory Neurons",
-  `7` = "Oligodendrocytes",
-  `8` = "Excitatory Neurons",
-  `9` = "Inhibitory Neurons",
-  `10` = "Excitatory Neurons",
-  `11` = "Inhibitory Neurons",
-  `12` = "Inhibitory Neurons",
-  `13` = "OPCs",
-  `14` = "Microglia",
-  `15` = "Excitatory Neurons",
-  `16` = "Excitatory Neurons",
-  `17` = "Excitatory Neurons",
-  `18` = "Inhibitory Neurons",
-  `19` = "Excitatory Neurons",
-  `20` = "Oligodendrocytes",
-  `21` = "Excitatory Neurons",
-  `22_1` = "Astrocytes",
-  `22_2` = "Oligodendrocytes",
-  `22_3` = "Oligodendrocytes",
-  `23` = "Oligodendrocytes",
-  `24` = "Excitatory Neurons",
-  `25` = "Excitatory Neurons",
-  `26` = "Vascular Cells",
-  `27` = "Excitatory Neurons",
-  `28` = "Excitatory Neurons",
-  `29` = "Vascular Cells",
-  `30` = "Excitatory Neurons",
-  `31` = "Oligodendrocytes",
-  `32` = "Vascular Cells"
-)
-
-annotated_brain_samples <-
-  AddMetaData(
-    object = annotated_brain_samples,
-    as.vector(annotated_brain_samples@active.ident),
-    col.name = "cell_type"
-  )
-```
-
-### Visualize finished UMAP
-
-Let's look at the new umap.
-
-```{r plot umap}
-DimPlot(annotated_brain_samples)
-```
-
-Yes, I think this is better.
 
 ### Save
 
@@ -376,7 +285,7 @@ Vascular Cells (Pericytes/Fibroblasts/VLMCs/Endothelial Cells) - Vtn
 ```{r make dot plot}
 # plot and save cell type markers for all cell types
 png(here("results", "seurat_outputs", "cell_type_markers.png"))
-DotPlot(annotated_brain_samples, features = c("Vtn", "Cx3cr1", "Pdgfra", "Gad2", "Mbp", "Slc1a3", "Slc17a7")) + theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
+DotPlot(annotated_brain_samples, features = c("Vtn", "Cx3cr1", "Pdgfra", "Gad2", "Mbp", "Aqp4", "Slc17a7")) + theme(axis.text.x = element_text(angle = 45, vjust = 0.6))
 dev.off()
 
 # additional plot for all vascular cell markers to show specificity
@@ -435,44 +344,34 @@ other attached packages:
 [21] here_1.0.1        
 
 loaded via a namespace (and not attached):
-  [1] RColorBrewer_1.1-3     rstudioapi_0.15.0      jsonlite_1.8.7        
-  [4] magrittr_2.0.3         spatstat.utils_3.0-4   farver_2.1.1          
-  [7] rmarkdown_2.25         vctrs_0.6.4            ROCR_1.0-11           
- [10] spatstat.explore_3.2-5 htmltools_0.5.6.1      sctransform_0.4.1     
- [13] parallelly_1.36.0      KernSmooth_2.23-22     htmlwidgets_1.6.2     
- [16] desc_1.4.2             ica_1.0-3              plyr_1.8.9            
- [19] plotly_4.10.3          zoo_1.8-12             igraph_1.5.1          
- [22] mime_0.12              lifecycle_1.0.4        pkgconfig_2.0.3       
- [25] Matrix_1.6-1.1         R6_2.5.1               fastmap_1.1.1         
- [28] fitdistrplus_1.1-11    future_1.33.0          shiny_1.7.5.1         
- [31] digest_0.6.33          colorspace_2.1-0       ps_1.7.5              
- [34] tensor_1.5             rprojroot_2.0.3        RSpectra_0.16-1       
- [37] irlba_2.3.5.1          labeling_0.4.3         progressr_0.14.0      
- [40] fansi_1.0.5            spatstat.sparse_3.0-3  timechange_0.2.0      
- [43] polyclip_1.10-6        abind_1.4-5            httr_1.4.7            
- [46] compiler_4.3.1         remotes_2.4.2.1        withr_2.5.2           
- [49] backports_1.4.1        fastDummies_1.7.3      R.utils_2.12.2        
- [52] MASS_7.3-60            tools_4.3.1            lmtest_0.9-40         
- [55] httpuv_1.6.12          future.apply_1.11.0    goftest_1.2-3         
- [58] R.oo_1.25.0            glue_1.6.2             callr_3.7.3           
- [61] nlme_3.1-163           R.cache_0.16.0         promises_1.2.1        
- [64] grid_4.3.1             Rtsne_0.16             cluster_2.1.4         
- [67] reshape2_1.4.4         generics_0.1.3         gtable_0.3.4          
- [70] spatstat.data_3.0-3    tzdb_0.4.0             R.methodsS3_1.8.2     
- [73] hms_1.1.3              xml2_1.3.5             utf8_1.2.4            
- [76] spatstat.geom_3.2-7    RcppAnnoy_0.0.21       ggrepel_0.9.4         
- [79] RANN_2.6.1             pillar_1.9.0           spam_2.10-0           
- [82] RcppHNSW_0.5.0         later_1.3.1            splines_4.3.1         
- [85] lattice_0.21-8         deldir_1.0-9           survival_3.5-7        
- [88] tidyselect_1.2.0       miniUI_0.1.1.1         pbapply_1.7-2         
- [91] knitr_1.44             gridExtra_2.3          scattermore_1.2       
- [94] xfun_0.40              matrixStats_1.0.0      rex_1.2.1             
- [97] stringi_1.8.1          lazyeval_0.2.2         yaml_2.3.7            
-[100] evaluate_0.22          codetools_0.2-19       cli_3.6.1             
-[103] uwot_0.1.16            xtable_1.8-4           reticulate_1.34.0     
-[106] munsell_0.5.0          processx_3.8.2         xmlparsedata_1.0.5    
-[109] spatstat.random_3.2-1  globals_0.16.2         png_0.1-8             
-[112] parallel_4.3.1         ellipsis_0.3.2         dotCall64_1.1-0       
-[115] listenv_0.9.0          viridisLite_0.4.2      cyclocomp_1.1.1       
-[118] scales_1.2.1           ggridges_0.5.4         leiden_0.4.3          
-[121] crayon_1.5.2           rlang_1.1.2            cowplot_1.1.1    
+  [1] RColorBrewer_1.1-3     rstudioapi_0.15.0      jsonlite_1.8.7         magrittr_2.0.3        
+  [5] spatstat.utils_3.0-4   rmarkdown_2.25         farver_2.1.1           vctrs_0.6.4           
+  [9] ROCR_1.0-11            spatstat.explore_3.2-5 htmltools_0.5.6.1      sctransform_0.4.1     
+ [13] parallelly_1.36.0      KernSmooth_2.23-22     htmlwidgets_1.6.2      desc_1.4.2            
+ [17] ica_1.0-3              plyr_1.8.9             plotly_4.10.3          zoo_1.8-12            
+ [21] igraph_1.5.1           mime_0.12              lifecycle_1.0.4        pkgconfig_2.0.3       
+ [25] Matrix_1.6-1.1         R6_2.5.1               fastmap_1.1.1          fitdistrplus_1.1-11   
+ [29] future_1.33.0          shiny_1.7.5.1          digest_0.6.33          colorspace_2.1-0      
+ [33] ps_1.7.5               rprojroot_2.0.3        tensor_1.5             RSpectra_0.16-1       
+ [37] irlba_2.3.5.1          labeling_0.4.3         progressr_0.14.0       timechange_0.2.0      
+ [41] fansi_1.0.5            spatstat.sparse_3.0-3  httr_1.4.7             polyclip_1.10-6       
+ [45] abind_1.4-5            compiler_4.3.1         remotes_2.4.2.1        withr_2.5.2           
+ [49] backports_1.4.1        fastDummies_1.7.3      R.utils_2.12.2         MASS_7.3-60           
+ [53] tools_4.3.1            lmtest_0.9-40          httpuv_1.6.12          future.apply_1.11.0   
+ [57] goftest_1.2-3          R.oo_1.25.0            glue_1.6.2             callr_3.7.3           
+ [61] nlme_3.1-163           R.cache_0.16.0         promises_1.2.1         grid_4.3.1            
+ [65] Rtsne_0.16             cluster_2.1.4          reshape2_1.4.4         generics_0.1.3        
+ [69] gtable_0.3.4           spatstat.data_3.0-3    tzdb_0.4.0             R.methodsS3_1.8.2     
+ [73] hms_1.1.3              xml2_1.3.5             utf8_1.2.4             spatstat.geom_3.2-7   
+ [77] RcppAnnoy_0.0.21       ggrepel_0.9.4          RANN_2.6.1             pillar_1.9.0          
+ [81] spam_2.10-0            RcppHNSW_0.5.0         later_1.3.1            splines_4.3.1         
+ [85] lattice_0.21-8         survival_3.5-7         deldir_1.0-9           tidyselect_1.2.0      
+ [89] miniUI_0.1.1.1         pbapply_1.7-2          knitr_1.44             gridExtra_2.3         
+ [93] scattermore_1.2        xfun_0.40              matrixStats_1.0.0      rex_1.2.1             
+ [97] stringi_1.8.1          yaml_2.3.7             lazyeval_0.2.2         evaluate_0.22         
+[101] codetools_0.2-19       cli_3.6.1              uwot_0.1.16            xtable_1.8-4          
+[105] reticulate_1.34.0      munsell_0.5.0          processx_3.8.2         globals_0.16.2        
+[109] spatstat.random_3.2-1  png_0.1-8              parallel_4.3.1         ellipsis_0.3.2        
+[113] dotCall64_1.1-0        listenv_0.9.0          viridisLite_0.4.2      cyclocomp_1.1.1       
+[117] scales_1.2.1           ggridges_0.5.4         leiden_0.4.3           crayon_1.5.2          
+[121] rlang_1.1.2            cowplot_1.1.1
