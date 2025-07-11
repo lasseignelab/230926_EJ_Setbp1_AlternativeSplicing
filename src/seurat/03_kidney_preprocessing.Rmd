@@ -1,0 +1,55 @@
+---
+title: "03_kidney_preprocessing"
+author: "Tabea M. Soelter"
+date: "2025-07-11"
+output: html_document
+---
+**Pre-processing of S858R mouse kidney data**
+
+__Goal__: Process S858R (snRNA-seq) kidney data for downstream analyses. The
+data consists of 2 conditions (S858R-mutants, wildtype) and 1 sex (male).
+  
+__Reproducibility__:
+* GitHub: lasseignelab/230926_EJ_Setbp1_AlternativeSplicing
+* Docker: emmafjones/setbp1_alternative_splicing
+    * Version: 1.1.0 
+* HPC: Yes
+  * Resources: long partition (150hrs), 4 CPUs, 65GB per CPU
+
+__Data__:
+* Name: N/A
+* Location: 230926_EJ_Setbp1_AlternativeSplicing/data/soupX/
+
+__Analysis Plan__:
+* Load necessary packages 
+* Load data 
+* Create seurat object
+* Perform quality control and filtering
+* Integration
+* Save integrated seurat object
+
+__Analysis__:
+# Load packages
+```{r}
+# Time tracking
+ptm <- proc.time()
+
+# Setting seed
+set.seed(42)
+
+# Load packages
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(tidyverse)
+  library(harmony)
+  library(clustree)
+  library(stringr)
+  library(scCustomize)
+  library(gprofiler2)
+  library(here)
+  library(styler)
+  library(lintr)
+})
+
+source(here("src", "functions_TMS.R"))
+```
