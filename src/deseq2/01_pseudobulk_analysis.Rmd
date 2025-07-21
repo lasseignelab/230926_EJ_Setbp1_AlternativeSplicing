@@ -362,9 +362,6 @@ n_sig_dn <- dplyr::filter(sig_res, log2FoldChange <= -log2fc_cutoff) %>%
 ```{r scatterplot}
 ## Extract normalized counts from dds object
 normalized_counts <- counts(dds, normalized = TRUE)
-# I added below because there were no row names, but I wanted to index genes
-# code: rownames(normalized_counts) <- 1:nrow(normalized_counts)
-
 
 ## Extract top 20 DEG from resLFC (make sure to order by padj)
 top20_sig_genes <- sig_res %>%
@@ -461,9 +458,6 @@ map(
   B = "mutant",
   save_path = "results/deseq2/"
 )
-
-# microglia and vascular cell do not have any significant genes, probably due to
-# low cell counts
 ```
 
 
