@@ -52,6 +52,12 @@ suppressPackageStartupMessages({
 source(here("src", "functions_soelter.R"))
 source(here("src", "seurat", "functions.R"))
 ```
+# need to rebuild docker and add scCustomize
+```{r}
+install.packages("scCustomize")
+library(scCustomize)
+```
+
 
 ```{r}
 ## make_seurat_object
@@ -68,9 +74,9 @@ make_seurat_object <- function(path){
     sample_name <- basename(i)
     seurat_object <- CreateSeuratObject(counts = counts, project = sample_name, min.features = 200)
     if (substring(sample_name, nchar(sample_name)) %in% c("1", "3", "5")) {
-      seurat_object$orig.ident <- "wildtype"
+      seurat_object$condition <- "wildtype"
     } else {
-      seurat_object$orig.ident <- "mutant"
+      seurat_object$condition <- "mutant"
     }
     seurat_object$sample_id <- sample_name
     object_list[[i]] <- seurat_object
@@ -109,8 +115,193 @@ merged_seurat <- make_seurat_object(here(
 ```
 
 ```{r}
-merged_seurat <- calculate_qc(merged_seurat)
+merged_seurat <- JoinLayers(merged_seurat)
 ```
+
+
+```{r}
+## og_calculate_qc
+# A function which calculates quality control metrics for a merged seurat object
+og_calculate_qc <- function(seurat_object){
+  seurat_object$log10GenesPerUMI <- log10(seurat_object$nFeature_RNA) / log10(seurat_object$nCount_RNA)
+  seurat_object$mitoRatio <- PercentageFeatureSet(object = seurat_object, 
+                                                  pattern = "^mt-")
+  seurat_object$mitoRatio <- seurat_object@meta.data$mitoRatio / 100
+  return(seurat_object)
+}
+```
+
+
+```{r}
+merged_seurat <- og_calculate_qc(merged_seurat)
+```
+
+```{r}
+metadata <- format_metadata(merged_seurat)
+dim(metadata) # 83107     8
+
+# Add metadata to merged_seurat
+merged_seurat@meta.data <- metadata
+```
+
+```{r}
+pdf(file = here("results", "seurat_outputs", "qc_plots_kidney.pdf"))
+plot_qc(metadata)
+dev.off()
+```
+
+# Filtering 
+* Performing cell-level and gene-level filtering on the data. 
+  * Cell-level filtering is performed based on the plotted QC metrics (above).
+  * Gene-level filtering aims at removing count values = 0, since they can skew average gene expression measurements.
+```{r}
+# Cell-level filtering
+sub_seurat <- subset(merged_seurat,
+  subset =
+    nGene > 1000 &
+      nGene < 10000 &
+      mitoRatio < 0.2 &
+      log10GenesPerUMI > 0.80
+)
+
+# Gene-level filtering
+counts <- GetAssayData(sub_seurat, layer = "counts")
+
+nonzero <- counts > 0
+
+keep_genes <- rowSums(nonzero) >= 10
+
+filtered_counts <- counts[keep_genes, ]
+
+filtered_seurat <- CreateSeuratObject(filtered_counts,
+  meta.data = sub_seurat@meta.data
+)
+```
+
+# Save filtered seurat object
+```{r}
+saveRDS(filtered_seurat, file = here("data", "seurat", "filtered_kidney_samples.rds"))
+```
+
+# Plot QC metrics after filtering
+```{r warning=FALSE}
+metadata <- filtered_seurat@meta.data
+dim(metadata) # 75889    10
+
+# plot and save post-filter QC outputs
+pdf(file = here(
+  "results",
+  "seurat_outputs",
+  "qc_plots_filtered_kidney.pdf"
+))
+
+plot_qc(metadata)
+
+dev.off()
+```
+
+```{r}
+install.packages("ggplot2")
+library(ggplot2)
+```
+
+
+## Evaluate cell cycle effects and run PCA
+
+```{r evaluate cell cycle effects and run PCA}
+s.genes <- unlist(as.list(read_csv(
+  here("doc/SGenes.csv"),
+  col_names = FALSE,
+  show_col_types = FALSE
+)))
+
+g2m.genes <- unlist(as.list(read_csv(
+  here("doc/G2MGenes.csv"),
+  col_names = FALSE,
+  show_col_types = FALSE
+)))
+
+pdf(here("results", "seurat_outputs", "cellcycle_pca_kidney.pdf"), )
+
+filtered_seurat <- evaluate_cell_cycle(filtered_seurat)
+
+dev.off()
+```
+
+```{r}
+## cell_cycle_effects
+# A function which calculates and plots the effect of cell cycle on the data using a filtered seurat object as input. It also performs log normalization, scaling, and dimension reduction using PCA
+cell_cycle_effects <- function(filtered_seurat, g2m_genes, s_genes){
+  # log normalize -----
+  filtered_seurat <- NormalizeData(filtered_seurat)
+  # score cells based in gex of genes -----
+  filtered_seurat <- CellCycleScoring(filtered_seurat,
+                                      g2m.features = g2m_genes,
+                                      s.features = s_genes)
+  filtered_seurat <- FindVariableFeatures(filtered_seurat,
+                                          selection.method = "vst",
+                                          verbose = FALSE)
+  # scale data -----
+  filtered_seurat <- ScaleData(filtered_seurat)
+  # run pca -----
+  set.seed(42)
+  filtered_seurat <- RunPCA(filtered_seurat, approx = FALSE)
+  # plot pca -----
+  elbow <- ElbowPlot(filtered_seurat, reduction = "pca", ndims = 50)
+  # plot cell cycle scoring -----
+  cell_cycle_plot <- DimPlot(filtered_seurat,
+                             reduction = "pca",
+                             group.by = "Phase",
+                             split.by = "Phase")
+  plot(cell_cycle_plot)
+  plot(elbow)
+  return(filtered_seurat)
+}
+```
+
+
+
+
+```{r}
+saveRDS(filtered_seurat,
+  file = here("data", "seurat", "filtered_kidney_samples_pca.rds")
+)
+```
+
+```{r}
+integrated_seurat <- RunHarmony(filtered_seurat,
+  group.by.vars = "sample_id"
+) # Harmony converged after 8 iterations
+
+integrated_seurat <- RunUMAP(integrated_seurat,
+  dims = 1:30,
+  reduction = "harmony",
+  reduction.name = "umap_harmony"
+)
+```
+
+```{r}
+saveRDS(integrated_seurat,
+  file = here("data", "seurat", "integrated_kidney_samples.rds")
+)
+```
+
+```{r}
+resolutions <- c(0.5, 0.75, 0.9, 1, 1.25)
+
+clustered_seurat <- find_clusters(integrated_seurat,
+  dims = 1:25,
+  reduction = "harmony",
+  resolutions = resolutions
+)
+```
+
+```{r}
+saveRDS(clustered_seurat,
+  file = here("data", "seurat", "clustered_kidney_samples.rds")
+)
+```
+
 
 
 
