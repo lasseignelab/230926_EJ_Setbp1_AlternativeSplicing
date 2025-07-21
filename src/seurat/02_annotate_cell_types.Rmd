@@ -266,6 +266,11 @@ dev.off()
 Save annotated object!
 
 ```{r save annotated object}
+# remove timestamps
+for (layer in names(annotated_brain_samples@commands)){
+  annotated_brain_samples@commands[[layer]]@time.stamp <- as.POSIXct(character(0))
+}
+
 # save
 saveRDS(annotated_brain_samples,
   file = here("data", "seurat", "annotated_brain_samples.rds")

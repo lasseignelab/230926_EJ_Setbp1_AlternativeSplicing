@@ -217,6 +217,11 @@ This now becomes 51465 cells.
 Save object!
 
 ```{r save object}
+# remove timestamps
+for (layer in names(filtered_brain_samples@commands)){
+  filtered_brain_samples@commands[[layer]]@time.stamp <- as.POSIXct(character(0))
+}
+
 # save
 saveRDS(filtered_brain_samples,
   file = here("data", "seurat", "filtered_brain_samples.rds")
@@ -248,6 +253,11 @@ dev.off()
 Save object again!
 
 ```{r save object again}
+# remove timestamps
+for (layer in names(filtered_brain_samples@commands)){
+  filtered_brain_samples@commands[[layer]]@time.stamp <- as.POSIXct(character(0))
+}
+
 # save
 saveRDS(filtered_brain_samples,
   file = here("data", "seurat", "filtered_brain_samples_pca.rds")
@@ -273,6 +283,11 @@ Harmony converged after 10 iterations
 Save integrated object!
 
 ```{r save integrated object}
+# remove timestamps
+for (layer in names(integrated_brain_samples@commands)){
+  integrated_brain_samples@commands[[layer]]@time.stamp <- as.POSIXct(character(0))
+}
+
 # save
 saveRDS(integrated_brain_samples,
   file = here("data", "seurat", "integrated_brain_samples.rds")
@@ -294,6 +309,11 @@ clustered_brain_samples <- find_clusters(integrated_brain_samples,
 Save clustered object!
 
 ```{r save clustered object}
+# remove timestamps
+for (layer in names(clustered_brain_samples@commands)){
+  clustered_brain_samples@commands[[layer]]@time.stamp <- as.POSIXct(character(0))
+}
+
 # save
 saveRDS(clustered_brain_samples,
   file = here("data", "seurat", "clustered_brain_samples.rds")
