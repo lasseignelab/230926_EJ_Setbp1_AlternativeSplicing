@@ -1,0 +1,16 @@
+
+Files included:
+5e7dece5063d1e19fa8df0c81270b759  data/marvel/All_Cell_Types_marvel_object.rds
+138dcf86dec72c9fe2af798ac234fe12  data/marvel/Astrocytes_marvel_object.rds
+d88526f6c923cea4e57da9c0eb1e6de6  data/marvel/cell_type_goresults.rds
+f847f4f9593a8ccbad1f6a3108a55a43  data/marvel/Microglia_marvel_object.rds
+bc883c22bc3197dd1489cbe8804701c6  data/marvel/Oligodendrocytes_marvel_object.rds
+0745e59c4760fdec01036e9a8bb6ceb4  data/marvel/OPCs_marvel_object.rds
+5c9df3dfd9df90a9315a764118670e30  data/marvel/setbp1_marvel_aligned.rds
+a00a26c257de778fa2fa912445303ac8  data/marvel/sj_usage_cell_type.rds
+479c3edd1b30c8e9fa82fca12c23c159  data/marvel/sj_usage_condition.rds
+
+Combined MD5 checksum:
+78664ab0d2123e477dc299249657dc7e
+
+Ran from: /data/user/tsoelter/projects/230926_EJ_Setbp1_AlternativeSplicing
