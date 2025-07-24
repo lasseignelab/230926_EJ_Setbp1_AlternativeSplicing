@@ -1,0 +1,43 @@
+
+Files included:
+ec0e10774862dd7673bf4f4931eb28b0  data/soupX/J13/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/J13/genes.tsv
+c0f9727cffaffa4b905d93f742428cc3  data/soupX/J13/matrix.mtx
+3e1fdef422188b37d40c2161cc13ab03  data/soupX/J15/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/J15/genes.tsv
+798101eafc5605ccf24f0ad305232108  data/soupX/J15/matrix.mtx
+95f5f709064c8d538170ba294b759994  data/soupX/J1/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/J1/genes.tsv
+cb4a67339fa0cd9ea95a68522dea9038  data/soupX/J1/matrix.mtx
+03a81e20e94b2bfaa23200b7d1261952  data/soupX/J2/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/J2/genes.tsv
+ee460fd52d35778cb72e07466a9876f3  data/soupX/J2/matrix.mtx
+9b01c5e58cec6c8932ab7790625c2021  data/soupX/J3/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/J3/genes.tsv
+b38c5b50943c6a02edfa5f4b9d31e9aa  data/soupX/J3/matrix.mtx
+4ddc57d34f7804090fd6ab95b079fb4d  data/soupX/J4/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/J4/genes.tsv
+800ce2ff58f596dde6f7ad5f8794a1c3  data/soupX/J4/matrix.mtx
+354c51bb796f9a6f14915d5c6e4818bf  data/soupX/K1/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/K1/genes.tsv
+7db68d21b9fd43d2844413793a94517b  data/soupX/K1/matrix.mtx
+3fc1055d1895cebd8c928494b6d737e9  data/soupX/K2/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/K2/genes.tsv
+cf50729f30f6122ffdeea00e0be96395  data/soupX/K2/matrix.mtx
+db2ed40630e4816f5dc4f5a48fa22537  data/soupX/K3/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/K3/genes.tsv
+7d63959b884df7a433e8bdf69e384bc5  data/soupX/K3/matrix.mtx
+8b1867561bfd425a22c741bf41581fc1  data/soupX/K4/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/K4/genes.tsv
+5a6b5228a301c34d5d9b6d87fffb9f99  data/soupX/K4/matrix.mtx
+c1d3758ac5d35a26f8c982d474882cee  data/soupX/K5/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/K5/genes.tsv
+21f60afd7fdafab7873abae176fd8e78  data/soupX/K5/matrix.mtx
+e017c7bc35af29b091b7638facacdff8  data/soupX/K6/barcodes.tsv
+2b499cdf0bb9de90a221bb3425888ff8  data/soupX/K6/genes.tsv
+d8646db6d8f19e14b32af26276453455  data/soupX/K6/matrix.mtx
+
+Combined MD5 checksum:
+ad5a5f53859fc3b52a18cfb45a3a06ac
+
+Ran from: /data/user/tsoelter/projects/230926_EJ_Setbp1_AlternativeSplicing
