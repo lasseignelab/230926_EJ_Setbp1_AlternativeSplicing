@@ -137,6 +137,7 @@ evaluate_cell_cycle <- function(filtered_seurat) {
     g2m.features = g2m.genes,
     s.features = s.genes
   )
+  set.seed(42)
   filtered_seurat <- FindVariableFeatures(filtered_seurat,
     selection.method = "vst",
     verbose = FALSE
