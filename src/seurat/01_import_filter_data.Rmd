@@ -212,7 +212,7 @@ filtered_brain_samples <- filtered_brain_samples[!grepl(
 filtered_brain_samples
 ```
 
-This now becomes 51465 cells.
+This now becomes 51318 cells.
 
 Save object!
 
@@ -243,7 +243,7 @@ g2m.genes <- unlist(as.list(read_csv(
   show_col_types = FALSE
 )))
 
-pdf(here("results", "seurat_outputs", "cellcycle_pca.pdf"), )
+pdf(here("results", "seurat_outputs", "cellcycle_pca.pdf"))
 
 filtered_brain_samples <- evaluate_cell_cycle(filtered_brain_samples)
 
@@ -278,7 +278,7 @@ integrated_brain_samples <- RunUMAP(integrated_brain_samples,
 )
 ```
 
-Harmony converged after 10 iterations
+Harmony converged after 7 iterations
 
 Save integrated object!
 
