@@ -1,0 +1,156 @@
+---
+title: "04_kidney_celltype_assignment"
+author: "Tabea M. Soelter"
+date: "2025-07-23"
+output: html_document
+---
+Docker version: 1.0.6 
+
+```{r}
+suppressPackageStartupMessages({
+  library(here)
+  library(styler)
+  library(lintr)
+  library(tidyverse)
+  library(Seurat)
+})
+
+# set seed
+set.seed(42)
+```
+
+
+```{r}
+clustered_seurat <- readRDS("/data/user/tsoelter/projects/230926_EJ_Setbp1_AlternativeSplicing/data/seurat/clustered_kidney_samples.rds")
+```
+
+```{r}
+# set identity to best clustering after exploring data
+clustered_seurat <- SetIdent(clustered_seurat,
+  value = "RNA_snn_res.1.25"
+)
+
+DimPlot(clustered_seurat, label = TRUE)
+```
+
+```{r}
+marker_genes <- FindAllMarkers(clustered_seurat,
+  logfc.threshold = 0.2,
+  assay = "RNA",
+  only.pos = TRUE
+)
+
+top10 <- marker_genes %>%
+  group_by(cluster) %>%
+  top_n(-10, p_val_adj)
+```
+
+```{r}
+kidney_markers <- list(
+  Podocytes = c("Nphs1"),
+  Mesangial = c("Col1a2"),
+  Proximal_Tubule = c("Slc34a1", "Slc13a3"),
+  PCT = c("Slc5a2", "Slc6a19"),
+  PST = c("Slc22a7", "Slc22a6"),
+  LOH = c("Slc12a1"),
+  Descending_thin_limb_LOH = c("Fst", "Aqp1"),
+  Ascending_thin_limb_LOH = c("Epha7", "Mx2"),
+  Thick_ascending_limb_LOH = c("Ptger3", "Tmem207"),
+  DCT = c("Slc12a3"),
+  CDPC = c("Aqp2", "Hsd11b2"),
+  CDICA = c("Aqp6"),
+  CDICB = c("Hmx2"),
+  Connecting_Tubule = c("Atp6v1b1", "Fxyd4"),
+  Fibroblasts = c("Col1a1", "Gucy1a1"),
+  Pericytes = c("Pdgfrb"),
+  Endothelial = c("Flt1", "Pecam1", "Cdh5"),
+  Smooth_Muscle = c("Myh11"),
+  Macrophages = c("Cd68", "C1qa"),
+  Dendritic_Cells = c("Itgax", "H2-Aa"),
+  T_Cells = c("Cxcr6", "Cd247"),
+  T_regulatory_cells = c("Tnfrsf4", "Capg", "Ikzf2"),
+  B_Cells = c("Cd79a", "Cd79b"),
+  NK_Cells = c("Nkg7")
+)
+
+DotPlot(clustered_seurat, features = kidney_markers) + RotatedAxis()
+
+```
+
+
+```{r}
+annotated_seurat <- RenameIdents(clustered_seurat,
+  `1` = "PST",
+  `2` = "Mesenchymal cells",
+  `3` = "Thick ascending limb (LOH)",
+  `4` = "PST",
+  `5` = "Endothelial cells",
+  `6` = "PCT",
+  `7` = "Proximal tubule cells",
+  `8` = "Thick ascending limb (LOH)",
+  `9` = "Endothelial cells",
+  `10` = "Proximal tubule cells",
+  `11` = "PCT",
+  `12` = "DCT",
+  `13` = "PST",
+  `14` = "Endothelial cells",
+  `15` = "PST",
+  `16` = "CDPC",
+  `17` = "DCT",
+  `18` = "Proximal tubule cells",
+  `19` = "Proximal tubule cells",
+  `20` = "DCT",
+  `21` = "Proximal tubule cells",
+  `22` = "Dendritic cells",
+  `23` = "Pericytes",
+  `24` = "CDPC",
+  `25` = "CDIC-A",
+  `26` = "CDIC-B",
+  `27` = "Thin descending limb (LOH)",
+  `28` = "Thin ascending limb (LOH)",
+  `29` = "Mesenchymal cells",
+  `30` = "CDPC",
+  `31` = "Mesenchymal cells",
+  `32` = "Proximal tubule cells",
+  `33` = "Dendritic cells",
+  `34` = "DCT",
+  `35` = "Proximal tubule cells",
+  `36` = "Thin ascending limb (LOH)",
+  `37` = "Mesenchymal cells",
+  `38` = "T cells",
+  `39` = "Proximal tubule cells",
+  `40` = "Podocytes",
+  `41` = "B cells",
+  `42` = "Thick ascending limb (LOH)",
+  `43` = "PST",
+  `44` = "Connecting tubule cells",
+  `45` = "PST",
+  `46` = "T regulatory cells",
+  `47` = "Mesenchymal cells"
+)
+
+annotated_seurat <-
+  AddMetaData(
+    object = annotated_seurat,
+    as.vector(annotated_seurat@active.ident),
+    col.name = "cell_type"
+  )
+```
+
+```{r}
+png(here("results", "seurat_outputs", "annotated_umap_kidney.png"))
+DimPlot(annotated_seurat)
+dev.off()
+```
+
+```{r}
+saveRDS(annotated_seurat,
+  file = here("data", "seurat", "annotated_kidney_samples.rds")
+)
+```
+
+```{r}
+sessionInfo()
+```
+
+
