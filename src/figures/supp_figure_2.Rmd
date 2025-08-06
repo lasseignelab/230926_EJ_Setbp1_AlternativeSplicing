@@ -102,7 +102,7 @@ dotplot <- DotPlot(annotated_brain_samples,
   cols = c("lightgray", other_colors[2]),
   features = c(
     "Vtn", "Cx3cr1", "Pdgfra", "Gad2", "Mbp",
-    "Slc1a3", "Slc17a7"
+    "Aqp4", "Slc17a7"
   )
 ) +
   theme(
@@ -216,7 +216,7 @@ figure_1 <- plot_grid(umap_1, dotplot, umap_2, barplot,
   labels = c("A", "B", "C", "D")
 )
 
-png(here::here("results", "final_outputs", "supplementary_figures", "supp_figure1.png"),
+png(here::here("results", "supplementary_figures", "supp_figure1.png"),
   width = 12, height = 8, units = "in", res = 300
 )
 figure_1
