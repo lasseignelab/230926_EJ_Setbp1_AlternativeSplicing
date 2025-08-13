@@ -17,6 +17,6 @@ PROJECT_PATH="$(cd "$SLURM_SUBMIT_DIR/../.." && pwd)"
 singularity exec --cleanenv \
                  --containall \
                  -B "${PROJECT_PATH}" \
-                 "${PROJECT_PATH}"/bin/docker/setbp1_alternative_splicing_1.1.0.sif \
+                 "${PROJECT_PATH}"/bin/docker/setbp1_alternative_splicing_2.0.0.sif \
                  Rscript --vanilla "${PROJECT_PATH}"/src/seurat/03_kidney_preprocessing.R \
                  "${PROJECT_PATH}"
