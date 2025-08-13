@@ -105,7 +105,6 @@ remove_ambient_rna <- function(inputs, outputs, plots) {
   dev.off()
 }
 
-
 ## make_seurat_object
 # A function which takes a path to sample folders with the three CellRanger
 # output files and creates a merged seurat object
