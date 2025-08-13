@@ -27,6 +27,8 @@
 
 ## Set-up:
 args <- R.utils::commandArgs(trailingOnly = TRUE)
+wd <- args[1]
+setwd(wd)
 
 set.seed(42)
 
@@ -37,20 +39,14 @@ suppressPackageStartupMessages({
   library(stringr)
   library(gprofiler2)
   library(scCustomize)
-  library(here)
-  library(styler)
-  library(lintr)
 })
 
-wd <- args[1]
-setwd(wd)
-
-source(here("src", "functions_soelter.R"))
-source(here("src", "seurat", "functions.R"))
+source(file.path("src", "functions_soelter.R"))
+source(file.path("src", "seurat", "functions.R"))
 
 ## Analysis:
 # Object creation
-merged_seurat <- make_seurat_object(here(
+merged_seurat <- make_seurat_object(file.path(
   "data",
   "soupX"
 ))
@@ -62,7 +58,7 @@ merged_seurat <- calc_qc(merged_seurat)
 metadata <- format_metadata(merged_seurat)
 merged_seurat@meta.data <- metadata
 
-pdf(file = here("results", "seurat_outputs", "qc_plots_kidney.pdf"))
+pdf(file = file.path("results", "seurat_outputs", "qc_plots_kidney.pdf"))
 plot_qc(metadata)
 dev.off()
 
@@ -85,7 +81,7 @@ filtered_seurat <- CreateSeuratObject(filtered_counts,
 )
 
 saveRDS(filtered_seurat,
-        file = here("data",
+        file = file.path("data",
                     "seurat",
                     "filtered_kidney_samples.rds"
                     )
@@ -94,7 +90,7 @@ saveRDS(filtered_seurat,
 # Post-filtering QC:
 metadata <- filtered_seurat@meta.data
 
-pdf(file = here(
+pdf(file = file.path(
   "results",
   "seurat_outputs",
   "qc_plots_filtered_kidney.pdf"
@@ -104,22 +100,25 @@ dev.off()
 
 # Cell cycle scoring:
 s.genes <- unlist(as.list(read_csv(
-  here("doc/SGenes.csv"),
+  file.path("doc/SGenes.csv"),
   col_names = FALSE,
   show_col_types = FALSE
 )))
 g2m.genes <- unlist(as.list(read_csv(
-  here("doc/G2MGenes.csv"),
+  file.path("doc/G2MGenes.csv"),
   col_names = FALSE,
   show_col_types = FALSE
 )))
 
-pdf(here("results", "seurat_outputs", "cellcycle_pca_kidney.pdf"), )
-filtered_seurat <- cell_cycle_effects(filtered_seurat)
+pdf(file.path("results", "seurat_outputs", "cellcycle_pca_kidney.pdf"), )
+filtered_seurat <- cell_cycle_effects(filtered_seurat,
+                                      s_genes = s.genes,
+                                      g2m_genes = g2m.genes
+                                      )
 dev.off()
 
 saveRDS(filtered_seurat,
-        file = here("data", "seurat", "filtered_kidney_samples_pca.rds")
+        file = file.path("data", "seurat", "filtered_kidney_samples_pca.rds")
 )
 
 # Integration:
@@ -134,7 +133,7 @@ integrated_seurat <- RunUMAP(integrated_seurat,
                              )
 
 saveRDS(integrated_seurat,
-        file = here("data", "seurat", "integrated_kidney_samples.rds")
+        file = file.path("data", "seurat", "integrated_kidney_samples.rds")
         )
 
 # Clustering:
@@ -145,7 +144,7 @@ clustered_seurat <- find_clusters(integrated_seurat,
                                   )
 
 saveRDS(clustered_seurat,
-        file = here("data", "seurat", "clustered_kidney_samples.rds")
+        file = file.path("data", "seurat", "clustered_kidney_samples.rds")
         )
 
 # Cell type annotation:
@@ -159,9 +158,12 @@ marker_genes <- FindAllMarkers(clustered_seurat,
                                only.pos = TRUE
                                )
 
-top10 <- marker_genes %>%
-  group_by(cluster) %>%
-  top_n(-10, p_val_adj)
+saveRDS(marker_genes,
+        file.path("results",
+                  "seurat_outputs",
+                  "kidney_marker_genes.rds"
+                  )
+        )
 
 kidney_markers <- list(
   Podocytes = c("Nphs1", "Synpo"),
@@ -190,7 +192,9 @@ kidney_markers <- list(
   NK_Cells = c("Nkg7")
 )
 
+png(file.path("results", "seurat_outputs", "celltype_markers_kidney.png"))
 DotPlot(clustered_seurat, features = kidney_markers) + RotatedAxis()
+dev.off()
 
 annotated_seurat <- RenameIdents(clustered_seurat,
                                  `1` = "Endothelial cells",
@@ -251,14 +255,82 @@ annotated_seurat <- AddMetaData(
   col.name = "cell_type"
   )
 
-png(here("results", "seurat_outputs", "annotated_umap_kidney.png"))
+png(file.path("results", "seurat_outputs", "annotated_umap_kidney.png"))
 DimPlot(annotated_seurat)
 dev.off()
 
 # Save final object for downstream analyses:
 saveRDS(annotated_seurat,
-        file = here("data", "seurat", "annotated_kidney_samples.rds")
+        file = file.path("data", "seurat", "annotated_kidney_samples.rds")
         )
 
 # Session Information:
 sessionInfo()
+#R version 4.3.1 (2023-06-16)
+#Platform: x86_64-pc-linux-gnu (64-bit)
+#Running under: Ubuntu 22.04.3 LTS
+
+#Matrix products: default
+#BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+#LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.20.so;  LAPACK version 3.10.0
+
+#locale:
+#  [1] C
+
+#time zone: Etc/UTC
+#tzcode source: system (glibc)
+
+#attached base packages:
+#  [1] stats     graphics  grDevices utils     datasets  methods   base     
+
+#other attached packages:
+#  [1] scCustomize_3.0.1  gprofiler2_0.2.3   harmony_1.1.0      Rcpp_1.0.12       
+#[5] lubridate_1.9.3    forcats_1.0.0      stringr_1.5.1      dplyr_1.1.4       
+#[9] purrr_1.0.2        readr_2.1.4        tidyr_1.3.0        tibble_3.2.1      
+#[13] ggplot2_3.5.2      tidyverse_2.0.0    Seurat_5.0.0       SeuratObject_5.0.0
+#[17] sp_2.1-1          
+
+#loaded via a namespace (and not attached):
+#  [1] RColorBrewer_1.1-3     shape_1.4.6            jsonlite_1.8.7        
+#[4] magrittr_2.0.3         ggbeeswarm_0.7.2       spatstat.utils_3.0-4  
+#[7] farver_2.1.1           GlobalOptions_0.1.2    vctrs_0.6.5           
+#[10] ROCR_1.0-11            spatstat.explore_3.2-5 paletteer_1.6.0       
+#[13] janitor_2.2.1          htmltools_0.5.6.1      sctransform_0.4.1     
+#[16] parallelly_1.36.0      KernSmooth_2.23-22     htmlwidgets_1.6.2     
+#[19] ica_1.0-3              plyr_1.8.9             plotly_4.10.3         
+#[22] zoo_1.8-12             igraph_1.5.1           mime_0.12             
+#[25] lifecycle_1.0.4        pkgconfig_2.0.3        Matrix_1.6-1.1        
+#[28] R6_2.5.1               fastmap_1.1.1          snakecase_0.11.1      
+#[31] fitdistrplus_1.1-11    future_1.33.0          shiny_1.7.5.1         
+#[34] digest_0.6.33          colorspace_2.1-0       rematch2_2.1.2        
+#[37] patchwork_1.3.1        rprojroot_2.0.3        tensor_1.5            
+#[40] RSpectra_0.16-1        irlba_2.3.5.1          labeling_0.4.3        
+#[43] progressr_0.14.0       fansi_1.0.6            spatstat.sparse_3.0-3 
+#[46] timechange_0.2.0       mgcv_1.9-0             httr_1.4.7            
+#[49] polyclip_1.10-6        abind_1.4-5            compiler_4.3.1        
+#[52] here_1.0.1             bit64_4.0.5            withr_3.0.0           
+#[55] fastDummies_1.7.3      R.utils_2.12.2         MASS_7.3-60           
+#[58] rappdirs_0.3.3         tools_4.3.1            vipor_0.4.7           
+#[61] lmtest_0.9-40          beeswarm_0.4.0         httpuv_1.6.12         
+#[64] future.apply_1.11.0    goftest_1.2-3          R.oo_1.25.0           
+#[67] glue_1.7.0             nlme_3.1-163           promises_1.2.1        
+#[70] grid_4.3.1             Rtsne_0.16             cluster_2.1.4         
+#[73] reshape2_1.4.4         generics_0.1.3         gtable_0.3.6          
+#[76] spatstat.data_3.0-3    tzdb_0.4.0             R.methodsS3_1.8.2     
+#[79] data.table_1.14.8      hms_1.1.3              utf8_1.2.4            
+#[82] spatstat.geom_3.2-7    RcppAnnoy_0.0.21       ggrepel_0.9.5         
+#[85] RANN_2.6.1             pillar_1.9.0           limma_3.56.2          
+#[88] vroom_1.6.4            ggprism_1.0.6          spam_2.10-0           
+#[91] RcppHNSW_0.5.0         later_1.3.1            circlize_0.4.15       
+#[94] splines_4.3.1          lattice_0.21-8         bit_4.0.5             
+#[97] survival_3.5-7         deldir_1.0-9           tidyselect_1.2.1      
+#[100] miniUI_0.1.1.1         pbapply_1.7-2          gridExtra_2.3         
+#[103] scattermore_1.2        RhpcBLASctl_0.23-42    matrixStats_1.0.0     
+#[106] stringi_1.8.1          lazyeval_0.2.2         codetools_0.2-19      
+#[109] cli_3.6.2              uwot_0.1.16            xtable_1.8-4          
+#[112] reticulate_1.34.0      munsell_0.5.1          globals_0.16.2        
+#[115] spatstat.random_3.2-1  png_0.1-8              ggrastr_1.0.2         
+#[118] parallel_4.3.1         ellipsis_0.3.2         presto_1.0.0          
+#[121] dotCall64_1.1-0        listenv_0.9.0          viridisLite_0.4.2     
+#[124] scales_1.3.0           ggridges_0.5.4         crayon_1.5.2          
+#[127] leiden_0.4.3           rlang_1.1.3            cowplot_1.1.1
