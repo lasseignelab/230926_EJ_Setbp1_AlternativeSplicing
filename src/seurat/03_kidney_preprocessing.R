@@ -80,6 +80,10 @@ filtered_seurat <- CreateSeuratObject(filtered_counts,
                                       meta.data = sub_seurat@meta.data
 )
 
+for (layer in names(filtered_seurat@commands)){
+  filtered_seurat@commands[[layer]]@time.stamp <- as.POSIXct(character(0))
+}
+
 saveRDS(filtered_seurat,
         file = file.path("data",
                     "seurat",
@@ -117,6 +121,10 @@ filtered_seurat <- cell_cycle_effects(filtered_seurat,
                                       )
 dev.off()
 
+for (layer in names(filtered_seurat@commands)){
+  filtered_seurat@commands[[layer]]@time.stamp <- as.POSIXct(character(0))
+}
+
 saveRDS(filtered_seurat,
         file = file.path("data", "seurat", "filtered_kidney_samples_pca.rds")
 )
@@ -132,6 +140,10 @@ integrated_seurat <- RunUMAP(integrated_seurat,
                              reduction.name = "umap_harmony"
                              )
 
+for (layer in names(integrated_seurat@commands)){
+  integrated_seurat@commands[[layer]]@time.stamp <- as.POSIXct(character(0))
+}
+
 saveRDS(integrated_seurat,
         file = file.path("data", "seurat", "integrated_kidney_samples.rds")
         )
@@ -142,6 +154,10 @@ clustered_seurat <- find_clusters(integrated_seurat,
                                   reduction = "harmony",
                                   resolutions = 1.25
                                   )
+
+for (layer in names(clustered_seurat@commands)){
+  clustered_seurat@commands[[layer]]@time.stamp <- as.POSIXct(character(0))
+}
 
 saveRDS(clustered_seurat,
         file = file.path("data", "seurat", "clustered_kidney_samples.rds")
@@ -192,8 +208,13 @@ kidney_markers <- list(
   NK_Cells = c("Nkg7")
 )
 
-png(file.path("results", "seurat_outputs", "celltype_markers_kidney.png"))
-DotPlot(clustered_seurat, features = kidney_markers) + RotatedAxis()
+png(file.path("results", "seurat_outputs", "celltype_markers_kidney.png"),
+    width = 1200,
+    height = 1200,
+    res = 300
+    )
+dotplot <- DotPlot(clustered_seurat, features = kidney_markers) + RotatedAxis()
+print(dotplot)
 dev.off()
 
 annotated_seurat <- RenameIdents(clustered_seurat,
@@ -260,6 +281,10 @@ DimPlot(annotated_seurat)
 dev.off()
 
 # Save final object for downstream analyses:
+for (layer in names(annotated_seurat@commands)){
+  annotated_seurat@commands[[layer]]@time.stamp <- as.POSIXct(character(0))
+}
+
 saveRDS(annotated_seurat,
         file = file.path("data", "seurat", "annotated_kidney_samples.rds")
         )
