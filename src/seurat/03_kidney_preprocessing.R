@@ -209,11 +209,14 @@ kidney_markers <- list(
 )
 
 png(file.path("results", "seurat_outputs", "celltype_markers_kidney.png"),
-    width = 1200,
-    height = 1200,
+    width = 48,
+    height = 24,
+    units = "cm",
     res = 300
     )
-dotplot <- DotPlot(clustered_seurat, features = kidney_markers) + RotatedAxis()
+dotplot <- DotPlot(clustered_seurat, features = kidney_markers) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        strip.text = element_text(angle = 90, hjust = 0))
 print(dotplot)
 dev.off()
 
