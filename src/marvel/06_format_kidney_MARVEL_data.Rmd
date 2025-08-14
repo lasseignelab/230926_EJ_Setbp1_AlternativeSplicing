@@ -1,0 +1,171 @@
+---
+title: "06_format_kidney_MARVEL_data"
+author: "Tabea M. Soelter"
+date: "2025-08-07"
+output: html_document
+---
+
+## Load Packages
+```{r}
+suppressPackageStartupMessages({
+  library(here)
+  library(styler)
+  library(lintr)
+  library(tidyverse)
+  library(Seurat)
+  library(patchwork)
+  library(harmony)
+  library(presto)
+  library(MARVEL)
+  library(ggnewscale)
+  library(ggrepel)
+  library(reshape2)
+  library(plyr)
+  library(textclean)
+  library(AnnotationDbi)
+  library(clusterProfiler)
+  library(org.Hs.eg.db)
+  library(org.Mm.eg.db)
+  library(gtools)
+  library(GenomicRanges)
+  library(IRanges)
+  library(S4Vectors)
+  library(wiggleplotr)
+  library(Matrix)
+  library(data.table)
+  library(gridExtra)
+  library(MatrixExtra)
+  options("MatrixExtra.quick_show" = FALSE)
+})
+
+# set seed
+set.seed(42)
+
+# source functions
+source(here::here("src", "marvel", "functions.R"))
+```
+
+## Import Expression Data
+```{r}
+annotated_kidney_samples <- read_rds(
+  here::here("data", "seurat", "annotated_kidney_samples.rds")
+)
+
+gene_norm <- annotated_kidney_samples@assays[["RNA"]]@layers[["data"]]
+gene_norm <- as(gene_norm, "TsparseMatrix")
+gene_norm[gene_norm[, 1] != 0, ][1:5, 1:5]
+
+gene_metadata <- annotated_kidney_samples@meta.data
+gene_metadata <- tibble::rownames_to_column(gene_metadata, "cell.id")
+head(gene_metadata)
+
+gene_features <- rownames(annotated_kidney_samples)
+head(gene_features)
+gene_features <- as.data.frame(gene_features)
+colnames(gene_features) <- "gene_short_name"
+
+gene_counts <- annotated_kidney_samples@assays[["RNA"]]@layers[["counts"]]
+gene_counts <- as(gene_counts, "TsparseMatrix")
+gene_counts[gene_counts[, 1] != 0, ][1:5, 1:5]
+```
+
+## Import Splice Junction Data
+```{r use function to extract splice information}
+# sample K1
+K1_sj_info <- split_sj_info(
+  sample_id = "K1",
+  condition = "ctrl"
+)
+# sample K2
+K2_sj_info <- split_sj_info(
+  sample_id = "K2",
+  condition = "het"
+)
+# sample K3
+K3_sj_info <- split_sj_info(
+  sample_id = "K3",
+  condition = "ctrl"
+)
+# sample K4
+K4_sj_info <- split_sj_info(
+  sample_id = "K4",
+  condition = "het"
+)
+# sample K5
+K5_sj_info <- split_sj_info(
+  sample_id = "K5",
+  condition = "ctrl"
+)
+# sample K6
+K6_sj_info <- split_sj_info_ts(
+  sample_id = "K6",
+  condition = "het"
+)
+```
+
+## Combine data
+```{r}
+# Make list of all matrices - make sure these are in the order of your gene data
+matrices <- list(
+  K2_sj_info, K4_sj_info, K6_sj_info, K1_sj_info, K3_sj_info,
+  K5_sj_info
+)
+
+# Identify all unique features
+all_features <- unique(unlist(lapply(matrices, rownames)))
+
+# Align and combine matrices using custom function
+combined_matrix <- do.call(cbind, lapply(matrices, align_matrix, all_features))
+
+# Add correct colnames
+colnames(combined_matrix) <- gene_metadata$cell.id
+
+# Coerce to correct format
+combined_matrix <- as(combined_matrix, "TsparseMatrix")
+
+# Check values where each new sample starts
+combined_matrix[combined_matrix[, 1] != 0, ][1:5, 1:5]
+
+J1_sj_info[J1_sj_info[, 1] != 0, ][1:5, 1:5]
+
+# Check each sample - J13
+combined_matrix[combined_matrix[, 5039] != 0, ][1:5, 5039:5047]
+
+J13_sj_info[J13_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J15
+combined_matrix[combined_matrix[, 14474] != 0, ][1:5, 14474:14482]
+
+J15_sj_info[J15_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J2
+combined_matrix[combined_matrix[, 23427] != 0, ][1:5, 23427:23435]
+
+J2_sj_info[J2_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J3
+combined_matrix[combined_matrix[, 30507] != 0, ][1:5, 30507:30515]
+
+J3_sj_info[J3_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# Check each sample - J4
+combined_matrix[combined_matrix[, 40978] != 0, ][1:5, 40978:40986]
+
+J4_sj_info[J4_sj_info[, 1] != 0, ][1:5, 1:9]
+
+# rename matrix for ease
+all_sj_counts <- combined_matrix
+
+# get metadata (colnames)
+sj_metadata <- colnames(combined_matrix)
+sj_metadata <- as.data.frame(sj_metadata)
+colnames(sj_metadata) <- "cell.id"
+
+# get splice junction location names
+sj_features <- rownames(combined_matrix)
+sj_features <- as.data.frame(sj_features)
+colnames(sj_features) <- "coord.intron"
+```
+
+
+
