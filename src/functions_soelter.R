@@ -152,6 +152,7 @@ make_seurat_object <- function(path){
   merged_seurat <- merge(x = wildtypes,
                          y = mutants,
                          add.cell.id = c("WT", "S858R"))
+  colnames(merged_seurat) <- gsub("__", "_", colnames(merged_seurat))
   return(merged_seurat)
 }
 
