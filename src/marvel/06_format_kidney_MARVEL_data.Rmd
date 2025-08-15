@@ -74,32 +74,32 @@ gene_counts[gene_counts[, 1] != 0, ][1:5, 1:5]
 # sample K1
 K1_sj_info <- split_sj_info(
   sample_id = "K1",
-  condition = "ctrl"
+  condition = "WT"
 )
 # sample K2
 K2_sj_info <- split_sj_info(
   sample_id = "K2",
-  condition = "het"
+  condition = "S858R"
 )
 # sample K3
 K3_sj_info <- split_sj_info(
   sample_id = "K3",
-  condition = "ctrl"
+  condition = "WT"
 )
 # sample K4
 K4_sj_info <- split_sj_info(
   sample_id = "K4",
-  condition = "het"
+  condition = "S858R"
 )
 # sample K5
 K5_sj_info <- split_sj_info(
   sample_id = "K5",
-  condition = "ctrl"
+  condition = "WT"
 )
 # sample K6
 K6_sj_info <- split_sj_info_ts(
   sample_id = "K6",
-  condition = "het"
+  condition = "S858R"
 )
 ```
 
