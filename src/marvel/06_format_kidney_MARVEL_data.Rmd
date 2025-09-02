@@ -5,6 +5,10 @@ date: "2025-08-07"
 output: html_document
 ---
 
+MAKE SURE TO FIX THE SPLIT_SJ_INFO FUNCTION, BC IT DOES NOT WORK FOR KIDNEY. CURRENTLY SAVED IN 07_KIDNEY_MARVEL_TROUBLESHOOTING.R
+- ALSO NEED TO FIX THE K6 FILE, SO MAKE SURE TO INCLUDE THE CODE IN THIS SCRIPT AS WELL DURING CLEAN-UP.
+
+
 ## Load Packages
 ```{r}
 suppressPackageStartupMessages({
@@ -123,35 +127,36 @@ colnames(combined_matrix) <- gene_metadata$cell.id
 # Coerce to correct format
 combined_matrix <- as(combined_matrix, "TsparseMatrix")
 
+## NOT REALLY SURE WHAT THE PURPOSE OF THIS IS IN EJ'S CODE, I AM MOVING FORWARD WITHOUT IT.
 # Check values where each new sample starts
-combined_matrix[combined_matrix[, 1] != 0, ][1:5, 1:5]
+#combined_matrix[combined_matrix[, 1] != 0, ][1:5, 1:5]
 
-J1_sj_info[J1_sj_info[, 1] != 0, ][1:5, 1:5]
+#K1_sj_info[K1_sj_info[, 1] != 0, ][1:5, 1:5]
 
 # Check each sample - J13
-combined_matrix[combined_matrix[, 5039] != 0, ][1:5, 5039:5047]
+#combined_matrix[combined_matrix[, 12297] != 0, ][1:5, 12297:12300]
 
-J13_sj_info[J13_sj_info[, 1] != 0, ][1:5, 1:9]
+#J13_sj_info[J13_sj_info[, 1] != 0, ][1:5, 1:9]
 
 # Check each sample - J15
-combined_matrix[combined_matrix[, 14474] != 0, ][1:5, 14474:14482]
+#combined_matrix[combined_matrix[, 14474] != 0, ][1:5, 14474:14482]
 
-J15_sj_info[J15_sj_info[, 1] != 0, ][1:5, 1:9]
+#J15_sj_info[J15_sj_info[, 1] != 0, ][1:5, 1:9]
 
 # Check each sample - J2
-combined_matrix[combined_matrix[, 23427] != 0, ][1:5, 23427:23435]
+#combined_matrix[combined_matrix[, 23427] != 0, ][1:5, 23427:23435]
 
-J2_sj_info[J2_sj_info[, 1] != 0, ][1:5, 1:9]
+#J2_sj_info[J2_sj_info[, 1] != 0, ][1:5, 1:9]
 
 # Check each sample - J3
-combined_matrix[combined_matrix[, 30507] != 0, ][1:5, 30507:30515]
+#combined_matrix[combined_matrix[, 30507] != 0, ][1:5, 30507:30515]
 
-J3_sj_info[J3_sj_info[, 1] != 0, ][1:5, 1:9]
+#J3_sj_info[J3_sj_info[, 1] != 0, ][1:5, 1:9]
 
 # Check each sample - J4
-combined_matrix[combined_matrix[, 40978] != 0, ][1:5, 40978:40986]
+#combined_matrix[combined_matrix[, 40978] != 0, ][1:5, 40978:40986]
 
-J4_sj_info[J4_sj_info[, 1] != 0, ][1:5, 1:9]
+#J4_sj_info[J4_sj_info[, 1] != 0, ][1:5, 1:9]
 
 # rename matrix for ease
 all_sj_counts <- combined_matrix
@@ -167,5 +172,121 @@ sj_features <- as.data.frame(sj_features)
 colnames(sj_features) <- "coord.intron"
 ```
 
+### Get UMAP coordinates
 
+```{r get UMAP coordinates}
+umap_coords <-
+  annotated_kidney_samples@reductions[["umap_harmony"]]@cell.embeddings
+
+umap_coords <- tibble::rownames_to_column(as.data.frame(umap_coords), "cell.id")
+
+colnames(umap_coords) <- c("cell.id", "x", "y")
+```
+
+### Get GTF
+
+```{r get gtf in r env}
+# genome directory
+genome_dir <- "/data/project/lasseigne_lab/GENOME_dir/GENCODE_mm39/release_M31/"
+
+# load GTF
+m31_gtf <- as.data.frame(
+  fread(paste0(genome_dir, "GTF/gencode.vM31.primary_assembly.annotation.gtf")),
+  sep = "\t",
+  header = FALSE,
+  stringsAsFactors = FALSE)
+
+# rename columns
+colnames(m31_gtf) <- c("V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9")
+# drop chr from chromosome numbers in gtf column 1
+m31_gtf$V1 <- substr(m31_gtf$V1, 4, nchar(m31_gtf$V1))
+```
+
+## Make MARVEL object
+
+```{r make marvel object}
+setbp1_marvel <- CreateMarvelObject.10x(
+  gene.norm.matrix = gene_norm,
+  gene.norm.pheno = gene_metadata,
+  gene.norm.feature = gene_features,
+  gene.count.matrix = gene_counts,
+  gene.count.pheno = gene_metadata,
+  gene.count.feature = gene_features,
+  sj.count.matrix = all_sj_counts,
+  sj.count.pheno = sj_metadata,
+  sj.count.feature = sj_features,
+  pca = umap_coords,
+  gtf = m31_gtf
+)
+```
+
+## Pre-process MARVEL object
+```{r annotate gene metadta}
+setbp1_marvel <- AnnotateGenes.10x(MarvelObject = setbp1_marvel)
+
+head(setbp1_marvel$gene.metadata)
+
+table(setbp1_marvel$gene.metadata$gene_type)
+```
+
+```{r annotate junction metadata}
+setbp1_marvel <- AnnotateSJ.10x(MarvelObject = setbp1_marvel)
+
+head(setbp1_marvel$sj.metadata)
+```
+
+Now, we want to validate these splice junctions whose start and end are mapped to the same gene (no multi-gene splicing is included downstream because of this step).
+
+```{r validate splice junctions}
+setbp1_marvel <- ValidateSJ.10x(MarvelObject = setbp1_marvel)
+```
+
+Lastly, we will remove gene that are non-coding genes.
+
+```{r subset cds genes}
+setbp1_marvel <- FilterGenes.10x(
+  MarvelObject = setbp1_marvel,
+  gene.type = "protein_coding"
+)
+```
+
+Expected output:
+18180 of 32530 genes met filtering criteria and retained
+194653 of 205113 SJ met filtering criteria and retained
+Normalised gene and SJ metadata and matrix updated
+
+Last, before proceeding, we must check the alignment of the marvel object.
+
+```{r check alignment}
+setbp1_marvel <- CheckAlignment.10x(MarvelObject = setbp1_marvel)
+```
+Expected output:
+
+Matching gene list in normalised and raw (count) gene matrices...
+18180 genes found in normalised gene matrix
+32568 genes found in raw (count) gene matrix
+18180 overlapping genes found and retained
+Matching cells across normalised gene, raw (count) gene, raw (count) SJ matrices...
+75889 cells found in normalised gene matrix
+75889 cells found in raw (count) gene matrix
+75889 cells found in raw (count) SJ matrix
+75889 overlapping cells found and retained
+Checking column (sample) alignment...
+Sample metadata and normalised gene matrix column names MATCHED
+Normalised and raw (count) gene matrix column names MATCHED
+Raw (Count) gene and SJ matrix column names MATCHED
+Checking row (gene names/SJ coordinates) alignment...
+Gene metadata and normalised gene matrix row names MATCHED
+Normalised and raw (count) gene matrix row names MATCHED
+SJ metadata and raw (count) SJ matrix row names MATCHED
+75889 cells and 15561 genes consisting of 194653 splice junctions included for further analysis
+
+Looks good! Now we can save our marvel object before proceeding.
+
+```{r save marvel object}
+# save object
+write_rds(setbp1_marvel,
+  file = here::here("data", "marvel", "setbp1_kidney_marvel_aligned.rds")
+)
+```
 
