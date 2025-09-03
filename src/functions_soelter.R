@@ -179,6 +179,7 @@ cell_cycle_effects <- function(filtered_seurat, g2m_genes, s_genes){
   filtered_seurat <- CellCycleScoring(filtered_seurat,
                                       g2m.features = g2m_genes,
                                       s.features = s_genes)
+  set.seed(42)
   filtered_seurat <- FindVariableFeatures(filtered_seurat,
                                           selection.method = "vst",
                                           verbose = FALSE)

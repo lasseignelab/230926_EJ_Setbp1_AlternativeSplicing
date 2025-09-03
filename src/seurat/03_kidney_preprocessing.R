@@ -130,6 +130,7 @@ saveRDS(filtered_seurat,
 )
 
 # Integration:
+set.seed(42)
 integrated_seurat <- RunHarmony(filtered_seurat,
                                 group.by.vars = "sample_id"
                                 )
