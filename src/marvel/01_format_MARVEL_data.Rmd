@@ -216,7 +216,8 @@ m31_gtf <- as.data.frame(
   fread(paste0(genome_dir, "GTF/gencode.vM31.primary_assembly.annotation.gtf")),
   sep = "\t",
   header = FALSE,
-  stringsAsFactors = FALSE)
+  stringsAsFactors = FALSE
+)
 
 # rename columns
 colnames(m31_gtf) <- c("V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9")
@@ -270,7 +271,7 @@ Now, we want to validate these splice junctions whose start and end are mapped t
 setbp1_marvel <- ValidateSJ.10x(MarvelObject = setbp1_marvel)
 ```
 
-Lastly, we will remove gene that are non-coding genes.
+Lastly, we will remove genes that are non-coding genes.
 
 ```{r subset cds genes}
 setbp1_marvel <- FilterGenes.10x(
@@ -296,10 +297,10 @@ Matching gene list in normalised and raw (count) gene matrices...
 56979 genes found in raw (count) gene matrix
 21935 overlapping genes found and retained
 Matching cells across normalised gene, raw (count) gene, raw (count) SJ matrices...
-51465 cells found in normalised gene matrix
-51465 cells found in raw (count) gene matrix
-51465 cells found in raw (count) SJ matrix
-51465 overlapping cells found and retained
+51318 cells found in normalised gene matrix
+51318 cells found in raw (count) gene matrix
+51318 cells found in raw (count) SJ matrix
+51318 overlapping cells found and retained
 Checking column (sample) alignment...
 Sample metadata and normalised gene matrix column names MATCHED
 Normalised and raw (count) gene matrix column names MATCHED
@@ -308,7 +309,7 @@ Checking row (gene names/SJ coordinates) alignment...
 Gene metadata and normalised gene matrix row names MATCHED
 Normalised and raw (count) gene matrix row names MATCHED
 SJ metadata and raw (count) SJ matrix row names MATCHED
-51465 cells and 15633 genes consisting of 186562 splice junctions included for further analysis
+51318 cells and 15633 genes consisting of 186562 splice junctions included for further analysis
 
 Looks good! Now we can save our marvel object before proceeding.
 
