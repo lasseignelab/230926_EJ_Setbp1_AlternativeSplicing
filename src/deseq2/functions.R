@@ -12,6 +12,8 @@
 
 get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05, save_path) {
   
+  set.seed(123)
+  
   print(clustx) # useful for debugging
   
   # Extract counts matrix and metadata for cluster x
