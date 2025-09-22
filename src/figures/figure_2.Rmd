@@ -720,13 +720,14 @@ sig_sj_genes <- unique(unlist(lapply(matching_dfs, function(df_name) {
 ```
 
 ```{r apply function to all AS genes}
+filepath <- here::here("results", "as_gene_summaries", "brain")
+
+dir.create(filepath, recursive = TRUE, showWarnings = FALSE)
+
 lapply(sig_sj_genes, function(gene) {
   make_gene_sj_expr_usage_plots(
     gene_of_interest = gene,
-    save_path = here::here(
-      "results",
-      "as_gene_summaries"
-    )
+    save_path = filepath
   )
 })
 ```
