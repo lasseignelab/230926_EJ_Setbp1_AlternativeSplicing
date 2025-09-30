@@ -3,13 +3,6 @@ title: "Psuedobulk DE Analysis"
 output: html_document
 date: "2024-03-19"
 ---
-
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-
 The purpose of this script is to run a pseudobulk gene expression analysis using the cell type data from seurat. It is dependent on seurat scripts 01 and 02. It should be run in docker 1.0.8.
 
 Much of this analysis and code is based on the HBC training guide available here: https://hbctraining.github.io/scRNA-seq_online/lessons/pseudobulk_DESeq2_scrnaseq.html
@@ -42,19 +35,18 @@ suppressPackageStartupMessages({
 
 source(here(
   "src",
-  "deseq2",
-  "functions.R"
+  "functions_soelter.R"
 ))
 
 # set seed
-set.seed(123)
+set.seed(42)
 ```
 
 ## Load data
 
 ```{r load annotated object}
 seurat <-
-  readRDS(file = here::here("data", "seurat", "annotated_brain_samples.rds"))
+  readRDS(file = here::here("data", "seurat", "annotated_kidney_samples.rds"))
 ```
 
 ## Prepare data for DESeq2
@@ -217,238 +209,6 @@ str(metadata_ls)
 ```
 
 ## Perform differential gene expression using DESeq2
-
-```{r choose cell type to begin}
-idx <- which(names(counts_ls) == "Astrocytes")
-cluster_counts <- counts_ls[[idx]]
-cluster_metadata <- metadata_ls[[idx]]
-
-cluster_metadata$group_id <- factor(cluster_metadata$group_id)
-
-# check everything ok
-all(colnames(cluster_counts) == rownames(cluster_metadata))
-```
-
-
-
-```{r create deseq2 object}
-dds <- DESeqDataSetFromMatrix(cluster_counts,
-  colData = cluster_metadata,
-  design = ~group_id
-)
-```
-
-Visualize data
-
-```{r plot pca}
-# Transform counts for data visualization
-rld <- rlog(dds, blind = TRUE)
-
-# Plot PCA
-DESeq2::plotPCA(rld, ntop = 500, intgroup = "group_id")
-
-DESeq2::plotPCA(rld, ntop = 500, intgroup = "cell_count")
-# PC2 seems to influence cell count
-```
-
-
-```{r use hierarchical clustering}
-# Extract the rlog matrix
-rld_mat <- assay(rld)
-rld_cor <- cor(rld_mat)
-
-# Plot heatmap
-pheatmap(rld_cor, annotation = cluster_metadata[, c("group_id"), drop = FALSE])
-```
-
-## Run DESeq2
-
-```{r run deseq}
-dds <- DESeq(dds)
-
-# check dispersion estimates
-plotDispEsts(dds)
-```
-
-
-```{r explore results}
-# get results names
-resultsNames(dds)
-
-# generate results object
-res <- results(dds, name = "group_id_wildtype_vs_mutant", alpha = 0.05)
-
-# use apeglm
-res <- lfcShrink(dds,
-  coef = "group_id_wildtype_vs_mutant", res = res,
-  type = "apeglm"
-)
-```
-
-
-```{r look at results}
-# Turn the DESeq2 results object into a tibble for use with tidyverse functions
-res_tbl <- res %>%
-  data.frame() %>%
-  rownames_to_column(var = "gene") %>%
-  as_tibble() %>%
-  arrange(padj)
-
-# Check results output
-res_tbl
-
-# Write all results to file
-write.csv(res_tbl,
-  here::here(
-    paste0(
-      "results/deseq2/",
-      unique(cluster_metadata$cluster_id),
-      "_",
-      levels(cluster_metadata$group_id)[2],
-      "_vs_",
-      levels(cluster_metadata$group_id)[1],
-      "_all_genes.csv"
-    )
-  ),
-  quote = FALSE,
-  row.names = FALSE
-)
-```
-
-```{r filter for significance}
-# Set thresholds
-padj_cutoff <- 0.05
-
-# Subset the significant results
-sig_res <- dplyr::filter(res_tbl, padj < padj_cutoff) %>%
-  dplyr::arrange(padj)
-
-# Check significant genes output
-sig_res
-
-# Write significant results to file
-write.csv(res_tbl,
-  here::here(
-    paste0(
-      "results/deseq2/",
-      unique(cluster_metadata$cluster_id),
-      "_",
-      levels(cluster_metadata$group_id)[2],
-      "_vs_",
-      levels(cluster_metadata$group_id)[1],
-      "_signif_genes.csv"
-    )
-  ),
-  quote = FALSE,
-  row.names = FALSE
-)
-```
-
-
-```{r set thresholds}
-# Set thresholds
-log2fc_cutoff <- 0.5
-
-# Count significantly up/down genes above threshold
-n_sig_up <- dplyr::filter(sig_res, log2FoldChange >= log2fc_cutoff) %>%
-  nrow()
-n_sig_dn <- dplyr::filter(sig_res, log2FoldChange <= -log2fc_cutoff) %>%
-  nrow()
-```
-
-
-
-
-```{r scatterplot}
-## Extract normalized counts from dds object
-normalized_counts <- counts(dds, normalized = TRUE)
-
-## Extract top 20 DEG from resLFC (make sure to order by padj)
-top20_sig_genes <- sig_res %>%
-  dplyr::arrange(padj) %>%
-  dplyr::pull(gene) %>%
-  head(n = 20)
-
-## Extract matching normalized count values from matrix
-top20_sig_counts <- normalized_counts[rownames(normalized_counts) %in%
-                                        top20_sig_genes, ]
-top20_sig_counts
-
-## Convert wide matrix to long data frame for ggplot2
-top20_sig_df <- data.frame(top20_sig_counts)
-top20_sig_df$gene <- rownames(top20_sig_counts)
-
-top20_sig_df <- melt(setDT(top20_sig_df),
-  id.vars = c("gene"),
-  variable.name = "cluster_sample_id"
-) %>%
-  data.frame()
-
-## Replace "." by " " in cluster_sample_id variable (melt() introduced the ".")
-top20_sig_df$cluster_sample_id <- gsub(
-  "\\.",
-  " ",
-  top20_sig_df$cluster_sample_id
-)
-top20_sig_df
-
-## Join counts data frame with metadata
-top20_sig_df <- plyr::join(top20_sig_df, as.data.frame(colData(dds)),
-  by = "cluster_sample_id"
-)
-top20_sig_df
-
-## Generate plot
-ggplot(top20_sig_df, aes(y = value, x = group_id, col = group_id)) +
-  geom_jitter(height = 0, width = 0.15) +
-  scale_y_continuous(trans = "log10") +
-  ylab("log10 of normalized expression level") +
-  xlab("condition") +
-  ggtitle("Top 20 Significant DE Genes") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  facet_wrap(~gene)
-```
-
-```{r make heatmaps}
-## Extract normalized counts for significant genes only
-sig_counts <- normalized_counts[rownames(normalized_counts) %in% sig_res$gene, ]
-
-## Set a color-blind friendly palette
-heat_colors <- rev(brewer.pal(11, "PuOr"))
-
-## Run pheatmap using the metadata data frame for the annotation
-pheatmap(sig_counts,
-  color = heat_colors,
-  cluster_rows = TRUE,
-  show_rownames = FALSE,
-  annotation = cluster_metadata[, c("group_id", "cluster_id")],
-  border_color = NA,
-  fontsize = 10,
-  scale = "row",
-  fontsize_row = 10,
-  height = 20
-)
-```
-
-```{r volcano plot}
-# Volcano plot
-res_table_thres <- res_tbl[!is.na(res_tbl$padj), ] %>%
-  mutate(threshold = padj < padj_cutoff & abs(log2FoldChange) >= log2fc_cutoff)
-min(log10(res_table_thres$padj))
-
-## Generate plot
-ggplot(res_table_thres) +
-  geom_point(aes(x = log2FoldChange, y = -log10(padj), colour = threshold)) +
-  ggtitle("Volcano plot of S858R mutant astrocytes relative to control") +
-  xlab("log2 fold change") +
-  ylab("-log10 adjusted p-value") +
-  scale_color_manual(values = c("grey60", "blue3")) +
-  theme(
-    legend.position = "none",
-    plot.title = element_text(size = rel(1.3), hjust = 0.5),
-    axis.title = element_text(size = rel(1.15))
-  )
-```
 ```{r run deseq2 on all cell types}
 # run function on all clusters
 map(
@@ -456,7 +216,7 @@ map(
   get_dds_resultsAvsB,
   A = "wildtype",
   B = "mutant",
-  save_path = "results/deseq2/"
+  save_path = "results/deseq2/kidney/"
 )
 ```
 
