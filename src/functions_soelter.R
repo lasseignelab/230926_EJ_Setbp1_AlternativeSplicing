@@ -105,3 +105,59 @@ remove_ambient_rna <- function(inputs, outputs, plots) {
   dev.off()
 }
 
+## split_sj_info_ts
+# This function was originally written by Emma Jones and named split_sj_info. It can
+# be found in src/marvel/functions.R
+# Since the function was originally written for the brain data, it was not applicable
+# to the kidney data and modifications were necessary. I removed code that edited
+# barcodes, as it led to mismatch problems. Additionally, I added an if statement
+# to treat K6 sample differently due to an outlier being manually removed.
+split_sj_info_ts <- function(sample_id, condition) {
+  # split the sample ID string into individual characters
+  char_vector <- strsplit(sample_id, "")[[1]]
+  # get cell barcodes
+  sj_barcodes <- read.table(
+    here::here(
+      "data", "star", sample_id, "Solo.out", "SJ", "raw",
+      "barcodes.tsv"
+    )
+  )
+  colnames(sj_barcodes) <- "cell.id"
+  sj_barcodes$cell.id <- paste0(
+    condition, "_", sample_id, "_",
+    sj_barcodes$cell.id
+  )
+  # subset barcodes and get order
+  subset_barcodes <-
+    gene_metadata[gene_metadata$sample_id == sample_id, "cell.id"]
+  barcode_order <- match(subset_barcodes, sj_barcodes$cell.id)
+  # subset the sj counts matrix
+  if (sample_id == "K6") {
+    sj_matrix <- readMM(
+      here::here("data", "star", sample_id, "Solo.out", "SJ", "raw", "matrix_fixed.mtx")
+    )
+    sj_matrix <- sj_matrix[, barcode_order]
+  } else {
+    sj_matrix <- readMM(
+      here::here("data", "star", sample_id, "Solo.out", "SJ", "raw", "matrix.mtx")
+    )
+    sj_matrix <- sj_matrix[, barcode_order]
+  }
+  # import sj features
+  sj_features <- read.table(
+    here::here(
+      "data", "star", sample_id, "Solo.out", "SJ", "raw",
+      "features.tsv"
+    )
+  )
+  sj_features <- paste(sj_features$V1, sj_features$V2,
+                       sj_features$V3,
+                       sep = ":"
+  )
+  # make everything into a single dataframe
+  colnames(sj_matrix) <- sj_barcodes[barcode_order, ]
+  rownames(sj_matrix) <- sj_features
+  
+  # export data in long dataframe format for that sample
+  return(sj_matrix)
+}
