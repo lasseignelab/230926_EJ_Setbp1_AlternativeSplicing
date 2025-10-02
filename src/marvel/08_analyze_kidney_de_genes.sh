@@ -18,5 +18,5 @@ singularity exec --cleanenv \
                  --containall \
                  -B "${PROJECT_PATH}" \
                  "${PROJECT_PATH}"/bin/docker/setbp1_alternative_splicing_1.1.0.sif \
-                 Rscript --vanilla "${PROJECT_PATH}"/src/marvel/06_format_kidney_MARVEL_data.R \
+                 Rscript --vanilla "${PROJECT_PATH}"/src/marvel/08_analyze_kidney_de_genes.R \
                  "${PROJECT_PATH}"
