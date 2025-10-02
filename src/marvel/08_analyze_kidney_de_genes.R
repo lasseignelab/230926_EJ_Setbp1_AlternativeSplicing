@@ -63,16 +63,17 @@ suppressPackageStartupMessages({
   library(gridExtra)
 })
 
-source(here::here("src", "marvel", "functions.R"))
-source(here::here("src", "marvel", "PlotSJPosition_modification.R"))
+source(file.path(wd, "src", "marvel", "functions.R"))
+source(file.path(wd, "src", "marvel", "PlotSJPosition_modification.R"))
+source(file.path(wd, "src", "functions_soelter.R"))
 
 # Load data
-setbp1_marvel <- read_rds(here::here(
+setbp1_marvel <- read_rds(file.path(wd, 
   "data", "marvel",
   "setbp1_kidney_marvel_aligned.rds"
 ))
 
-load(here::here("data", "marvel", "significant_tables_kidney.RData"))
+load(file.path(wd, "data", "marvel", "significant_tables_kidney.RData"))
 
 # Prepare data for UpSet plotting
 sample_metadata <- setbp1_marvel$sample.metadata
@@ -89,10 +90,6 @@ colnames(gene_lists_mat) <- gsub("_sig_table", "", colnames(gene_lists_mat))
 cell_types <- setbp1_marvel[["sample.metadata"]][["cell_type"]] %>%
   unique()
 
-to_col_format <- function(x) {
-  tolower(gsub(" ", "_", x))
-}
-
 name_mapping <- setNames(cell_types, to_col_format(cell_types))
 
 colnames(gene_lists_mat) <- name_mapping[colnames(gene_lists_mat)]
@@ -105,7 +102,7 @@ color_indices <- rank(comb_degrees)
 n_combinations <- length(comb_degrees)
 
 # draw UpSet plot (ComplexHeatmap)
-png(here::here("results", "upset_plots", "sig_gene_overlap_kidney.png"),
+png(file.path(wd, "results", "upset_plots", "sig_gene_overlap_kidney.png"),
     width = 12, height = 6, units = "in", res = 300
 )
 gene_lists_upset_plot <- UpSet(
