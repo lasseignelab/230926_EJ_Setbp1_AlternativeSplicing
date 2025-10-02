@@ -112,7 +112,12 @@ remove_ambient_rna <- function(inputs, outputs, plots) {
 # to the kidney data and modifications were necessary. I removed code that edited
 # barcodes, as it led to mismatch problems. Additionally, I added an if statement
 # to treat K6 sample differently due to an outlier being manually removed.
-split_sj_info_ts <- function(sample_id, condition) {
+split_sj_info_ts <- function(sample_id) {
+  if (sample_id %in% c("K1", "K3", "K5")) {
+    condition <- "WT"
+  } else {
+    condition <- "S858R"
+  }
   # split the sample ID string into individual characters
   char_vector <- strsplit(sample_id, "")[[1]]
   # get cell barcodes
@@ -160,4 +165,98 @@ split_sj_info_ts <- function(sample_id, condition) {
   
   # export data in long dataframe format for that sample
   return(sj_matrix)
+}
+
+
+## run_marvel_cell_type_kidney
+# Adapated from the run_marvel_cell_type function by Emma Jones
+# Original function and description can be found in src/marvel/functions.R
+# Due to differing cell type names in the kidney, I changed the way the results
+# are saved by creating a modified cell type name to avoid spaces in final objects
+run_marvel_cell_type_kidney <- function(marvel_object, cell_type, min_pct_cells = 5, 
+                                        min_pct_cells_gene = 5, min_pct_cells_sj = 5,
+                                        min_gene_norm = 1, results_path) {
+  
+  # Assign MARVEL object to start from
+  marvel_object <- setbp1_marvel
+  
+  # Group 1 (reference)
+  index_1 <- which(sample_metadata$cell_type == cell_type & 
+                     sample_metadata$seq_folder == "wildtype")
+  cell_ids_1 <- sample_metadata[index_1, "cell.id"]
+  
+  # Group 2
+  index_2 <- which(sample_metadata$cell_type == cell_type & 
+                     sample_metadata$seq_folder == "mutant")
+  cell_ids_2 <- sample_metadata[index_2, "cell.id"]
+  
+  # Explore % of cells expressing genes
+  marvel_object <- PlotPctExprCells.Genes.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells = min_pct_cells
+  )
+  
+  # Explore % of cells expressing junctions
+  marvel_object <- PlotPctExprCells.SJ.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells.genes = min_pct_cells_gene,
+    min.pct.cells.sj = min_pct_cells_sj,
+    downsample = TRUE,
+    downsample.pct.sj = 10
+  )
+  
+  # Differential Splicing Analysis
+  marvel_object <- CompareValues.SJ.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells.genes = min_pct_cells_gene,
+    min.pct.cells.sj = min_pct_cells_sj,
+    min.gene.norm = min_gene_norm,
+    seed = 1,
+    n.iterations = 100,
+    downsample = TRUE,
+    show.progress = TRUE
+  )
+  
+  # Differential Gene Analysis
+  marvel_object <- CompareValues.Genes.10x(
+    MarvelObject = marvel_object,
+    show.progress = TRUE
+  )
+  
+  # Make volcano plot
+  marvel_object <- PlotDEValues.SJ.10x(
+    MarvelObject = marvel_object,
+    pval = 0.05,
+    delta = 1,
+    min.gene.norm = min_gene_norm,
+    anno = FALSE
+  )
+  # Assign kinds of iso-switching
+  marvel_object <- IsoSwitch.10x(
+    MarvelObject = marvel_object,
+    pval.sj = 0.05,
+    delta.sj = 1,
+    min.gene.norm = min_gene_norm,
+    pval.adj.gene = 0.05,
+    log2fc.gene = 0.5
+  )
+  
+  # Pull significant genes
+  significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
+  
+  modified_cell_type <- gsub(" ", "-", cell_type)
+  
+  # Save MARVEL object
+  write_rds(marvel_object, file = paste0(results_path, "/", modified_cell_type,
+                                         "_marvel_object.rds")
+  )
+  
+  # Return list
+  return(marvel_object)
 }
