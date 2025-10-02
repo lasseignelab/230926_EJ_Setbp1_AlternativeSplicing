@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #SBATCH --ntasks=4          
-#SBATCH --time=01:00:00                    
+#SBATCH --time=06:00:00                    
 #SBATCH --mem=30G
-#SBATCH --partition=express
+#SBATCH --partition=short
 #SBATCH --output=%x_%A_%a.out
 #SBATCH --error=%x_%A_%a.err
 
