@@ -260,3 +260,9 @@ run_marvel_cell_type_kidney <- function(marvel_object, cell_type, min_pct_cells 
   # Return list
   return(marvel_object)
 }
+
+## to_col_format
+# Function that helps formatting cell type names
+to_col_format <- function(x) {
+  tolower(gsub(" ", "_", x))
+}
