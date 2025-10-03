@@ -17,6 +17,7 @@ PROJECT_PATH="$(cd "$SLURM_SUBMIT_DIR/../.." && pwd)"
 singularity exec --cleanenv \
                  --containall \
                  -B "${PROJECT_PATH}" \
+                 -B /data/project/lasseigne_lab/ \
                  "${PROJECT_PATH}"/bin/docker/setbp1_alternative_splicing_1.1.0.sif \
                  Rscript --vanilla "${PROJECT_PATH}"/src/marvel/06_format_kidney_MARVEL_data.R \
                  "${PROJECT_PATH}"
