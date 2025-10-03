@@ -2,7 +2,7 @@
 
 #SBATCH --ntasks=4          
 #SBATCH --time=01:00:00                    
-#SBATCH --mem=30G
+#SBATCH --mem=64G
 #SBATCH --partition=express
 #SBATCH --output=%x_%A_%a.out
 #SBATCH --error=%x_%A_%a.err
