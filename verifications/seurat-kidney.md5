@@ -1,0 +1,12 @@
+
+Files included:
+d18e559b0c97457db2e97523d6aec8f9  data/seurat/annotated_kidney_samples.rds
+f07e48e6c5aa209cf90c9ad93e260aae  data/seurat/clustered_kidney_samples.rds
+18629da6fba71d66ee8dd67e3e4f0683  data/seurat/filtered_kidney_samples_pca.rds
+6e9d685327122436e811e422f6c46d96  data/seurat/filtered_kidney_samples.rds
+5f4c3a2a93adb8fe02e6fe6996aa6930  data/seurat/integrated_kidney_samples.rds
+
+Combined MD5 checksum:
+2b0bed9a5353b8fb8cbf70ab16eef6fe
+
+Ran from: /data/user/tsoelter/projects/230926_EJ_Setbp1_AlternativeSplicing
