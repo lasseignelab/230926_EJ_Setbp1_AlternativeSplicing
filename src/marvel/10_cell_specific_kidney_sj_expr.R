@@ -82,15 +82,26 @@ suppressPackageStartupMessages({
 
 source(here::here("src", "marvel", "functions.R"))
 
-# Set colors - CHANGE THESE FOR KIDNEY
+# Set colors
 cell_type_colors <- c(
-  `Astrocytes` = "#6CA9E2",
-  `Excitatory Neurons` = "#98D070",
-  `Inhibitory Neurons` = "#DEE971",
-  `Microglia` = "#B898E4",
-  `Oligodendrocytes` = "#4AD8E6",
-  `OPCs` = "#0A9A8D",
-  `Vascular Cells` = "#E28C67"
+  `Proximal tubule cells` = "#F8766D",
+  `Thick ascending limb (LOH)` = "#AA937E",
+  `PCT` = "#A85A5A",
+  `Endothelial cells` = "#CF9400",
+  `PST` = "#948802",
+  `CDPC` = "#F03F00",
+  `DCT` = "#6D0404",
+  `Mesenchymal cells` = "#FFC8C4",
+  `Thin ascending limb (LOH)` = "#AA6320",
+  `CDIC-B` = "#EEDF37",
+  `Dendritic cells` = "#C70F0F",
+  `Thin descending limb (LOH)` = "#FFE196",
+  `CDIC-A` = "#4E3801",
+  `Podocytes` = "#BD085E",
+  `B cells` = "#FFBE1D",
+  `T regulatory cells` = "#00B0F6",
+  `T cells` = "#FF7600",
+  `Connecting tubule cells` = "#E76BF3"
 )
 
 # Load data
@@ -132,7 +143,7 @@ genes_per_cell_violin <- ggplot(
   )
 ) +
   geom_violin() +
-  #scale_fill_manual(values = cell_type_colors) +
+  scale_fill_manual(values = cell_type_colors) +
   guides(fill = "none", alpha = "none") +
   geom_boxplot(width = 0.1) +
   theme_minimal(base_size = 14) +
@@ -152,7 +163,7 @@ sjs_per_cell_violin <- ggplot(
   )
 ) +
   geom_violin() +
-  #scale_fill_manual(values = cell_type_colors) +
+  scale_fill_manual(values = cell_type_colors) +
   guides(fill = "none", alpha = "none") +
   geom_boxplot(width = 0.1) +
   theme_minimal(base_size = 14) +
@@ -172,7 +183,7 @@ sjs_genes_per_cell_violin <- ggplot(
   )
 ) +
   geom_violin() +
-  #scale_fill_manual(values = cell_type_colors) +
+  scale_fill_manual(values = cell_type_colors) +
   guides(fill = "none", alpha = "none") +
   geom_boxplot(width = 0.1) +
   theme_minimal(base_size = 14) +
