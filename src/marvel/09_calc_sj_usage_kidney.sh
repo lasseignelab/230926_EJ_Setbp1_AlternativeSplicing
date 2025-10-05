@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --ntasks=4          
-#SBATCH --time=04:00:00                    
-#SBATCH --mem=30G
+#SBATCH --ntasks=2          
+#SBATCH --time=12:00:00                    
+#SBATCH --mem=64G
 #SBATCH --partition=short
 #SBATCH --output=%x_%A_%a.out
 #SBATCH --error=%x_%A_%a.err
