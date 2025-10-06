@@ -128,7 +128,9 @@ setbp1_marvel <- readRDS(here::here(
 
 split_matrices_list <- readRDS(here::here("data", "marvel", "split_matrices_list_kidney.rds"))
 
-# Retrieve & prepare metadata
+# Retrieve & prepare metadatas
+sj_metadata <- setbp1_marvel$sj.metadata
+
 sample_metadata <- setbp1_marvel$sample.metadata
 sample_metadata$num_sjs <- diff(sj_counts@p)
 sample_metadata$num_genes <- diff(gene_counts@p)
