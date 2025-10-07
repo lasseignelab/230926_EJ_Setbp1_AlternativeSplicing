@@ -12,15 +12,10 @@
 ########################################
 PROJECT_PATH="$(cd "$SLURM_SUBMIT_DIR/../.." && pwd)"
 
-TMPDIR="$PROJECT_PATH/tmp_dir"
-mkdir -p "${TMPDIR}"
-export SINGULARITYENV_TMPDIR="${TMPDIR}"
-
 module load Singularity/3.5.2-GCC-5.4.0-2.26
 
 singularity exec --cleanenv \
                  --containall \
-                 -B "${TMPDIR}:$TMPDIR" \
                  -B "${PROJECT_PATH}" \
                  "${PROJECT_PATH}"/bin/docker/setbp1_alternative_splicing_1.0.8.sif \
                  Rscript --vanilla "${PROJECT_PATH}"/src/deseq2/02_pseudobulk_analysis_kidney.R \
