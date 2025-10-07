@@ -20,5 +20,3 @@ singularity exec --cleanenv \
                  "${PROJECT_PATH}"/bin/docker/setbp1_alternative_splicing_1.0.8.sif \
                  Rscript --vanilla "${PROJECT_PATH}"/src/deseq2/02_pseudobulk_analysis_kidney.R \
                  "${PROJECT_PATH}"
-                 
-rm -rf "${TMPDIR}"
