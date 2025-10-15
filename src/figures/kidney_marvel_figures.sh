@@ -17,6 +17,7 @@ module load Singularity/3.5.2-GCC-5.4.0-2.26
 singularity exec --cleanenv \
                  --containall \
                  -B "${PROJECT_PATH}" \
+                 -B /data/project/lasseigne_lab/ \
                  "${PROJECT_PATH}"/bin/docker/setbp1_alternative_splicing_1.0.9.sif \
                  Rscript --vanilla "${PROJECT_PATH}"/src/figures/kidney_marvel_figures.R \
                  "${PROJECT_PATH}"
