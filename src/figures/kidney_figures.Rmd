@@ -173,7 +173,7 @@ sj_usage_cell_type$sj_position <- rownames(sj_usage_cell_type)
 rownames(sj_usage_cell_type) <- NULL
 
 sj_usage_cell_type <- pivot_longer(sj_usage_cell_type,
-  cols = colnames(sj_usage_cell_type)[1:7], names_to = "cell_type",
+  cols = colnames(sj_usage_cell_type)[1:18], names_to = "cell_type",
   values_to = "sj_usage"
 )
 
@@ -908,7 +908,7 @@ make_gene_sj_expr_usage_plots <- function(gene_of_interest, save_path) {
     both_delta_heatmaps <- delta_gene_heatmap %v% delta_sj_heatmap  # stacked
     
     # Original dimensions for vertical layout
-    dynamic_height <- max(7, 5 + (n_sjs * 0.25))
+    dynamic_height <- max(10, 5 + (n_sjs * 0.25))
     dynamic_width <- max(14, 12 + (ncol(delta_sje_heatmap_df) * 0.25))
   }
   
@@ -987,4 +987,11 @@ make_gene_sj_expr_usage_plots <- function(gene_of_interest, save_path) {
 }
 ```
 
+# test
+```{r}
+make_gene_sj_expr_usage_plots(
+  gene_of_interest = "Cdkl1",
+  save_path = filepath
+)
+```
 
