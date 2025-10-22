@@ -467,4 +467,333 @@ make_gene_sj_expr_usage_plots_ts <- function(gene_of_interest, save_path) {
   )
   print(paneled_figure)
   dev.off()
+# The following function is from https://hbctraining.github.io/scRNA-seq_online/lessons/pseudobulk_DESeq2_scrnaseq.html
+# Edited by Emma Jones
+# Function to run DESeq2 Wald Test and get results for any cluster:
+## clustx is the name of the cluster (cell type) on which to run the function
+## A is the sample group to compare (e.g. stimulated condition)
+## B is the sample group to compare against (base/control level)
+## padj_cutoff defines the adjusted p-value cutoff for significance (set to 0.05 by default)
+
+## This function assumes the counts matrices and metadata for all clusters have been prepared
+## and arranged in matching named lists (as illustrated in tutorial above)
+## This function assumes the contrast (e.g. stim vs. control) is stored in a variable named "group_id"
+
+# Edited further by Tabea Soelter
+
+get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05, save_path) {
+  
+  set.seed(42)
+  
+  print(clustx) # useful for debugging
+  
+  # Extract counts matrix and metadata for cluster x
+  idx <- which(names(counts_ls) == clustx)
+  cluster_counts <- counts_ls[[idx]]
+  cluster_metadata <- metadata_ls[[idx]]
+  
+  # Print error message if sample names do not match
+  if ( all(colnames(cluster_counts) != rownames(cluster_metadata)) ) {
+    print("ERROR: sample names in counts matrix columns and metadata rows do not match!")
+  }
+  
+  dds <- DESeqDataSetFromMatrix(cluster_counts, 
+                                colData = cluster_metadata, 
+                                design = ~ group_id)
+  
+  # Transform counts for data visualization
+  rld <- rlog(dds, blind = TRUE)
+  
+  # Modify cluster name for saving
+  clustx_modified <- gsub(" ", "_", clustx)
+  
+  # Generate QC plots
+  
+  ## Plot and save PCA plot
+  DESeq2::plotPCA(rld, intgroup = "group_id")
+  ggsave(here::here(paste0(save_path, clustx_modified, "_specific_PCAplot.png")))
+  
+  ## Extract rlog matrix from the object and compute pairwise correlation values
+  rld_mat <- assay(rld)
+  rld_cor <- cor(rld_mat)
+  
+  ## Plot and save heatmap
+  png(here::here(paste0(save_path, clustx_modified, "_specific_heatmap.png")),
+      height = 6, width = 7.5, units = "in", res = 300)
+  pheatmap(rld_cor, annotation = cluster_metadata[, c("group_id"), drop = FALSE])
+  dev.off()
+  
+  
+  # Run DESeq2 differential expression analysis
+  dds <- DESeq(dds)
+  
+  ## Plot dispersion estimates
+  png(here::here(paste0(save_path, clustx_modified, "_dispersion_plot.png")),
+      height = 5, width = 6, units = "in", res = 300)
+  plotDispEsts(dds)
+  dev.off()
+  
+  ## Output and shrink results of Wald test for contrast A vs B
+  contrast <- paste(c("group_id", A, "vs", B), collapse = "_")
+  
+  res <- results(dds, name = contrast, alpha = 0.05)
+  res <- lfcShrink(dds, coef = contrast, res = res)
+  
+  ## Turn the results object into a tibble for use with tidyverse functions
+  res_tbl <- res %>%
+    data.frame() %>%
+    rownames_to_column(var = "gene") %>%
+    as_tibble()
+  
+  write.csv(res_tbl,
+            here::here(paste0(save_path, clustx_modified, "_", contrast, "_all_genes.csv")),
+            quote = FALSE, 
+            row.names = FALSE)
+  
+  ## Subset the significant results
+  sig_res <- dplyr::filter(res_tbl, padj < padj_cutoff) %>%
+    dplyr::arrange(padj)
+  
+  write.csv(sig_res,
+            here::here(paste0(save_path, clustx_modified, "_", contrast, "_signif_genes.csv")),
+            quote = FALSE, 
+            row.names = FALSE)
+  
+  
+  # Generate results visualization plots
+  
+  ## Extract normalized counts from dds object
+  normalized_counts <- counts(dds, normalized = TRUE)
+  
+  ## Extract top 20 DEG from resLFC (make sure to order by padj)
+  top20_sig_genes <- sig_res %>%
+    dplyr::arrange(padj) %>%
+    dplyr::pull(gene) %>%
+    head(n = 20)
+  
+  # added step to only proceed with following steps if you have 20 genes
+  if(length(top20_sig_genes) == 20)
+    
+    ## Extract matching normalized count values from matrix
+  {top20_sig_counts <- normalized_counts[rownames(normalized_counts) %in% top20_sig_genes, ]
+  
+  ## Convert wide matrix to long data frame for ggplot2
+  top20_sig_df <- data.frame(top20_sig_counts, check.names = FALSE)
+  top20_sig_df$gene <- rownames(top20_sig_counts)
+  
+  top20_sig_df <- melt(setDT(top20_sig_df), 
+                       id.vars = c("gene"),
+                       variable.name = "cluster_sample_id") %>% 
+    data.frame()
+  
+  ## Join counts data frame with metadata
+  top20_sig_df <- plyr::join(top20_sig_df, as.data.frame(colData(dds)),
+                             by = "cluster_sample_id")
+  
+  ## Generate plot
+  ggplot(top20_sig_df, aes(y = value, x = group_id, col = group_id)) +
+    geom_jitter(height = 0, width = 0.15) +
+    scale_y_continuous(trans = 'log10') +
+    ylab("log10 of normalized expression level") +
+    xlab("condition") +
+    ggtitle("Top 20 Significant DE Genes") +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    facet_wrap(~ gene)
+  
+  ggsave(here::here(paste0(save_path, clustx_modified, "_", contrast, "_top20_DE_genes.png")))}
+  
+  # how many genes are there?
+  number <- length(top20_sig_genes)
+  
+  # added step to only plot if you have between 1 and 19 genes
+  if(between(number, 1, 19))
+    
+    ## Extract matching normalized count values from matrix
+  {top20_sig_counts <- normalized_counts[rownames(normalized_counts) %in% top20_sig_genes, ]
+  
+  ## Convert wide matrix to long data frame for ggplot2
+  top20_sig_df <- data.frame(top20_sig_counts, check.names = FALSE)
+  top20_sig_df$gene <- rownames(top20_sig_counts)
+  
+  top20_sig_df <- melt(setDT(top20_sig_df), 
+                       id.vars = c("gene"),
+                       variable.name = "cluster_sample_id") %>% 
+    data.frame()
+  
+  ## Join counts data frame with metadata
+  top20_sig_df <- plyr::join(top20_sig_df, as.data.frame(colData(dds)),
+                             by = "cluster_sample_id")
+  
+  ## Generate plot
+  ggplot(top20_sig_df, aes(y = value, x = group_id, col = group_id)) +
+    geom_jitter(height = 0, width = 0.15) +
+    scale_y_continuous(trans = 'log10') +
+    ylab("log10 of normalized expression level") +
+    xlab("condition") +
+    ggtitle(paste0("Top", number, "Significant DE Genes")) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    facet_wrap(~ gene)
+  
+  ggsave(here::here(paste0(save_path, clustx_modified, "_", contrast, "_top", number, "_DE_genes.png")))}
+  
+## split_sj_info_ts
+# This function was originally written by Emma Jones and named split_sj_info. It can
+# be found in src/marvel/functions.R
+# Since the function was originally written for the brain data, it was not applicable
+# to the kidney data and modifications were necessary. I removed code that edited
+# barcodes, as it led to mismatch problems. Additionally, I added an if statement
+# to treat K6 sample differently due to an outlier being manually removed.
+split_sj_info_ts <- function(sample_id) {
+  if (sample_id %in% c("K1", "K3", "K5")) {
+    condition <- "WT"
+  } else {
+    condition <- "S858R"
+  }
+  # split the sample ID string into individual characters
+  char_vector <- strsplit(sample_id, "")[[1]]
+  # get cell barcodes
+  sj_barcodes <- read.table(
+    here::here(
+      "data", "star", sample_id, "Solo.out", "SJ", "raw",
+      "barcodes.tsv"
+    )
+  )
+  colnames(sj_barcodes) <- "cell.id"
+  sj_barcodes$cell.id <- paste0(
+    condition, "_", sample_id, "_",
+    sj_barcodes$cell.id
+  )
+  # subset barcodes and get order
+  subset_barcodes <-
+    gene_metadata[gene_metadata$sample_id == sample_id, "cell.id"]
+  barcode_order <- match(subset_barcodes, sj_barcodes$cell.id)
+  # subset the sj counts matrix
+  if (sample_id == "K6") {
+    sj_matrix <- readMM(
+      here::here("data", "star", sample_id, "Solo.out", "SJ", "raw", "matrix_fixed.mtx")
+    )
+    sj_matrix <- sj_matrix[, barcode_order]
+  } else {
+    sj_matrix <- readMM(
+      here::here("data", "star", sample_id, "Solo.out", "SJ", "raw", "matrix.mtx")
+    )
+    sj_matrix <- sj_matrix[, barcode_order]
+  }
+  # import sj features
+  sj_features <- read.table(
+    here::here(
+      "data", "star", sample_id, "Solo.out", "SJ", "raw",
+      "features.tsv"
+    )
+  )
+  sj_features <- paste(sj_features$V1, sj_features$V2,
+                       sj_features$V3,
+                       sep = ":"
+  )
+  # make everything into a single dataframe
+  colnames(sj_matrix) <- sj_barcodes[barcode_order, ]
+  rownames(sj_matrix) <- sj_features
+  
+  # export data in long dataframe format for that sample
+  return(sj_matrix)
+}
+
+
+## run_marvel_cell_type_kidney
+# Adapated from the run_marvel_cell_type function by Emma Jones
+# Original function and description can be found in src/marvel/functions.R
+# Due to differing cell type names in the kidney, I changed the way the results
+# are saved by creating a modified cell type name to avoid spaces in final objects
+run_marvel_cell_type_kidney <- function(marvel_object, cell_type, min_pct_cells = 5, 
+                                        min_pct_cells_gene = 5, min_pct_cells_sj = 5,
+                                        min_gene_norm = 1, results_path) {
+  
+  # Assign MARVEL object to start from
+  marvel_object <- setbp1_marvel
+  
+  # Group 1 (reference)
+  index_1 <- which(sample_metadata$cell_type == cell_type & 
+                     sample_metadata$seq_folder == "wildtype")
+  cell_ids_1 <- sample_metadata[index_1, "cell.id"]
+  
+  # Group 2
+  index_2 <- which(sample_metadata$cell_type == cell_type & 
+                     sample_metadata$seq_folder == "mutant")
+  cell_ids_2 <- sample_metadata[index_2, "cell.id"]
+  
+  # Explore % of cells expressing genes
+  marvel_object <- PlotPctExprCells.Genes.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells = min_pct_cells
+  )
+  
+  # Explore % of cells expressing junctions
+  marvel_object <- PlotPctExprCells.SJ.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells.genes = min_pct_cells_gene,
+    min.pct.cells.sj = min_pct_cells_sj,
+    downsample = TRUE,
+    downsample.pct.sj = 10
+  )
+  
+  # Differential Splicing Analysis
+  marvel_object <- CompareValues.SJ.10x(
+    MarvelObject = marvel_object,
+    cell.group.g1 = cell_ids_1,
+    cell.group.g2 = cell_ids_2,
+    min.pct.cells.genes = min_pct_cells_gene,
+    min.pct.cells.sj = min_pct_cells_sj,
+    min.gene.norm = min_gene_norm,
+    seed = 1,
+    n.iterations = 100,
+    downsample = TRUE,
+    show.progress = TRUE
+  )
+  
+  # Differential Gene Analysis
+  marvel_object <- CompareValues.Genes.10x(
+    MarvelObject = marvel_object,
+    show.progress = TRUE
+  )
+  
+  # Make volcano plot
+  marvel_object <- PlotDEValues.SJ.10x(
+    MarvelObject = marvel_object,
+    pval = 0.05,
+    delta = 1,
+    min.gene.norm = min_gene_norm,
+    anno = FALSE
+  )
+  # Assign kinds of iso-switching
+  marvel_object <- IsoSwitch.10x(
+    MarvelObject = marvel_object,
+    pval.sj = 0.05,
+    delta.sj = 1,
+    min.gene.norm = min_gene_norm,
+    pval.adj.gene = 0.05,
+    log2fc.gene = 0.5
+  )
+  
+  # Pull significant genes
+  significant_genes <- marvel_object[["SJ.Gene.Cor"]][["Data"]]$gene_short_name
+  
+  modified_cell_type <- gsub(" ", "-", cell_type)
+  
+  # Save MARVEL object
+  write_rds(marvel_object, file = paste0(results_path, "/", modified_cell_type,
+                                         "_marvel_object.rds")
+  )
+  
+  # Return list
+  return(marvel_object)
+}
+
+## to_col_format
+# Function that helps formatting cell type names
+to_col_format <- function(x) {
+  tolower(gsub(" ", "_", x))
 }
