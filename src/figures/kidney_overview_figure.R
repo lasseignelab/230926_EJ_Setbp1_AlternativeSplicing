@@ -83,7 +83,7 @@ umap_1 <- DimPlot(annotated_kidney_samples,
                   label = TRUE,
                   label.box = TRUE,
                   label.color = "white",
-                  label.size = 3.75,
+                  label.size = 4.75,
                   repel = TRUE,
                   seed = 42
 ) +
@@ -99,11 +99,12 @@ umap_1 <- DimPlot(annotated_kidney_samples,
 
 # Plot panel B
 ordered_annotated_kidney_samples <- SetIdent(
-  annotated_kidney_samples,
+  annotated_kidney_samples, 
   value = factor(Idents(annotated_kidney_samples),
-                 levels = sort(levels(Idents(annotated_kidney_samples)))
+                 levels = sort(levels(Idents(annotated_kidney_samples)),
+                               decreasing = TRUE)
+                 )
   )
-)
 
 dotplot <- DotPlot(ordered_annotated_kidney_samples,
                    cols = c("lightgray", other_colors[2]),
@@ -113,6 +114,10 @@ dotplot <- DotPlot(ordered_annotated_kidney_samples,
                      "Slc12a3", "Atp6v1b1", "Aqp2",  "Hmx2", "Aqp6", "Cd79a"
                    )
 ) +
+  guides(
+    size = guide_legend(title = "Percent\nExpressed"),
+    color = guide_colorbar(title = "Average\nExpression")
+  ) +
   theme(
     legend.title = element_text(face = "bold"),
     legend.text = element_text(face = "bold"),
@@ -195,7 +200,7 @@ figure <- plot_grid(umap_1, dotplot, umap_2, barplot,
 )
 
 png(file.path(wd, "results", "kidney_figures", "kidney_overview_figure.png"),
-    width = 14, height = 10, units = "in", res = 300
+    width = 17, height = 12, units = "in", res = 300
 )
 figure
 dev.off()
