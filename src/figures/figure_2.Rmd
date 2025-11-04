@@ -38,6 +38,7 @@ suppressPackageStartupMessages({
 # source functions
 source(here::here("src", "figures", "geom_split_violin.R"))
 source(here::here("src", "figures", "functions.R"))
+source(here::here("src", "functions_soelter.R"))
 ```
 
 ## Set colors
@@ -725,7 +726,7 @@ filepath <- here::here("results", "as_gene_summaries", "brain")
 dir.create(filepath, recursive = TRUE, showWarnings = FALSE)
 
 lapply(sig_sj_genes, function(gene) {
-  make_gene_sj_expr_usage_plots(
+  make_gene_sj_expr_usage_plots_ts(
     gene_of_interest = gene,
     save_path = filepath
   )
