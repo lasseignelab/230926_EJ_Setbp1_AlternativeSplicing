@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Authors 
 
-Tabea M. Soelter<sup>#</sup>, Emma F. Jones<sup>#</sup>, Timothy C. Howton, Anthony B. Crumley, Elizabeth J. Wilk,  Brittany N. Lasseigne* 
+**Tabea M. Soelter<sup>#</sup>, Emma F. Jones<sup>#</sup>, Timothy C. Howton, Anthony B. Crumley, Elizabeth J. Wilk,  Brittany N. Lasseigne*** 
 
 \#Equal contribution  
 *Corresponding author
