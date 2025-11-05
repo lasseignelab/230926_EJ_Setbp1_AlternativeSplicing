@@ -1,5 +1,5 @@
 ---
-title: "Cell-type-specific alternative splicing in the cerebral cortex of a Schinzel-Giedion Syndrome patient variant mouse model"
+title: "Cell-type-specific alternative splicing in the cerebral cortex and kidney of a <i>Setbp1<sup>S858R</sup></i> Schinzel-Giedion Syndrome patient variant mouse"
 author:
 output: github_document
 date: "`r Sys.Date()`"
