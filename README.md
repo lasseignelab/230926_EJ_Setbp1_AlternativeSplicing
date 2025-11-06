@@ -40,10 +40,7 @@ splice junction level. Overall, we find that AS may be implicated in a
 tissue- and cell-type-specific manner in the cerebral cortex and kidney
 of <i>Setbp1<sup>S858R</sup></i> mice.
 
-<figure>
-<img src="results/final_outputs/figure1.png" alt="alt text" />
-<figcaption aria-hidden="true">alt text</figcaption>
-</figure>
+![](results/final_outputs/figure1.png)
 
 ## Scripts
 
