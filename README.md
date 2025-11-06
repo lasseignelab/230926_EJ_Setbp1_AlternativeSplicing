@@ -2,7 +2,7 @@ Cell-type-specific alternative splicing in the cerebral cortex and
 kidney of a <i>Setbp1<sup>S858R</sup></i> Schinzel-Giedion Syndrome
 patient variant mouse
 ================
-2025-11-05
+2025-11-06
 
 ## Authors
 
@@ -40,7 +40,10 @@ splice junction level. Overall, we find that AS may be implicated in a
 tissue- and cell-type-specific manner in the cerebral cortex and kidney
 of <i>Setbp1<sup>S858R</sup></i> mice.
 
-![](results/final_outputs/figure1.png)
+<figure>
+<img src="results/final_outputs/figure1.png" alt="alt text" />
+<figcaption aria-hidden="true">alt text</figcaption>
+</figure>
 
 ## Scripts
 
@@ -55,24 +58,19 @@ of <i>Setbp1<sup>S858R</sup></i> mice.
     ## │   ├── 02_pseudobulk_analysis_kidney.sh
     ## │   └── functions.R
     ## ├── figures
-    ## │   ├── celltypespecificity.R
-    ## │   ├── combined_upsets.Rmd
     ## │   ├── figure_2.Rmd
     ## │   ├── figure_3-4.Rmd
     ## │   ├── figure_5.Rmd
     ## │   ├── functions.R
     ## │   ├── geom_split_violin.R
-    ## │   ├── kidney_figures.Rmd
     ## │   ├── kidney_marvel_figures.R
     ## │   ├── kidney_marvel_figures.sh
     ## │   ├── kidney_overview_figure.R
-    ## │   ├── kidney_overview_figure.Rmd
     ## │   ├── kidney_overview_figure.sh
     ## │   ├── mean_expression_celltype.R
     ## │   └── supp_figure_2.Rmd
     ## ├── functions_soelter.R
     ## ├── marvel
-    ## │   ├── 00_prepare_marvel_inputs.sh
     ## │   ├── 01_format_MARVEL_data.Rmd
     ## │   ├── 02_MARVEL_differential_analysis.Rmd
     ## │   ├── 03_analyze_de_genes.Rmd
