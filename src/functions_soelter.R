@@ -108,7 +108,7 @@ remove_ambient_rna <- function(inputs, outputs, plots) {
 ## make_seurat_object
 # A function which takes a path to sample folders with the three CellRanger
 # output files and creates a merged seurat object
-make_seurat_object <- function(path){
+make_seurat_object <- function(path) {
   counts_list <- list.dirs(path, 
                            full.names = TRUE, 
                            recursive = FALSE)
@@ -159,7 +159,7 @@ make_seurat_object <- function(path){
 
 ## calc_qc
 # A function which calculates quality control metrics for a merged seurat object
-calc_qc <- function(seurat_object){
+calc_qc <- function(seurat_object) {
   seurat_object$log10GenesPerUMI <- log10(seurat_object$nFeature_RNA) / log10(seurat_object$nCount_RNA)
   seurat_object$mitoRatio <- PercentageFeatureSet(object = seurat_object, 
                                                   pattern = "^mt-")
@@ -172,7 +172,7 @@ calc_qc <- function(seurat_object){
 # A function which calculates and plots the effect of cell cycle on the data
 # using a filtered seurat object as input. It also performs log normalization,
 # scaling, and dimension reduction using PCA
-cell_cycle_effects <- function(filtered_seurat, g2m_genes, s_genes){
+cell_cycle_effects <- function(filtered_seurat, g2m_genes, s_genes) {
   # log normalize -----
   filtered_seurat <- NormalizeData(filtered_seurat)
   # score cells based in gex of genes -----
