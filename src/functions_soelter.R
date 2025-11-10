@@ -467,6 +467,8 @@ make_gene_sj_expr_usage_plots_ts <- function(gene_of_interest, save_path) {
   )
   print(paneled_figure)
   dev.off()
+}
+
 # The following function is from https://hbctraining.github.io/scRNA-seq_online/lessons/pseudobulk_DESeq2_scrnaseq.html
 # Edited by Emma Jones
 # Function to run DESeq2 Wald Test and get results for any cluster:
@@ -635,6 +637,7 @@ get_dds_resultsAvsB <- function(clustx, A, B, padj_cutoff = 0.05, save_path) {
     facet_wrap(~ gene)
   
   ggsave(here::here(paste0(save_path, clustx_modified, "_", contrast, "_top", number, "_DE_genes.png")))}
+}
   
 ## split_sj_info_ts
 # This function was originally written by Emma Jones and named split_sj_info. It can
